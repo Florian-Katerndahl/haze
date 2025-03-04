@@ -12,7 +12,7 @@ struct boundingBox *allocBoundingBox(void);
 
 void freeBoundingBox(struct boundingBox *box);
 
-struct boundingBox *boxFromPath(char *filePath, char *layerName);
+struct boundingBox *boxFromPath(const char *filePath, const char *layerName);
 
 void printBoundingBox(const struct boundingBox *box);
 

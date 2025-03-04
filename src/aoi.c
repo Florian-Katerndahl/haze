@@ -21,11 +21,11 @@ void freeBoundingBox(struct boundingBox *box) {
     box = NULL;
 }
 
-struct boundingBox *boxFromPath(char *filePath, char *layerName) {
+struct boundingBox *boxFromPath(const char *filePath, const char *layerName) {
     // bigger TODO: each step could be packed into its own function which would make this one more readable
     struct boundingBox *box;
 
-    // assert(fileExists(filePath) && fileReadable(filePath));
+    assert(fileReadable(filePath));
 
     if ((box = allocBoundingBox()) == NULL) {
         perror("calloc");
@@ -114,7 +114,13 @@ struct boundingBox *boxFromPath(char *filePath, char *layerName) {
             // TODO cleanup
             exit(1);
         }
-        if (OCTTransformBounds(transformation, mbr->MinX, mbr->MinY, mbr->MaxX, mbr->MaxY, &(box->left), &(box->bottom), &(box->right), &(box->top), 21) == FALSE) {
+        if (OCTTransformBounds(
+            transformation,
+            mbr->MinX, mbr->MinY,
+            mbr->MaxX, mbr->MaxY,
+            &(box->left), &(box->bottom),
+            &(box->right), &(box->top),
+            21) == FALSE) {
             fprintf(stderr, "Failed to transform bounding box\n");
             // todo cleanup
             exit(1);

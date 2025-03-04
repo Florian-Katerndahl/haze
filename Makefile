@@ -12,12 +12,17 @@ LOCALFLAGS=-L
 
 all: main
 
+build/fscheck.o: src/fscheck.c src/fscheck.h
+	$(CC) $(DEFINES) $(CFLAGS) -c src/fscheck.c -o $@
+
 build/aoi.o: src/aoi.c src/aoi.h
 	$(CC) $(DEFINES) $(CFLAGS) -c src/aoi.c $(GDALFLAGS) -o $@
 
-main: main.c build/aoi.o
+build/main.o: main.c
 	$(CC) $(DEFINES) $(CFLAGS) -c main.c -o build/main.o
-	$(CC) $(DEFINES) $(CFLAGS) build/main.o build/aoi.o $(GDALFLAGS) -o $@
+
+main: build/main.o build/aoi.o build/fscheck.o	
+	$(CC) $(DEFINES) $(CFLAGS) $^ $(GDALFLAGS) -o $@
 
 clean:
 	rm -f main
