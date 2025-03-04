@@ -76,14 +76,6 @@ struct boundingBox *boxFromPath(const char *filePath, const char *layerName) {
         exit(1);
     }
 
-    char *layerWkt;
-    OGRErr wktErr = OSRExportToWktEx(spatRef, &layerWkt, NULL);
-    if (wktErr != OGRERR_NONE) {
-        fprintf(stderr, "Failed to export layer WKT\n");
-        //TODO cleanup
-        exit(1);
-    }
-
     OGREnvelope *mbr = CPLCalloc(1, sizeof(OGREnvelope));
     OGRErr extErr = OGR_L_GetExtent(layer, mbr, 1); // force calculation of layer extent, regardless of cost
     if (extErr == OGRERR_FAILURE) {
@@ -94,6 +86,15 @@ struct boundingBox *boxFromPath(const char *filePath, const char *layerName) {
             exit(1);
         }
     }
+
+    char *layerWkt;
+    OGRErr wktErr = OSRExportToWktEx(spatRef, &layerWkt, NULL);
+    if (wktErr != OGRERR_NONE) {
+        fprintf(stderr, "Failed to export layer WKT\n");
+        //TODO cleanup
+        exit(1);
+    }
+    
     if (EQUAL(layerWkt, SRS_WKT_WGS84_LAT_LONG)) {
         box->left = mbr->MinX;
         box->top = mbr->MaxY;
