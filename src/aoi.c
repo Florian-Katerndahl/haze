@@ -94,11 +94,11 @@ struct boundingBox *boxFromPath(const char *filePath, const char *layerName) {
         //TODO cleanup
         exit(1);
     }
-    
+
     if (EQUAL(layerWkt, SRS_WKT_WGS84_LAT_LONG)) {
-        box->left = mbr->MinX;
-        box->top = mbr->MaxY;
-        box->right = mbr->MaxX;
+        box->left   = mbr->MinX;
+        box->top    = mbr->MaxY;
+        box->right  = mbr->MaxX;
         box->bottom = mbr->MinY;
     } else {
         // FIXME: handle crossing of meridians
@@ -116,12 +116,12 @@ struct boundingBox *boxFromPath(const char *filePath, const char *layerName) {
             exit(1);
         }
         if (OCTTransformBounds(
-            transformation,
-            mbr->MinX, mbr->MinY,
-            mbr->MaxX, mbr->MaxY,
-            &(box->left), &(box->bottom),
-            &(box->right), &(box->top),
-            21) == FALSE) {
+                    transformation,
+                    mbr->MinX, mbr->MinY,
+                    mbr->MaxX, mbr->MaxY,
+                    &(box->left), &(box->bottom),
+                    &(box->right), &(box->top),
+                    21) == FALSE) {
             fprintf(stderr, "Failed to transform bounding box\n");
             // todo cleanup
             exit(1);
