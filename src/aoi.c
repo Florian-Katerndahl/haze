@@ -65,8 +65,8 @@ struct boundingBox *boxFromPath(const char *filePath, const char *layerName) {
         exit(1);
     }
 
-    OGRSpatialReferenceH *spatRef = OGR_L_GetSpatialRef(layer);
-    if (spatRef == NULL) {
+    OGRSpatialReferenceH *layerRef = OGR_L_GetSpatialRef(layer);
+    if (layerRef == NULL) {
         fprintf(stderr, "Spatial reference not available\n");
         CPLErr closeErr = GDALClose(aoi);
         if (closeErr != CE_None) {
@@ -79,7 +79,7 @@ struct boundingBox *boxFromPath(const char *filePath, const char *layerName) {
     OGREnvelope *mbr = CPLCalloc(1, sizeof(OGREnvelope));
     OGRErr extErr = OGR_L_GetExtent(layer, mbr, 1); // force calculation of layer extent, regardless of cost
     if (extErr == OGRERR_FAILURE) {
-        fprintf(stderr, "Failed to get layer extent\n");
+        fprintf(stderr, "Failed to get layer extent: %s", CPLGetLastErrorMsg());
         CPLErr closeErr = GDALClose(aoi);
         if (closeErr != CE_None) {
             fprintf(stderr, "%s\n", CPLGetLastErrorMsg());
@@ -87,31 +87,31 @@ struct boundingBox *boxFromPath(const char *filePath, const char *layerName) {
         }
     }
 
-    char *layerWkt;
-    OGRErr wktErr = OSRExportToWktEx(spatRef, &layerWkt, NULL);
+    char *layerWKT;
+    OGRErr wktErr = OSRExportToWktEx(layerRef, &layerWKT, NULL);
     if (wktErr != OGRERR_NONE) {
         fprintf(stderr, "Failed to export layer WKT\n");
         //TODO cleanup
         exit(1);
     }
 
-    if (EQUAL(layerWkt, SRS_WKT_WGS84_LAT_LONG)) {
+    if (EQUAL(layerWKT, SRS_WKT_WGS84_LAT_LONG)) {
         box->left   = mbr->MinX;
         box->top    = mbr->MaxY;
         box->right  = mbr->MaxX;
         box->bottom = mbr->MinY;
     } else {
         // FIXME: handle crossing of meridians
-        char *wgs84WKT = SRS_WKT_WGS84_LAT_LONG;
-        OGRSpatialReferenceH *wgs84Ref = NULL;
-        if (OSRImportFromWkt(wgs84Ref, &wgs84WKT) != OGRERR_NONE) {
-            fprintf(stderr, "Failed to create spatial reference object for WGS84 WKT\n");
+        const char *wgs84WKT = SRS_WKT_WGS84_LAT_LONG;
+        OGRSpatialReferenceH *wgs84Ref = OSRNewSpatialReference(wgs84WKT);
+        if (wgs84Ref == NULL) {
+            fprintf(stderr, "Failed to create spatial reference object for WGS84 WKT: %s", CPLGetLastErrorMsg());
             // TODO cleanup
             exit(1);
         }
-        OGRCoordinateTransformationH *transformation = OCTNewCoordinateTransformationEx(layerWkt, wgs84Ref, NULL);
+        OGRCoordinateTransformationH *transformation = OCTNewCoordinateTransformationEx(layerRef, wgs84Ref, NULL);
         if (transformation == NULL) {
-            fprintf(stderr, "Failed to create transformation object\n");
+            fprintf(stderr, "Failed to create transformation object: %s", CPLGetLastErrorMsg());
             // TODO cleanup
             exit(1);
         }
@@ -131,7 +131,7 @@ struct boundingBox *boxFromPath(const char *filePath, const char *layerName) {
         OCTDestroyCoordinateTransformation(transformation);
     }
 
-    CPLFree(layerWkt);
+    CPLFree(layerWKT);
 
     CPLFree(mbr);
 
