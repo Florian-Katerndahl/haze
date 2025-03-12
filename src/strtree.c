@@ -256,7 +256,7 @@ GEOSSTRtree *buildSTRTreefromRaster(const struct averagedData *data, const struc
                 // todo cleanup
                 return NULL;
             }
-            
+
             struct cellGeometry *cell = calloc(1, sizeof(struct cellGeometry));
             if (cell == NULL) {
                 perror("calloc");

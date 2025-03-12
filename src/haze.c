@@ -342,9 +342,9 @@ mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *ras
         fprintf(stderr, "Could not determine if CRS is projected or not");
         return NULL;
     }
-    
+
     const bool isGeodesic = !isProjected(rasterWkt);
-    
+
     size_t wkbSize;
     GEOSWKBWriter *wkbWriter = GEOSWKBWriter_create();
     if (wkbWriter == NULL) {
@@ -360,18 +360,18 @@ mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *ras
             continue; // is continue really appropriate here?
         }
 
-        if (OGR_G_Centroid(intersections->reference, centroid) == OGRERR_FAILURE) {            
+        if (OGR_G_Centroid(intersections->reference, centroid) == OGRERR_FAILURE) {
             fprintf(stderr, "Failed to calculate centroid\n");
             OGR_G_DestroyGeometry(centroid);
             continue; // is continue really appropriate here?
         }
 
-        #if GDAL_VERSION_NUM < 3090000
+#if GDAL_VERSION_NUM < 3090000
         double referenceArea = OGR_G_Area(intersections->reference);
         fprintf(stderr, "Calcluating cartesian area regardless of projection\n");
-        #else
+#else
         double referenceArea = isGeodesic ? OGR_G_GeodesicArea(intersections->reference) : OGR_G_Area(intersections->reference);
-        #endif
+#endif
         if (referenceArea == -1) {
             fprintf(stderr, "Failed to calculate reference area\n");
             OGR_G_DestroyGeometry(centroid);
@@ -384,7 +384,7 @@ mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *ras
             OGR_G_DestroyGeometry(centroid);
             continue; // is continue really appropriate here?
         }
-        
+
         double *weights = calloc(intersections->intersectionCount, sizeof(double));
         if (weights == NULL) {
             perror("calloc");
@@ -393,14 +393,14 @@ mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *ras
         }
 
         cellGeometryList *temp = intersections->intersectingCells;
-        
+
         // iterate over all found intersections
         for (size_t i = 0; i < intersections->intersectionCount; i++) {
             values[i] = *temp->entry->value; // shit, here I do copy data again...
 
             OGRGeometryH *cellAsOGR = OGR_G_CreateGeometry(wkbPolygon);
             OGR_G_AssignSpatialReference(cellAsOGR, spatialRef);
-            
+
             const unsigned char *geometryAsWkb = GEOSWKBWriter_write(wkbWriter, temp->entry->geometry, &wkbSize);
             if (geometryAsWkb == NULL) {
                 fprintf(stderr, "Failed to export geometry as WKB\n");
@@ -413,7 +413,7 @@ mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *ras
                 // todo cleanup
                 continue; // is continue really appropriate here?
             }
-            
+
             GEOSFree((void *) geometryAsWkb);
 
             OGRGeometryH *intersection = OGR_G_Intersection(intersections->reference, cellAsOGR);
@@ -424,12 +424,12 @@ mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *ras
             }
             OGR_G_AssignSpatialReference(intersection, spatialRef);
 
-            #if GDAL_VERSION_NUM < 3090000
+#if GDAL_VERSION_NUM < 3090000
             double intersectingArea = OGR_G_Area(intersections->reference);
             fprintf(stderr, "Calcluating cartesian area regardless of projection\n"); // todo this is very excessive
-            #else
+#else
             double intersectingArea = isGeodesic ? OGR_G_GeodesicArea(intersections->reference) : OGR_G_Area(intersections->reference);
-            #endif
+#endif
 
             weights[i] = intersectingArea / referenceArea;
 
@@ -483,7 +483,7 @@ void writeWeightedMeans(mean_t *values, const char *filePath) {
             outFile,
             "%.4lf %.4lf %f ERA\n",
             values->x, values->y, (float) values->value);
-        
+
         values = values->next;
     }
 
