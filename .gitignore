@@ -1,8 +1,8 @@
 .vscode/
 docs/
-feature-tests/
 build/
 data/
 main
+feature-tests/test-strtree
 *.orig
 *.csv
