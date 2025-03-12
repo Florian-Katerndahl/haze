@@ -2,5 +2,7 @@
 docs/
 feature-tests/
 build/
+data/
 main
 *.orig
+*.csv
