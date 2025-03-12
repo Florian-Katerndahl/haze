@@ -1,3 +1,4 @@
+mode=c
 style=mozilla
 indent=spaces=2
 max-code-length=100
@@ -10,7 +11,9 @@ pad-header
 pad-oper
 pad-comma
 suffix=none
-exclude=data
-exclude=deps
-exclude=out
-exclude=test
+exclude=build
+exclude=docs
+exclude=.vscode
+exclude=feature-tests
+attach-closing-while
+indent-switches
