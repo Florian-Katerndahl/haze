@@ -1,4 +1,6 @@
 .vscode/
 docs/
+feature-tests/
+build/
 main
 *.orig
