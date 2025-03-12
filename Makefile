@@ -1,10 +1,11 @@
 CC=gcc
 DEFINES=-D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS
 SANITIZERS+=-fsanitize=address,undefined,leak -fno-omit-frame-pointer -fsanitize-address-use-after-scope -fstack-protector-strong -fstack-clash-protection
-CFLAGS=-Wall -Wextra -pedantic -std=c2x -flto -ggdb $(SANITIZERS)
+CFLAGS=-Wall -Wextra -pedantic -std=c2x -flto -ggdb -O0 $(SANITIZERS)
 JANSONFLAGS=$(shell pkg-config --cflags --libs jansson)
 CURLFLAGS=$(shell pkg-config --cflags --libs libcurl)
 GDALFLAGS=$(shell pkg-config --cflags --libs gdal)
+GEOSFLAGS=$(shell pkg-config --cflags --libs geos)
 MATHFLAGS=-lm
 LOCALFLAGS=-L
 
@@ -18,10 +19,13 @@ build/fscheck.o: src/fscheck.c src/fscheck.h
 build/aoi.o: src/aoi.c src/aoi.h
 	$(CC) $(DEFINES) $(CFLAGS) -c src/aoi.c $(GDALFLAGS) -o $@
 
+build/haze.o: src/haze.c src/haze.h
+	$(CC) $(DEFINES) $(CFLAGS) -c src/haze.c $(GDALFLAGS) -o $@
+
 build/main.o: main.c
 	$(CC) $(DEFINES) $(CFLAGS) -c main.c -o build/main.o
 
-main: build/main.o build/aoi.o build/fscheck.o	
+main: build/main.o build/aoi.o build/fscheck.o build/haze.o
 	$(CC) $(DEFINES) $(CFLAGS) $^ $(GDALFLAGS) -o $@
 
 clean:
