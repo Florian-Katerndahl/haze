@@ -353,6 +353,10 @@ mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *ras
         return NULL;
     }
 
+#if GDAL_VERSION_NUM < 3090000
+    fprintf(stderr, "Calcluating cartesian area regardless of projection\n");
+#endif
+
     while (intersections != NULL) {
         OGRGeometryH *centroid = OGR_G_CreateGeometry(wkbPoint);
         if (centroid == NULL) {
@@ -368,7 +372,6 @@ mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *ras
 
 #if GDAL_VERSION_NUM < 3090000
         double referenceArea = OGR_G_Area(intersections->reference);
-        fprintf(stderr, "Calcluating cartesian area regardless of projection\n");
 #else
         double referenceArea = isGeodesic ? OGR_G_GeodesicArea(intersections->reference) : OGR_G_Area(intersections->reference);
 #endif
