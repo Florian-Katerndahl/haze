@@ -10,10 +10,12 @@ align-pointer=name
 pad-header
 pad-oper
 pad-comma
+attach-closing-while
+indent-switches
 suffix=none
+ignore-exclude-errors
 exclude=build
+exclude=data
 exclude=docs
 exclude=.vscode
 exclude=feature-tests
-attach-closing-while
-indent-switches
