@@ -3,9 +3,10 @@
 
 #include <stdlib.h>
 
-enum how{
-    CEILING,
-    FLOOR
+enum how
+{
+  CEILING,
+  FLOOR
 };
 
 int fNudge(const float *x, enum how direction);

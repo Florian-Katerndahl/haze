@@ -22,9 +22,11 @@ void readRasterDataset(GDALDatasetH *raster, struct rawData **dataBuffer);
 
 int averageRawData(const struct rawData *data, struct averagedData **average);
 
-int averageRawDataWithSizeOffset(const struct rawData *data, struct averagedData **average, const size_t size, const size_t offset);
+int averageRawDataWithSizeOffset(const struct rawData *data, struct averagedData **average,
+                                 const size_t size, const size_t offset);
 
-int averagePILRawDataWithSizeOffset(const struct rawData *data, struct averagedData **average, const size_t size, const size_t offset);
+int averagePILRawDataWithSizeOffset(const struct rawData *data, struct averagedData **average,
+                                    const size_t size, const size_t offset);
 
 void reorderToPixelInterleave(struct rawData *data);
 

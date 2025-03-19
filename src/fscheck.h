@@ -1,4 +1,4 @@
-/* 
+/*
 Documentation warns about usage of euidaccess, but since I don't do any safety-critical things, I don't care
 */
 #ifndef FSCHECK_H

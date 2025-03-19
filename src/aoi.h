@@ -1,11 +1,12 @@
 #ifndef AOI_H
 #define AOI_H
 
-struct boundingBox {
-    double left;
-    double top;
-    double right;
-    double bottom;
+struct boundingBox
+{
+  double left;
+  double top;
+  double right;
+  double bottom;
 };
 
 struct boundingBox *allocBoundingBox(void);
