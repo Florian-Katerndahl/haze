@@ -347,8 +347,11 @@ bool isProjected(const char *Wkt)
     exit(-1); // todo: doesn't make sense to continue if this fails
   }
 
+  bool isProjected = OSRIsProjected(spatialRef);
+
   OSRDestroySpatialReference(spatialRef);
-  return (bool) OSRIsProjected(spatialRef);
+  
+  return isProjected;
 }
 
 mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *rasterWkt)
