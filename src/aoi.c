@@ -1,4 +1,5 @@
 #include "aoi.h"
+#include "haze.h"
 #include "fscheck.h"
 #include <assert.h>
 #include <stdio.h>
@@ -13,8 +14,7 @@
 
 struct boundingBox *allocBoundingBox(void)
 {
-  struct boundingBox *new = calloc(1, sizeof(struct boundingBox));
-  return new;
+  return calloc(1, sizeof(struct boundingBox));
 }
 
 void freeBoundingBox(struct boundingBox *box)
@@ -35,59 +35,36 @@ struct boundingBox *boxFromPath(const char *filePath, const char *layerName)
     return NULL;
   }
 
-  GDALDatasetH aoi = GDALOpenEx(filePath, GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
+  GDALDatasetH aoi = openVector(filePath);
   if (aoi == NULL) {
-    fprintf(stderr, "Failed to open dataset %s\n", filePath);
-    exit(1);
+    return NULL;
   }
 
   if (GDALDatasetGetLayerCount(aoi) == 0) {
     fprintf(stderr, "Provided vector file does not conain layers\n");
-    CPLErr err = GDALClose(aoi);
-    if (err != CE_None) {
-      fprintf(stderr, "%s\n", CPLGetLastErrorMsg());
-      exit(1);
-    }
-    exit(1);
+    closeGDALDataset(aoi);
+    return NULL;
   }
 
-  OGRLayerH layer;
-  if (layerName == NULL) {
-    layer = GDALDatasetGetLayer(aoi, 0);
-  } else {
-    layer = GDALDatasetGetLayerByName(aoi, layerName);
-  }
+  OGRLayerH layer = openVectorLayer(aoi, layerName);
   if (layer == NULL) {
     fprintf(stderr, "Failed to get layer from dataset\n");
-    CPLErr err = GDALClose(aoi);
-    if (err != CE_None) {
-      fprintf(stderr, "%s\n", CPLGetLastErrorMsg());
-      exit(1);
-    }
-    exit(1);
+    closeGDALDataset(aoi);
+    return NULL;
   }
 
   OGRSpatialReferenceH layerRef = OGR_L_GetSpatialRef(layer);
   if (layerRef == NULL) {
     fprintf(stderr, "Spatial reference not available\n");
-    CPLErr closeErr = GDALClose(aoi);
-    if (closeErr != CE_None) {
-      fprintf(stderr, "%s\n", CPLGetLastErrorMsg());
-      exit(1);
-    }
-    exit(1);
+    closeGDALDataset(aoi);
+    return NULL;
   }
 
   OGREnvelope *mbr = CPLCalloc(1, sizeof(OGREnvelope));
-  OGRErr extErr = OGR_L_GetExtent(layer, mbr,
-                                  1); // force calculation of layer extent, regardless of cost
-  if (extErr == OGRERR_FAILURE) {
+  if (OGR_L_GetExtent(layer, mbr, 1) == OGRERR_FAILURE) {
     fprintf(stderr, "Failed to get layer extent: %s", CPLGetLastErrorMsg());
-    CPLErr closeErr = GDALClose(aoi);
-    if (closeErr != CE_None) {
-      fprintf(stderr, "%s\n", CPLGetLastErrorMsg());
-      exit(1);
-    }
+    closeGDALDataset(aoi);
+    return NULL;
   }
 
   char *layerWKT;
@@ -95,7 +72,7 @@ struct boundingBox *boxFromPath(const char *filePath, const char *layerName)
   if (wktErr != OGRERR_NONE) {
     fprintf(stderr, "Failed to export layer WKT\n");
     //TODO cleanup
-    exit(1);
+    return NULL;
   }
 
   if (EQUAL(layerWKT, SRS_WKT_WGS84_LAT_LONG)) {
@@ -111,14 +88,14 @@ struct boundingBox *boxFromPath(const char *filePath, const char *layerName)
       fprintf(stderr, "Failed to create spatial reference object for WGS84 WKT: %s",
               CPLGetLastErrorMsg());
       // TODO cleanup
-      exit(1);
+      return NULL;
     }
     OGRCoordinateTransformationH *transformation = OCTNewCoordinateTransformationEx(layerRef, wgs84Ref,
       NULL);
     if (transformation == NULL) {
       fprintf(stderr, "Failed to create transformation object: %s", CPLGetLastErrorMsg());
       // TODO cleanup
-      exit(1);
+      return NULL;
     }
     if (OCTTransformBounds(
           transformation,
@@ -129,7 +106,7 @@ struct boundingBox *boxFromPath(const char *filePath, const char *layerName)
           21) == FALSE) {
       fprintf(stderr, "Failed to transform bounding box\n");
       // todo cleanup
-      exit(1);
+      return NULL;
     }
 
     OSRDestroySpatialReference(wgs84Ref);
@@ -137,14 +114,8 @@ struct boundingBox *boxFromPath(const char *filePath, const char *layerName)
   }
 
   CPLFree(layerWKT);
-
   CPLFree(mbr);
-
-  CPLErr closeErr = GDALClose(aoi);
-  if (closeErr != CE_None) {
-    fprintf(stderr, "%s\n", CPLGetLastErrorMsg());
-    exit(1);
-  }
+  closeGDALDataset(aoi);
 
   return box;
 }
