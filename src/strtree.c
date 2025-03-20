@@ -426,8 +426,6 @@ intersection_t *querySTRTree(vectorGeometryList *areasOfInterest, GEOSSTRtree *r
     areasOfInterest = areasOfInterest->next;
   }
 
-  fprintf(stderr, "checked all geometries\n");
-
   return queryResults;
 }
 
