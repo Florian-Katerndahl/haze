@@ -61,7 +61,7 @@ void freeVectorGeometry(struct vectorGeometry *node)
   node = NULL;
 }
 
-char *extractCRSAsWKT(GDALDatasetH dataset, const char *layerName)
+[[nodiscard]] char *extractCRSAsWKT(GDALDatasetH dataset, const char *layerName)
 {
   GDALDriverH *driver = GDALGetDatasetDriver(dataset);
   char **driverMetadata = GDALGetMetadata(driver, NULL);
@@ -305,7 +305,7 @@ void freeVectorGeometryList(vectorGeometryList *list)
   }
 }
 
-GEOSSTRtree *buildSTRTreefromRaster(const struct averagedData *data,
+[[nodiscard]] GEOSSTRtree *buildSTRTreefromRaster(const struct averagedData *data,
                                     const struct geoTransform *transformation, cellGeometryList **cells)
 {
   unsigned int err = 0;
@@ -434,7 +434,7 @@ void queryCallback(void *item, void *userdata)
   return;
 }
 
-intersection_t *querySTRTree(vectorGeometryList *areasOfInterest, GEOSSTRtree *rasterTree)
+[[nodiscard]] intersection_t *querySTRTree(vectorGeometryList *areasOfInterest, GEOSSTRtree *rasterTree)
 {
   intersection_t *queryResults = NULL;
 

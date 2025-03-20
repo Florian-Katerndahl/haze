@@ -55,19 +55,19 @@ void freeVectorGeometry(struct vectorGeometry *node);
  *                  the first layer is selected.
  * @return char* Pointer to WKT string or NULL on error
  */
-char *extractCRSAsWKT(GDALDatasetH dataset, const char *layerName);
+[[nodiscard]] char *extractCRSAsWKT(GDALDatasetH dataset, const char *layerName);
 
 [[nodiscard]] vectorGeometryList *buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
     const char *inputReferenceSystem);
 
 void freeVectorGeometryList(vectorGeometryList *list);
 
-GEOSSTRtree *buildSTRTreefromRaster(const struct averagedData *data,
+[[nodiscard]] GEOSSTRtree *buildSTRTreefromRaster(const struct averagedData *data,
                                     const struct geoTransform *transformation, cellGeometryList **cells);
 
 void freeCellGeometryList(cellGeometryList *list);
 
-intersection_t *querySTRTree(vectorGeometryList *areasOfInterest, GEOSSTRtree *rasterTree);
+[[nodiscard]] intersection_t *querySTRTree(vectorGeometryList *areasOfInterest, GEOSSTRtree *rasterTree);
 
 void freeIntersections(intersection_t *list);
 
