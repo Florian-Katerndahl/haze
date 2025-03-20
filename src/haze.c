@@ -350,7 +350,7 @@ bool isProjected(const char *Wkt)
   bool isProjected = OSRIsProjected(spatialRef);
 
   OSRDestroySpatialReference(spatialRef);
-  
+
   return isProjected;
 }
 

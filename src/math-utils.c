@@ -4,7 +4,6 @@
 #include <math.h>
 #include <stdlib.h>
 
-
 int fNudge(const float *x, enum how direction)
 {
   assert(INT_MIN < *x || *x < INT_MAX);
