@@ -63,7 +63,7 @@ void freeVectorGeometry(struct vectorGeometry *node)
 
 [[nodiscard]] char *extractCRSAsWKT(GDALDatasetH dataset, const char *layerName)
 {
-  GDALDriverH *driver = GDALGetDatasetDriver(dataset);
+  GDALDriverH driver = GDALGetDatasetDriver(dataset);
   char **driverMetadata = GDALGetMetadata(driver, NULL);
   char *tempRef;
   if (CSLFetchBoolean(driverMetadata, GDAL_DCAP_RASTER, FALSE)) {
