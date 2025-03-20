@@ -57,7 +57,7 @@ typedef struct vectorGeometryList
 struct cellGeometry
 {
   GEOSGeometry *geometry;
-  double *value;
+  double value;
 };
 
 typedef struct cellGeometryList

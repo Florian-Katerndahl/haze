@@ -25,11 +25,11 @@ int main(void) {
     CPLPushErrorHandler(CPLQuietErrorHandler);
     GDALAllRegister();
 
-    GDALDatasetH *ds = GDALOpenEx("data/example.grib", GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
+    GDALDatasetH *ds = GDALOpenEx("../data/example.grib", GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
     const char *rasterWkt = extractCRSAsWKT(ds, NULL);
     
     vectorGeometryList *areasOfInterest = NULL;
-    buildGEOSGeometriesFromGDAL("data/grid.kml", NULL, &areasOfInterest, rasterWkt);
+    buildGEOSGeometriesFromGDAL("../data/grid.kml", NULL, &areasOfInterest, rasterWkt);
 
     struct rawData *data = NULL;
     readRasterDataset(ds, &data);
@@ -40,58 +40,44 @@ int main(void) {
     struct averagedData *average = NULL;
     averageRawDataWithSizeOffset(data, &average, 0, 0);
 
-    cellGeometryList *blub = NULL;
+    cellGeometryList *rasterCellsAsGEOS = NULL; // todo: document that this should be freed!
 
     // todo: optionally implement function to crop raster beforehand
 
-    GEOSSTRtree *rasterTree = buildSTRTreefromRaster(average, &transform, &blub);
+    GEOSSTRtree *rasterTree = buildSTRTreefromRaster(average, &transform, &rasterCellsAsGEOS);
 
-    // todo in strtree.c: implement a function to query the tree constructed by buildSTRTreefromRaster which somehow gets me for each polygon in areasOfInterest
+    // a function to query the tree constructed by buildSTRTreefromRaster which somehow gets me for each polygon in areasOfInterest
     // the intersecting polygons of the tree so I can calculate the area-weighted average
-    intersection_t *intersections = querySTRTree(areasOfInterest, rasterTree);
+    intersection_t *intersections = querySTRTree(areasOfInterest, rasterTree); // todo: free intersections!
     if (intersections == NULL) {
         fprintf(stderr, "No intersections found\n");
         // todo: cleanup
         return 0;
     }
 
-    // todo in strtree.c/haze.c: implement a functions that
+    // a functions that (should be split up into smaller pieces)
     // 1. converts GEOSGeometry back to OGRGeometry (via WKBExport)
     // 2. given two OGRGeometries (Polygons) computes the intersection
     // 3. a) depending on the CRS being geodesic or not, calculating the appropriate area
     // 3. b) query a WKT/dataset for property
     // 4. calculate area-weighted average
     // 5. get centroid of polygon
-    mean_t *weightedMeans = calculateAreaWeightedMean(intersections, rasterWkt);
+    mean_t *weightedMeans = calculateAreaWeightedMean(intersections, rasterWkt); // todo: free this!
     if (weightedMeans == NULL) {
      fprintf(stderr, "Failed to calculate weighted means\n");
      // todo: cleanup
      return 1;
     }
 
-    // 6. write tuple (centroid coordinates, average value, "ERA5") to a file
+    // 6. write tuple (centroid coordinates, average value, ERA5) to a file
     writeWeightedMeans(weightedMeans, "file.csv");
-    exit(1);
+    
+    freeVectorGeometryList(areasOfInterest);
+    freeCellGeometryList(rasterCellsAsGEOS);
+    freeIntersections(intersections);
+    freeWeightedMeans(weightedMeans);
+    
 
-
-    vectorGeometryList *node = areasOfInterest;
-    vectorGeometryList *temp;
-    double a, b, c, d;
-    while (node != NULL) {
-        // printf("%lld: ", node->entry->id);
-        // GEOSGeom_getXMin(node->entry->mbr, &a);
-        // GEOSGeom_getYMax(node->entry->mbr, &b);
-        // GEOSGeom_getXMax(node->entry->mbr, &c);
-        // GEOSGeom_getYMin(node->entry->mbr, &d);
-        // printf("%lf, %lf, %lf, %lf\n", a, b, c, d);
-        
-        freeVectorGeometry(node->entry);
-        temp = node;
-        node = node->next;
-        free(temp);
-    }
-
-    freeCellGeometryList(blub);
     GEOSSTRtree_destroy(rasterTree);
 
     CPLFree((void* ) rasterWkt);

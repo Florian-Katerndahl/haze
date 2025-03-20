@@ -60,11 +60,15 @@ char *extractCRSAsWKT(GDALDatasetH *dataset, const char *layerName);
 int buildGEOSGeometriesFromGDAL(const char *filePath, const char *layerName,
                                 vectorGeometryList **geometries, const char *inputReferenceSystem);
 
+void freeVectorGeometryList(vectorGeometryList *list);
+
 GEOSSTRtree *buildSTRTreefromRaster(const struct averagedData *data,
                                     const struct geoTransform *transformation, cellGeometryList **cells);
 
 void freeCellGeometryList(cellGeometryList *list);
 
 intersection_t *querySTRTree(vectorGeometryList *areasOfInterest, GEOSSTRtree *rasterTree);
+
+void freeIntersections(intersection_t *list);
 
 #endif // STRTREE_H

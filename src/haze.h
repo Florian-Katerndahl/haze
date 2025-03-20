@@ -38,4 +38,6 @@ mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *ras
 
 void writeWeightedMeans(mean_t *values, const char *filePath);
 
+void freeWeightedMeans(mean_t *list);
+
 #endif // HAZE_H

@@ -364,7 +364,9 @@ mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *ras
     return NULL;
   }
 
+#if GDAL_VERSION_NUM >= 3090000
   const bool isGeodesic = !isProjected(rasterWkt);
+#endif
 
   size_t wkbSize;
   GEOSWKBWriter *wkbWriter = GEOSWKBWriter_create();
@@ -421,10 +423,11 @@ mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *ras
 
     // iterate over all found intersections
     for (size_t i = 0; i < intersections->intersectionCount; i++) {
-      values[i] = *temp->entry->value; // shit, here I do copy data again...
+      values[i] = temp->entry->value; // shit, here I do copy data again...
 
       OGRGeometryH *cellAsOGR = OGR_G_CreateGeometry(wkbPolygon);
-      OGR_G_AssignSpatialReference(cellAsOGR, spatialRef);
+      OGR_G_AssignSpatialReference(cellAsOGR,
+                                   spatialRef); // todo: should spat ref be assigned AFTER import?
 
       const unsigned char *geometryAsWkb = GEOSWKBWriter_write(wkbWriter, temp->entry->geometry,
                                            &wkbSize);
@@ -440,8 +443,6 @@ mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *ras
         continue; // is continue really appropriate here?
       }
 
-      GEOSFree((void *) geometryAsWkb);
-
       OGRGeometryH *intersection = OGR_G_Intersection(intersections->reference, cellAsOGR);
       if (intersection == NULL) {
         fprintf(stderr, "Failed to create intersection-polygon: %s\n", CPLGetLastErrorMsg());
@@ -451,17 +452,18 @@ mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *ras
       OGR_G_AssignSpatialReference(intersection, spatialRef);
 
 #if GDAL_VERSION_NUM < 3090000
-      double intersectingArea = OGR_G_Area(intersections->reference);
-      fprintf(stderr,
-              "Calcluating cartesian area regardless of projection\n"); // todo this is very excessive
+      double intersectingArea = OGR_G_Area(intersection);
 #else
-      double intersectingArea = isGeodesic ? OGR_G_GeodesicArea(intersections->reference) : OGR_G_Area(
-                                  intersections->reference);
+      double intersectingArea = isGeodesic ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(intersection);
 #endif
 
       weights[i] = intersectingArea / referenceArea;
 
       temp = temp->next;
+
+      GEOSFree((void *) geometryAsWkb);
+      OGR_G_DestroyGeometry(intersection);
+      OGR_G_DestroyGeometry(cellAsOGR);
     }
 
     mean_t *meanEntry = calloc(1, sizeof(mean_t));
@@ -485,10 +487,11 @@ mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *ras
       root = meanEntry;
     }
 
+    intersections = intersections->next;
+
     free(values);
     free(weights);
-
-    intersections = intersections->next;
+    OGR_G_DestroyGeometry(centroid);
   }
 
   GEOSWKBWriter_destroy(wkbWriter);
@@ -518,4 +521,14 @@ void writeWeightedMeans(mean_t *values, const char *filePath)
 
   fclose(outFile);
   return;
+}
+
+void freeWeightedMeans(mean_t *list)
+{
+  mean_t *next;
+  while (list != NULL) {
+    next = list->next;
+    free(list);
+    list = next;
+  }
 }

@@ -243,6 +243,17 @@ int buildGEOSGeometriesFromGDAL(const char *filePath, const char *layerName,
   return retVal;
 }
 
+void freeVectorGeometryList(vectorGeometryList *list)
+{
+  vectorGeometryList *temp;
+  while (list != NULL) {
+    freeVectorGeometry(list->entry);
+    temp = list;
+    list = list->next;
+    free(temp);
+  }
+}
+
 GEOSSTRtree *buildSTRTreefromRaster(const struct averagedData *data,
                                     const struct geoTransform *transformation, cellGeometryList **cells)
 {
@@ -284,8 +295,7 @@ GEOSSTRtree *buildSTRTreefromRaster(const struct averagedData *data,
       }
 
       cell->geometry = geom;
-      cell->value = *data->data + x + y *
-                    data->columns; // todo make clear, that ownership is not passed and dataset handle is stillresponsible for freeing data
+      cell->value = *(*data->data + x + y * data->columns);
 
       cellGeometryList *node = calloc(1, sizeof(cellGeometryList));
       if (node == NULL) {
@@ -341,6 +351,8 @@ void queryCallback(void *item, void *userdata)
     return;
   }
 
+  // NOTE: this fucked me over - Only reference is taken, but to free memory,
+  // (i.e. geom) the linked list created while building tree should be freed!
   node->entry = geom;
   node->next = NULL;
 
@@ -366,6 +378,8 @@ intersection_t *querySTRTree(vectorGeometryList *areasOfInterest, GEOSSTRtree *r
       continue;
     }
 
+    // NOTE: no ownership of areasOfInterest->entry->OGRGeometry is taken,
+    // owner of `areaOfInterest` is responsible to free object!
     node->reference = areasOfInterest->entry->OGRGeometry;
     node->intersectionCount = 0;
     node->intersectingCells = NULL;
@@ -398,4 +412,26 @@ intersection_t *querySTRTree(vectorGeometryList *areasOfInterest, GEOSSTRtree *r
   fprintf(stderr, "checked all geometries\n");
 
   return queryResults;
+}
+
+void freeIntersections(intersection_t *list)
+{
+  intersection_t *nextIntersection;
+  cellGeometryList *nextGeom;
+
+  while (list != NULL) {
+    nextIntersection = list->next;
+
+    // NOTE: The elements within the nodes are owned by
+    // the list created when constructing the tree!
+    while (list->intersectingCells != NULL) {
+      nextGeom = list->intersectingCells->next;
+      free(list->intersectingCells);
+      list->intersectingCells = nextGeom;
+    }
+
+    free(list);
+
+    list = nextIntersection;
+  }
 }
