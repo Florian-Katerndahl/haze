@@ -1,5 +1,4 @@
 #include "types.h"
-#include <cstddef>
 #include <gdal/gdal.h>
 #include <geos_c.h>
 #include <stdlib.h>
