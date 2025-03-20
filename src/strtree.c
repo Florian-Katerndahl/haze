@@ -385,7 +385,6 @@ void queryCallback(void *item, void *userdata)
 
 intersection_t *querySTRTree(vectorGeometryList *areasOfInterest, GEOSSTRtree *rasterTree)
 {
-  // TODO: a linked list is probably not the smartest data structure to use here...
   intersection_t *queryResults = NULL;
 
   while (areasOfInterest != NULL) {
@@ -405,7 +404,7 @@ intersection_t *querySTRTree(vectorGeometryList *areasOfInterest, GEOSSTRtree *r
                       (void *) &node->intersectingCells);
 
     if (node->intersectingCells == NULL) {
-      fprintf(stderr, "Failed to get intersecting cells for item %lld\n", areasOfInterest->entry->id);
+      fprintf(stderr, "No intersections found for geometry with FID %lld.\n", areasOfInterest->entry->id);
       free(node);
       continue;
     } else {
