@@ -78,7 +78,6 @@ void freeAverageData(struct averagedData *data)
 
   assert(fileReadable(filePath));
 
-  GDALAllRegister();
   // TODO could read through entire directory when using sibling files?
   GDALDatasetH raster = GDALOpenEx(filePath, GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
   if (raster == NULL) {
@@ -97,8 +96,6 @@ void freeAverageData(struct averagedData *data)
   }
 
   assert(fileReadable(filePath));
-
-  GDALAllRegister(); // todo: this should be called by the application, not the library - right?
 
   GDALDatasetH vector = GDALOpenEx(filePath, GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
   if (vector == NULL) {

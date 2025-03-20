@@ -35,7 +35,6 @@ struct boundingBox *boxFromPath(const char *filePath, const char *layerName)
     return NULL;
   }
 
-  GDALAllRegister();
   GDALDatasetH aoi = GDALOpenEx(filePath, GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
   if (aoi == NULL) {
     fprintf(stderr, "Failed to open dataset %s\n", filePath);
