@@ -28,8 +28,7 @@ int main(void) {
     GDALDatasetH ds = GDALOpenEx("../data/example.grib", GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
     const char *rasterWkt = extractCRSAsWKT(ds, NULL);
     
-    vectorGeometryList *areasOfInterest = NULL;
-    buildGEOSGeometriesFromFile("../data/grid.kml", NULL, &areasOfInterest, rasterWkt);
+    vectorGeometryList *areasOfInterest = buildGEOSGeometriesFromFile("../data/grid.kml", NULL, rasterWkt);
 
     struct rawData *data = NULL;
     readRasterDataset(ds, &data);

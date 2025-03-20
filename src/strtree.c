@@ -95,35 +95,36 @@ char *extractCRSAsWKT(GDALDatasetH dataset, const char *layerName)
   }
 }
 
-int buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
-                                vectorGeometryList **geometries, const char *inputReferenceSystem)
+[[nodiscard]] vectorGeometryList *buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
+    const char *inputReferenceSystem)
 {
   // todo: return `vectorGeometryList *` instead? could make it a bit nicer!
+  vectorGeometryList *geometries = NULL;
 
   GDALDatasetH vectorDataset = openVector(filePath);
   if (vectorDataset == NULL) {
-    return 1;
+    return NULL;
   }
 
   OGRLayerH  layer = openVectorLayer(vectorDataset, layerName);
   if (layer == NULL) {
     fprintf(stderr, "Failed to get vector layer: %s", CPLGetLastErrorMsg());
     closeGDALDataset(vectorDataset);
-    return 1;
+    return NULL;
   }
 
   OGRSpatialReferenceH  layerCRS = OGR_L_GetSpatialRef(layer); // reference is owned by dataset
   if (layerCRS == NULL) {
     fprintf(stderr, "Failed to get layer CRS: %s", CPLGetLastErrorMsg());
     closeGDALDataset(vectorDataset);
-    return 1;
+    return NULL;
   }
 
   char *layerWKT;
   if (OSRExportToWktEx(layerCRS, &layerWKT, NULL) != OGRERR_NONE) {
     fprintf(stderr, "Failed to convert CRS to WKT: %s", CPLGetLastErrorMsg());
     closeGDALDataset(vectorDataset);
-    return 1;
+    return NULL;
   }
 
   const bool needsReprojection = !EQUAL(inputReferenceSystem, layerWKT);
@@ -136,7 +137,7 @@ int buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
       fprintf(stderr, "Failed to create spatial reference system for input: %s", CPLGetLastErrorMsg());
       CPLFree((void *) layerWKT);
       closeGDALDataset(vectorDataset);
-      return 1;
+      return NULL;
     }
 
     OGRSpatialReferenceH  sourceReferenceSystem = OSRNewSpatialReference(layerWKT);
@@ -145,7 +146,7 @@ int buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
       OSRDestroySpatialReference(targetReferenceSystem);
       CPLFree((void *) layerWKT);
       closeGDALDataset(vectorDataset);
-      return 1;
+      return NULL;
     }
 
     transformation = OCTNewCoordinateTransformationEx(sourceReferenceSystem, targetReferenceSystem,
@@ -156,7 +157,7 @@ int buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
       OSRDestroySpatialReference(targetReferenceSystem);
       CPLFree((void *) layerWKT);
       closeGDALDataset(vectorDataset);
-      return 1;
+      return NULL;
     }
 
     OSRDestroySpatialReference(targetReferenceSystem);
@@ -170,7 +171,7 @@ int buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
       OCTDestroyCoordinateTransformation(transformation);
     CPLFree((void *) layerWKT);
     closeGDALDataset(vectorDataset);
-    return 1;
+    return NULL;
   }
 
   OGR_FOR_EACH_FEATURE_BEGIN(feature, layer) {
@@ -195,7 +196,7 @@ int buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
     GEOSGeometry *geosMBR = GEOSGeom_createRectangle(mBr->MinX, mBr->MinY, mBr->MaxX, mBr->MaxY);
     if (geosMBR == NULL) {
       fprintf(stderr, "Failed to create GEOS rectangle\n");
-      freeVectorGeometryList(*geometries);
+      freeVectorGeometryList(geometries);
       CPLFree(mBr);
       OGR_G_DestroyGeometry(geom);
       OGR_F_Destroy(feature); // current feature as loop is not finished
@@ -204,7 +205,7 @@ int buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
         OCTDestroyCoordinateTransformation(transformation);
       CPLFree((void *) layerWKT);
       closeGDALDataset(vectorDataset);
-      return 1;
+      return NULL;
     }
 
     unsigned char *OGRWkb = CPLCalloc(OGR_G_WkbSize(geom), sizeof(unsigned char));
@@ -214,7 +215,7 @@ int buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
     struct vectorGeometry *vecGeom = calloc(1, sizeof(struct vectorGeometry));
     if (vecGeom == NULL) {
       perror("calloc");
-      freeVectorGeometryList(*geometries);
+      freeVectorGeometryList(geometries);
       CPLFree(OGRWkb);
       GEOSGeom_destroy(geosMBR);
       CPLFree(mBr);
@@ -225,7 +226,7 @@ int buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
         OCTDestroyCoordinateTransformation(transformation);
       CPLFree((void *) layerWKT);
       closeGDALDataset(vectorDataset);
-      return 1;
+      return NULL;
     }
 
     vecGeom->geometry = GEOSWKBReader_read(reader, OGRWkb, OGR_G_WkbSize(geom));
@@ -235,7 +236,7 @@ int buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
     if (vecGeom == NULL) {
       fprintf(stderr, "Failed to read OGR geometry as WKB into GEOS\n");
       free(vecGeom);
-      freeVectorGeometryList(*geometries);
+      freeVectorGeometryList(geometries);
       CPLFree(OGRWkb);
       GEOSGeom_destroy(geosMBR);
       CPLFree(mBr);
@@ -246,7 +247,7 @@ int buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
         OCTDestroyCoordinateTransformation(transformation);
       CPLFree((void *) layerWKT);
       closeGDALDataset(vectorDataset);
-      return 1;
+      return NULL;
     }
 
     // now, insert into linked list!
@@ -254,7 +255,7 @@ int buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
     if (node == NULL) {
       perror("calloc");
       free(vecGeom);
-      freeVectorGeometryList(*geometries);
+      freeVectorGeometryList(geometries);
       CPLFree(OGRWkb);
       GEOSGeom_destroy(geosMBR);
       CPLFree(mBr);
@@ -265,18 +266,18 @@ int buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
         OCTDestroyCoordinateTransformation(transformation);
       CPLFree((void *) layerWKT);
       closeGDALDataset(vectorDataset);
-      return 1;
+      return NULL;
     }
 
     node->entry = vecGeom;
     node->next = NULL;
-    if (*geometries == NULL) {
+    if (geometries == NULL) {
       // first node
-      *geometries = node;
+      geometries = node;
     } else {
       // append to front
-      node->next = *geometries;
-      *geometries = node;
+      node->next = geometries;
+      geometries = node;
     }
 
     CPLFree((void *) OGRWkb);
@@ -290,7 +291,7 @@ int buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
   CPLFree((void *) layerWKT);
   closeGDALDataset(vectorDataset);
 
-  return 0;
+  return geometries;
 }
 
 void freeVectorGeometryList(vectorGeometryList *list)

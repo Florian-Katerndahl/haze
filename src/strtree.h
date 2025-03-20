@@ -57,8 +57,8 @@ void freeVectorGeometry(struct vectorGeometry *node);
  */
 char *extractCRSAsWKT(GDALDatasetH dataset, const char *layerName);
 
-int buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
-                                vectorGeometryList **geometries, const char *inputReferenceSystem);
+[[nodiscard]] vectorGeometryList *buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
+    const char *inputReferenceSystem);
 
 void freeVectorGeometryList(vectorGeometryList *list);
 
