@@ -12,8 +12,9 @@ pad-oper
 pad-comma
 attach-closing-while
 indent-switches
-suffix=none
 ignore-exclude-errors
+squeeze-lines=1
+suffix=none
 exclude=build
 exclude=data
 exclude=docs
