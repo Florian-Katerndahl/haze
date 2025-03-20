@@ -14,39 +14,6 @@
 #define TREE_NODE_CAP 100
 
 /**
- * @brief
- *
- * @warning I don't fully understand this. Taken from https://stackoverflow.com/a/32334103.
- *          Has something to do with relative errors.
- * @param a
- * @param b
- * @return true
- * @return false
- */
-bool nearEqual(double a, double b);
-
-bool gte(double a, double b);
-
-bool lte(double a, double b);
-
-/**
- * @brief Determine if two rectangles/bounding boxes overlap in planar geometry
- *
- * @note Completely overlapping and 1pixel overlaps bounding boxes are considered to intersect each other.
- * @note The ordering of a and b does not matter in practice.
- *
- * @link https://stackoverflow.com/a/306332 @endlink
- *
- * @param a Foreground Bounding box
- * @param b Background bounding box
- * @return true
- * @return false
- */
-bool intersect(const struct boundingBox *a, const struct boundingBox *b);
-
-void freeVectorGeometry(struct vectorGeometry *node);
-
-/**
  * @brief Return the dataset/layer CRS as WKT
  * @note The function takes ownership of the WKT string, i.e. the returned string is
  *       allocated with CPLStrdup or CPLMalloc and should be freed with CPLFree.
@@ -57,18 +24,14 @@ void freeVectorGeometry(struct vectorGeometry *node);
  */
 [[nodiscard]] char *extractCRSAsWKT(GDALDatasetH dataset, const char *layerName);
 
-[[nodiscard]] vectorGeometryList *buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
+[[nodiscard]] vectorGeometryList *buildGEOSGeometriesFromFile(const char *filePath,
+    const char *layerName,
     const char *inputReferenceSystem);
 
-void freeVectorGeometryList(vectorGeometryList *list);
-
 [[nodiscard]] GEOSSTRtree *buildSTRTreefromRaster(const struct averagedData *data,
-                                    const struct geoTransform *transformation, cellGeometryList **cells);
+    const struct geoTransform *transformation, cellGeometryList **cells);
 
-void freeCellGeometryList(cellGeometryList *list);
-
-[[nodiscard]] intersection_t *querySTRTree(vectorGeometryList *areasOfInterest, GEOSSTRtree *rasterTree);
-
-void freeIntersections(intersection_t *list);
+[[nodiscard]] intersection_t *querySTRTree(vectorGeometryList *areasOfInterest,
+    GEOSSTRtree *rasterTree);
 
 #endif // STRTREE_H

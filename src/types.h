@@ -74,4 +74,14 @@ typedef struct intersection
   struct intersection *next;
 } intersection_t;
 
+void freeVectorGeometry(struct vectorGeometry *node);
+
+void freeVectorGeometryList(vectorGeometryList *list);
+
+void freeCellGeometry(struct cellGeometry *node);
+
+void freeCellGeometryList(cellGeometryList *list);
+
+void freeIntersections(intersection_t *list);
+
 #endif //TYPES_H

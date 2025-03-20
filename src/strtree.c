@@ -52,15 +52,6 @@ bool intersect(const struct boundingBox *a, const struct boundingBox *b)
          lte(a->top, b->bottom) && gte(a->bottom, b->top);
 }
 
-void freeVectorGeometry(struct vectorGeometry *node)
-{
-  OGR_G_DestroyGeometry(node->OGRGeometry);
-  GEOSGeom_destroy(node->geometry);
-  GEOSGeom_destroy(node->mbr);
-  free(node);
-  node = NULL;
-}
-
 [[nodiscard]] char *extractCRSAsWKT(GDALDatasetH dataset, const char *layerName)
 {
   GDALDriverH driver = GDALGetDatasetDriver(dataset);
@@ -95,7 +86,8 @@ void freeVectorGeometry(struct vectorGeometry *node)
   }
 }
 
-[[nodiscard]] vectorGeometryList *buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
+[[nodiscard]] vectorGeometryList *buildGEOSGeometriesFromFile(const char *filePath,
+    const char *layerName,
     const char *inputReferenceSystem)
 {
   // todo: return `vectorGeometryList *` instead? could make it a bit nicer!
@@ -294,19 +286,8 @@ void freeVectorGeometry(struct vectorGeometry *node)
   return geometries;
 }
 
-void freeVectorGeometryList(vectorGeometryList *list)
-{
-  vectorGeometryList *temp;
-  while (list != NULL) {
-    freeVectorGeometry(list->entry);
-    temp = list;
-    list = list->next;
-    free(temp);
-  }
-}
-
 [[nodiscard]] GEOSSTRtree *buildSTRTreefromRaster(const struct averagedData *data,
-                                    const struct geoTransform *transformation, cellGeometryList **cells)
+    const struct geoTransform *transformation, cellGeometryList **cells)
 {
   unsigned int err = 0;
 
@@ -356,8 +337,7 @@ void freeVectorGeometryList(vectorGeometryList *list)
       cellGeometryList *node = calloc(1, sizeof(cellGeometryList));
       if (node == NULL) {
         perror("calloc");
-        GEOSGeom_destroy(geom); // free parts of unfinished node
-        free(cell); // free parts of unfinished node
+        freeCellGeometry(cell);
         err = 1;
         break;
       }
@@ -395,18 +375,6 @@ void freeVectorGeometryList(vectorGeometryList *list)
   return tree;
 }
 
-void freeCellGeometryList(cellGeometryList *list)
-{
-  cellGeometryList *node;
-  while (list != NULL) {
-    GEOSGeom_destroy(list->entry->geometry);
-    free(list->entry);
-    node = list;
-    list = list->next;
-    free(node);
-  }
-}
-
 void queryCallback(void *item, void *userdata)
 {
   // fprintf(stderr, "Found intersecting bbox..");
@@ -434,7 +402,8 @@ void queryCallback(void *item, void *userdata)
   return;
 }
 
-[[nodiscard]] intersection_t *querySTRTree(vectorGeometryList *areasOfInterest, GEOSSTRtree *rasterTree)
+[[nodiscard]] intersection_t *querySTRTree(vectorGeometryList *areasOfInterest,
+    GEOSSTRtree *rasterTree)
 {
   intersection_t *queryResults = NULL;
 
@@ -477,26 +446,4 @@ void queryCallback(void *item, void *userdata)
   }
 
   return queryResults;
-}
-
-void freeIntersections(intersection_t *list)
-{
-  intersection_t *nextIntersection;
-  cellGeometryList *nextGeom;
-
-  while (list != NULL) {
-    nextIntersection = list->next;
-
-    // NOTE: The elements within the nodes are owned by
-    // the list created when constructing the tree!
-    while (list->intersectingCells != NULL) {
-      nextGeom = list->intersectingCells->next;
-      free(list->intersectingCells);
-      list->intersectingCells = nextGeom;
-    }
-
-    free(list);
-
-    list = nextIntersection;
-  }
 }
