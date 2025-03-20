@@ -16,7 +16,11 @@ void freeAverageData(struct averagedData *data);
 
 [[nodiscard]] GDALDatasetH *openRaster(const char *filePath);
 
-void closeRaster(GDALDatasetH *raster);
+[[nodiscard]] GDALDatasetH openVector(const char *filePath);
+
+void closeGDALDataset(GDALDatasetH dataset);
+
+OGRLayerH *openVectorLayer(GDALDatasetH *vector, const char *name);
 
 void readRasterDataset(GDALDatasetH *raster, struct rawData **dataBuffer);
 

@@ -89,11 +89,39 @@ void freeAverageData(struct averagedData *data)
   return raster;
 }
 
-void closeRaster(GDALDatasetH *raster)
+[[nodiscard]] GDALDatasetH openVector(const char *filePath)
 {
-  if (GDALClose(raster) != CE_None) {
-    fprintf(stderr, "%s\n", CPLGetLastErrorMsg());
-    exit(1); // TODO do i really want to exit here?
+  if (filePath == NULL) {
+    fprintf(stderr, "ERROR: filePath cannot be NULL\n");
+    return NULL;
+  }
+
+  assert(fileReadable(filePath));
+
+  GDALAllRegister(); // todo: this should be called by the application, not the library - right?
+
+  GDALDatasetH vector = GDALOpenEx(filePath, GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
+  if (vector == NULL) {
+    fprintf(stderr, "Failed to read vector dataset: %s", CPLGetLastErrorMsg());
+    return NULL;
+  }
+
+  return vector;
+}
+
+void closeGDALDataset(GDALDatasetH dataset)
+{
+  if (GDALClose(dataset) != CE_None) {
+    exit(1); // I mean, if this fails why continue at all?
+  }
+}
+
+OGRLayerH *openVectorLayer(GDALDatasetH *vector, const char *name)
+{
+  if (name) {
+    return OGR_DS_GetLayerByName(vector, name);
+  } else {
+    return OGR_DS_GetLayer(vector, 0);
   }
 }
 

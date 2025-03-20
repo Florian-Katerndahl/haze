@@ -29,13 +29,13 @@ int main(void) {
     const char *rasterWkt = extractCRSAsWKT(ds, NULL);
     
     vectorGeometryList *areasOfInterest = NULL;
-    buildGEOSGeometriesFromGDAL("../data/grid.kml", NULL, &areasOfInterest, rasterWkt);
+    buildGEOSGeometriesFromFile("../data/grid.kml", NULL, &areasOfInterest, rasterWkt);
 
     struct rawData *data = NULL;
     readRasterDataset(ds, &data);
     struct geoTransform transform = {0};
     getRasterMetadata(ds, &transform);
-    closeRaster(ds);
+    closeGDALDataset(ds);
 
     struct averagedData *average = NULL;
     averageRawDataWithSizeOffset(data, &average, 0, 0);
