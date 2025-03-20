@@ -61,7 +61,7 @@ void freeVectorGeometry(struct vectorGeometry *node)
   node = NULL;
 }
 
-char *extractCRSAsWKT(GDALDatasetH *dataset, const char *layerName)
+char *extractCRSAsWKT(GDALDatasetH dataset, const char *layerName)
 {
   GDALDriverH *driver = GDALGetDatasetDriver(dataset);
   char **driverMetadata = GDALGetMetadata(driver, NULL);
@@ -75,7 +75,7 @@ char *extractCRSAsWKT(GDALDatasetH *dataset, const char *layerName)
     }
     return CPLStrdup(tempRef);
   } else {
-    OGRLayerH *layer;
+    OGRLayerH layer;
     if (layerName == NULL) {
       layer = OGR_DS_GetLayer(dataset, 0);
     } else {
@@ -85,7 +85,7 @@ char *extractCRSAsWKT(GDALDatasetH *dataset, const char *layerName)
       fprintf(stderr, "Failed to get dataset layer: %s", CPLGetLastErrorMsg());
       return NULL;
     }
-    OGRSpatialReferenceH *ref = OGR_L_GetSpatialRef(layer);
+    OGRSpatialReferenceH ref = OGR_L_GetSpatialRef(layer);
     if (ref == NULL) {
       fprintf(stderr, "Failed to get layer CRS: %s", CPLGetLastErrorMsg());
       return NULL;
@@ -105,14 +105,14 @@ int buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
     return 1;
   }
 
-  OGRLayerH layer = openVectorLayer(vectorDataset, layerName);
+  OGRLayerH  layer = openVectorLayer(vectorDataset, layerName);
   if (layer == NULL) {
     fprintf(stderr, "Failed to get vector layer: %s", CPLGetLastErrorMsg());
     closeGDALDataset(vectorDataset);
     return 1;
   }
 
-  OGRSpatialReferenceH layerCRS = OGR_L_GetSpatialRef(layer); // reference is owned by dataset
+  OGRSpatialReferenceH  layerCRS = OGR_L_GetSpatialRef(layer); // reference is owned by dataset
   if (layerCRS == NULL) {
     fprintf(stderr, "Failed to get layer CRS: %s", CPLGetLastErrorMsg());
     closeGDALDataset(vectorDataset);
@@ -131,7 +131,7 @@ int buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
   OGRCoordinateTransformationH transformation = NULL;
 
   if (needsReprojection) {
-    OGRSpatialReferenceH targetReferenceSystem = OSRNewSpatialReference(inputReferenceSystem);
+    OGRSpatialReferenceH  targetReferenceSystem = OSRNewSpatialReference(inputReferenceSystem);
     if (targetReferenceSystem == NULL) {
       fprintf(stderr, "Failed to create spatial reference system for input: %s", CPLGetLastErrorMsg());
       CPLFree((void *) layerWKT);
@@ -139,7 +139,7 @@ int buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
       return 1;
     }
 
-    OGRSpatialReferenceH sourceReferenceSystem = OSRNewSpatialReference(layerWKT);
+    OGRSpatialReferenceH  sourceReferenceSystem = OSRNewSpatialReference(layerWKT);
     if (sourceReferenceSystem == NULL) {
       fprintf(stderr, "Failed to create spatial reference system for target: %s", CPLGetLastErrorMsg());
       OSRDestroySpatialReference(targetReferenceSystem);
@@ -174,7 +174,7 @@ int buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
   }
 
   OGR_FOR_EACH_FEATURE_BEGIN(feature, layer) {
-    OGRGeometryH geom = OGR_G_Clone(OGR_F_GetGeometryRef(feature)); // take ownership of geometry
+    OGRGeometryH  geom = OGR_G_Clone(OGR_F_GetGeometryRef(feature)); // take ownership of geometry
     if (wkbFlatten(OGR_G_GetGeometryType(geom)) != wkbPolygon) {
       printf("Feature with fid %lld is not a polygon, skipping\n", OGR_F_GetFID(feature));
       OGR_G_DestroyGeometry(geom);

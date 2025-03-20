@@ -44,7 +44,7 @@ struct vectorGeometry
 {
   GEOSGeometry *mbr;
   GEOSGeometry *geometry;
-  OGRGeometryH *OGRGeometry;
+  OGRGeometryH OGRGeometry;
   GIntBig id;
 };
 
@@ -68,7 +68,7 @@ typedef struct cellGeometryList
 
 typedef struct intersection
 {
-  OGRGeometryH *reference;
+  OGRGeometryH reference;
   cellGeometryList *intersectingCells;
   size_t intersectionCount;
   struct intersection *next;

@@ -55,7 +55,7 @@ void freeVectorGeometry(struct vectorGeometry *node);
  *                  the first layer is selected.
  * @return char* Pointer to WKT string or NULL on error
  */
-char *extractCRSAsWKT(GDALDatasetH *dataset, const char *layerName);
+char *extractCRSAsWKT(GDALDatasetH dataset, const char *layerName);
 
 int buildGEOSGeometriesFromFile(const char *filePath, const char *layerName,
                                 vectorGeometryList **geometries, const char *inputReferenceSystem);

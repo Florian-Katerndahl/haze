@@ -69,7 +69,7 @@ void freeAverageData(struct averagedData *data)
   free(data);
 }
 
-[[nodiscard]] GDALDatasetH *openRaster(const char *filePath)
+[[nodiscard]] GDALDatasetH openRaster(const char *filePath)
 {
   if (filePath == NULL) {
     fprintf(stderr, "ERROR: filePath cannot be NULL\n");
@@ -80,7 +80,7 @@ void freeAverageData(struct averagedData *data)
 
   GDALAllRegister();
   // TODO could read through entire directory when using sibling files?
-  GDALDatasetH *raster = GDALOpenEx(filePath, GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
+  GDALDatasetH raster = GDALOpenEx(filePath, GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
   if (raster == NULL) {
     fprintf(stderr, "ERROR: Failed to open raster dataset %s\n", filePath);
     return NULL;
@@ -116,7 +116,7 @@ void closeGDALDataset(GDALDatasetH dataset)
   }
 }
 
-OGRLayerH *openVectorLayer(GDALDatasetH *vector, const char *name)
+OGRLayerH  openVectorLayer(GDALDatasetH vector, const char *name)
 {
   if (name) {
     return OGR_DS_GetLayerByName(vector, name);
@@ -125,7 +125,7 @@ OGRLayerH *openVectorLayer(GDALDatasetH *vector, const char *name)
   }
 }
 
-GDALRasterBandH *openRasterBand(GDALDatasetH *raster, int index)
+GDALRasterBandH openRasterBand(GDALDatasetH raster, int index)
 {
   int layerCount = GDALGetRasterCount(raster);
   if (index < 1 || index > layerCount) {
@@ -133,7 +133,7 @@ GDALRasterBandH *openRasterBand(GDALDatasetH *raster, int index)
     return NULL;
   }
 
-  GDALRasterBandH *band = GDALGetRasterBand(raster, index);
+  GDALRasterBandH band = GDALGetRasterBand(raster, index);
   if (band == NULL) {
     fprintf(stderr, "ERROR: Failed to fetch raster band %d\n", index);
     return NULL;
@@ -141,7 +141,7 @@ GDALRasterBandH *openRasterBand(GDALDatasetH *raster, int index)
   return band;
 }
 
-void readRasterDataset(GDALDatasetH *raster, struct rawData **dataBuffer)
+void readRasterDataset(GDALDatasetH raster, struct rawData **dataBuffer)
 {
   *dataBuffer = allocateRawData();
   if (dataBuffer == NULL) {
@@ -149,7 +149,7 @@ void readRasterDataset(GDALDatasetH *raster, struct rawData **dataBuffer)
   }
 
   int dataSetBandCount = GDALGetRasterCount(raster);
-  GDALRasterBandH *layer = openRasterBand(raster, 1);
+  GDALRasterBandH layer = openRasterBand(raster, 1);
   if (layer == NULL) {
     *dataBuffer = NULL;
     return;
@@ -352,7 +352,7 @@ void reorderToPixelInterleave(struct rawData *data)
   return;
 }
 
-int getRasterMetadata(GDALDatasetH *raster, struct geoTransform *geoTransformation)
+int getRasterMetadata(GDALDatasetH raster, struct geoTransform *geoTransformation)
 {
   double tmp[6];
   if (GDALGetGeoTransform(raster, tmp) == CE_Failure)
@@ -369,7 +369,7 @@ int getRasterMetadata(GDALDatasetH *raster, struct geoTransform *geoTransformati
 
 bool isProjected(const char *Wkt)
 {
-  OGRSpatialReferenceH *spatialRef = OSRNewSpatialReference(Wkt);
+  OGRSpatialReferenceH  spatialRef = OSRNewSpatialReference(Wkt);
   if (spatialRef == NULL) {
     fprintf(stderr, "Could not determine if CRS is projected or not");
     exit(-1); // todo: doesn't make sense to continue if this fails
@@ -386,7 +386,7 @@ mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *ras
 {
   mean_t *root = NULL;
 
-  OGRSpatialReferenceH *spatialRef = OSRNewSpatialReference(rasterWkt);
+  OGRSpatialReferenceH  spatialRef = OSRNewSpatialReference(rasterWkt);
   if (spatialRef == NULL) {
     fprintf(stderr, "Could not determine if CRS is projected or not");
     return NULL;
@@ -409,7 +409,7 @@ mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *ras
 #endif
 
   while (intersections != NULL) {
-    OGRGeometryH *centroid = OGR_G_CreateGeometry(wkbPoint);
+    OGRGeometryH centroid = OGR_G_CreateGeometry(wkbPoint);
     if (centroid == NULL) {
       fprintf(stderr, "Failed to create empty centroid\n");
       continue; // is continue really appropriate here?
@@ -453,7 +453,7 @@ mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *ras
     for (size_t i = 0; i < intersections->intersectionCount; i++) {
       values[i] = temp->entry->value; // shit, here I do copy data again...
 
-      OGRGeometryH *cellAsOGR = OGR_G_CreateGeometry(wkbPolygon);
+      OGRGeometryH cellAsOGR = OGR_G_CreateGeometry(wkbPolygon);
       OGR_G_AssignSpatialReference(cellAsOGR,
                                    spatialRef); // todo: should spat ref be assigned AFTER import?
 
@@ -471,7 +471,7 @@ mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *ras
         continue; // is continue really appropriate here?
       }
 
-      OGRGeometryH *intersection = OGR_G_Intersection(intersections->reference, cellAsOGR);
+      OGRGeometryH intersection = OGR_G_Intersection(intersections->reference, cellAsOGR);
       if (intersection == NULL) {
         fprintf(stderr, "Failed to create intersection-polygon: %s\n", CPLGetLastErrorMsg());
         // todo cleanup

@@ -36,7 +36,7 @@ struct boundingBox *boxFromPath(const char *filePath, const char *layerName)
   }
 
   GDALAllRegister();
-  GDALDatasetH *aoi = GDALOpenEx(filePath, GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
+  GDALDatasetH aoi = GDALOpenEx(filePath, GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
   if (aoi == NULL) {
     fprintf(stderr, "Failed to open dataset %s\n", filePath);
     exit(1);
@@ -52,7 +52,7 @@ struct boundingBox *boxFromPath(const char *filePath, const char *layerName)
     exit(1);
   }
 
-  OGRLayerH *layer;
+  OGRLayerH layer;
   if (layerName == NULL) {
     layer = GDALDatasetGetLayer(aoi, 0);
   } else {
@@ -68,7 +68,7 @@ struct boundingBox *boxFromPath(const char *filePath, const char *layerName)
     exit(1);
   }
 
-  OGRSpatialReferenceH *layerRef = OGR_L_GetSpatialRef(layer);
+  OGRSpatialReferenceH layerRef = OGR_L_GetSpatialRef(layer);
   if (layerRef == NULL) {
     fprintf(stderr, "Spatial reference not available\n");
     CPLErr closeErr = GDALClose(aoi);
@@ -107,7 +107,7 @@ struct boundingBox *boxFromPath(const char *filePath, const char *layerName)
   } else {
     // FIXME: handle crossing of meridians
     const char *wgs84WKT = SRS_WKT_WGS84_LAT_LONG;
-    OGRSpatialReferenceH *wgs84Ref = OSRNewSpatialReference(wgs84WKT);
+    OGRSpatialReferenceH wgs84Ref = OSRNewSpatialReference(wgs84WKT);
     if (wgs84Ref == NULL) {
       fprintf(stderr, "Failed to create spatial reference object for WGS84 WKT: %s",
               CPLGetLastErrorMsg());

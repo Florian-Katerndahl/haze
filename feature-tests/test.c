@@ -25,7 +25,7 @@ int main(void) {
     CPLPushErrorHandler(CPLQuietErrorHandler);
     GDALAllRegister();
 
-    GDALDatasetH *ds = GDALOpenEx("../data/example.grib", GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
+    GDALDatasetH ds = GDALOpenEx("../data/example.grib", GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
     const char *rasterWkt = extractCRSAsWKT(ds, NULL);
     
     vectorGeometryList *areasOfInterest = NULL;

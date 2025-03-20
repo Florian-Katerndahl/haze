@@ -14,15 +14,17 @@ struct averagedData *allocateAverageData(void);
 
 void freeAverageData(struct averagedData *data);
 
-[[nodiscard]] GDALDatasetH *openRaster(const char *filePath);
+[[nodiscard]] GDALDatasetH openRaster(const char *filePath);
 
 [[nodiscard]] GDALDatasetH openVector(const char *filePath);
 
 void closeGDALDataset(GDALDatasetH dataset);
 
-OGRLayerH *openVectorLayer(GDALDatasetH *vector, const char *name);
+OGRLayerH  openVectorLayer(GDALDatasetH vector, const char *name);
 
-void readRasterDataset(GDALDatasetH *raster, struct rawData **dataBuffer);
+GDALRasterBandH openRasterBand(GDALDatasetH raster, int index);
+
+void readRasterDataset(GDALDatasetH raster, struct rawData **dataBuffer);
 
 int averageRawData(const struct rawData *data, struct averagedData **average);
 
@@ -34,7 +36,7 @@ int averagePILRawDataWithSizeOffset(const struct rawData *data, struct averagedD
 
 void reorderToPixelInterleave(struct rawData *data);
 
-int getRasterMetadata(GDALDatasetH *raster, struct geoTransform *geoTransformation);
+int getRasterMetadata(GDALDatasetH raster, struct geoTransform *geoTransformation);
 
 bool isProjected(const char *Wkt);
 
