@@ -6,11 +6,11 @@
 #include <stdio.h>
 #include <gdal/gdal.h>
 
-struct rawData *allocateRawData(void);
+[[nodiscard]] struct rawData *allocateRawData(void);
 
 void freeRawData(struct rawData *data);
 
-struct averagedData *allocateAverageData(void);
+[[nodiscard]] struct averagedData *allocateAverageData(void);
 
 void freeAverageData(struct averagedData *data);
 
@@ -40,7 +40,7 @@ int getRasterMetadata(GDALDatasetH raster, struct geoTransform *geoTransformatio
 
 bool isProjected(const char *Wkt);
 
-mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *rasterWkt);
+[[nodiscard]] mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *rasterWkt);
 
 void writeWeightedMeans(mean_t *values, const char *filePath);
 

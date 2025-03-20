@@ -20,7 +20,7 @@
 #include <gdal/ogr_api.h>
 #include <unistd.h>
 
-struct rawData *allocateRawData(void)
+[[nodiscard]] struct rawData *allocateRawData(void)
 {
   struct rawData *dataBuffer = calloc(1, sizeof(struct rawData));
   if (dataBuffer == NULL) {
@@ -44,7 +44,7 @@ void freeRawData(struct rawData *data)
   free(data);
 }
 
-struct averagedData *allocateAverageData(void)
+[[nodiscard]] struct averagedData *allocateAverageData(void)
 {
   struct averagedData *averageBuffer = calloc(1, sizeof(struct averagedData));
   if (averageBuffer == NULL) {
@@ -379,7 +379,7 @@ bool isProjected(const char *Wkt)
   return isProjected;
 }
 
-mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *rasterWkt)
+[[nodiscard]] mean_t *calculateAreaWeightedMean(intersection_t *intersections, const char *rasterWkt)
 {
   mean_t *root = NULL;
 
