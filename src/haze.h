@@ -40,4 +40,7 @@ void writeWeightedMeans(mean_t *values, const char *filePath);
 
 void freeWeightedMeans(mean_t *list);
 
+double coordinateFromCell(double origin, double axisOfInterest, double pixelExtent,
+                          double complementaryAxis, double rotation);
+
 #endif // HAZE_H

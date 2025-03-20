@@ -257,6 +257,8 @@ void freeVectorGeometryList(vectorGeometryList *list)
 GEOSSTRtree *buildSTRTreefromRaster(const struct averagedData *data,
                                     const struct geoTransform *transformation, cellGeometryList **cells)
 {
+  unsigned int err = 0;
+
   GEOSSTRtree *tree = GEOSSTRtree_create(TREE_NODE_CAP);
   if (tree == NULL) {
     fprintf(stderr, "Failed to allocate tree\n");
@@ -265,33 +267,36 @@ GEOSSTRtree *buildSTRTreefromRaster(const struct averagedData *data,
 
   for (size_t x = 0; x < data->columns; x++) {
     for (size_t y = 0; y < data->rows; y++) {
-      double x1 = transformation->xOrigin + (double) x * transformation->pixelWidth +
-                  (double) y * transformation->rowRotation;
-      double x2 = transformation->xOrigin + ((double) x + 1.0) * transformation->pixelWidth +
-                  (double) y * transformation->rowRotation;
-      double y1 = transformation->yOrigin + (double) x * transformation->colRotation +
-                  (double) y * transformation->pixelHeight;
-      double y2 = transformation->yOrigin + (double) x * transformation->colRotation + ((
-                    double) y + 1.0) * transformation->pixelHeight;
+      double x1 = coordinateFromCell(transformation->xOrigin, (double) x, transformation->pixelWidth,
+                                     (double) y, transformation->rowRotation);
+      double x2 = coordinateFromCell(transformation->xOrigin, ((double) x) + 1.0,
+                                     transformation->pixelWidth,
+                                     (double) y, transformation->rowRotation);
+      double y1 = coordinateFromCell(transformation->yOrigin, (double) y, transformation->pixelHeight,
+                                     (double) x, transformation->colRotation);
+      double y2 = coordinateFromCell(transformation->yOrigin, ((double) y) + 1.0,
+                                     transformation->pixelHeight,
+                                     (double) x, transformation->colRotation);
 
       // the ternary madness is needed because images may not be north-up
       GEOSGeometry *geom = GEOSGeom_createRectangle(
-                             x1 > x2 ? x2 : x1,
-                             y1 > y2 ? y2 : y1,
-                             x1 > x2 ? x1 : x2,
-                             y1 > y2 ? y1 : y2
+                             MIN(x1, x2),
+                             MIN(y1, y2),
+                             MAX(x1, x2),
+                             MAX(y1, y2)
                            );
       if (geom == NULL) {
         fprintf(stderr, "Failed to create cell geometry\n");
-        // todo cleanup
-        return NULL;
+        err = 1;
+        break;
       }
 
       struct cellGeometry *cell = calloc(1, sizeof(struct cellGeometry));
       if (cell == NULL) {
         perror("calloc");
-        // todo cleanup
-        return NULL;
+        GEOSGeom_destroy(geom); // free parts of unfinished node
+        err = 1;
+        break;
       }
 
       cell->geometry = geom;
@@ -300,8 +305,10 @@ GEOSSTRtree *buildSTRTreefromRaster(const struct averagedData *data,
       cellGeometryList *node = calloc(1, sizeof(cellGeometryList));
       if (node == NULL) {
         perror("calloc");
-        // todo cleanup
-        return NULL;
+        GEOSGeom_destroy(geom); // free parts of unfinished node
+        free(cell); // free parts of unfinished node
+        err = 1;
+        break;
       }
 
       node->entry = cell;
@@ -316,11 +323,21 @@ GEOSSTRtree *buildSTRTreefromRaster(const struct averagedData *data,
 
       GEOSSTRtree_insert(tree, cell->geometry, (void *) cell);
     }
+
+    if (err)
+      break;
+  }
+
+  if (err) {
+    freeCellGeometryList(*cells);
+    GEOSSTRtree_destroy(tree);
+    return NULL;
   }
 
   if (GEOSSTRtree_build(tree) == 0) {
     fprintf(stderr, "Failed to build tree\n");
-    // todo cleanup
+    freeCellGeometryList(*cells);
+    GEOSSTRtree_destroy(tree);
     return NULL;
   }
 

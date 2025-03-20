@@ -532,3 +532,10 @@ void freeWeightedMeans(mean_t *list)
     list = next;
   }
 }
+
+double coordinateFromCell(double origin, double axisOfInterest, double pixelExtent,
+                          double complementaryAxis, double rotation)
+{
+  // axisOfInterest is the axis for which coordinate should be caclulated
+  return origin + axisOfInterest * pixelExtent + complementaryAxis * rotation;
+}
