@@ -1,7 +1,6 @@
 #include "strtree.h"
 #include "haze.h"
-#include "fscheck.h"
-#include "aoi.h"
+#include "gdal-ops.h"
 #include "types.h"
 #include <assert.h>
 #include <float.h>
@@ -15,42 +14,9 @@
 #include <gdal/ogr_srs_api.h>
 #include <geos_c.h>
 #include <stdbool.h>
-#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-
-bool nearEqual(double a, double b)
-{
-  double epsilon = 128.0 * DBL_EPSILON;
-  double abs_th = DBL_MIN;
-
-  if (a == b)
-    return true;
-
-  double absDiff = fabs(a - b);
-  double norm = fmin(fabs(a) + fabs(b), DBL_MAX);
-
-  return absDiff < fmax(abs_th, epsilon * norm);
-}
-
-bool gte(double a, double b)
-{
-  return a > b || nearEqual(a, b);
-}
-
-bool lte(double a, double b)
-{
-  return a < b || nearEqual(a, b);
-}
-
-bool intersect(const struct boundingBox *a, const struct boundingBox *b)
-{
-  // TODO: actually, I need the boundingBox to be able to hold data; either
-  //       the value directly or some pointer :thinking_face:
-  return lte(a->left, b->right) && gte(a->right, b->left) &&
-         lte(a->top, b->bottom) && gte(a->bottom, b->top);
-}
 
 [[nodiscard]] char *extractCRSAsWKT(GDALDatasetH dataset, const char *layerName)
 {
