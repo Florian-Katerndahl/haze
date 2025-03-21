@@ -1,20 +1,10 @@
 #ifndef AOI_H
 #define AOI_H
 
-struct boundingBox
-{
-  double left;
-  double top;
-  double right;
-  double bottom;
-};
+#include <gdal/ogr_core.h>
 
-struct boundingBox *allocBoundingBox(void);
+[[nodiscard]] OGREnvelope *boxFromPath(const char *filePath, const char *layerName);
 
-void freeBoundingBox(struct boundingBox *box);
-
-struct boundingBox *boxFromPath(const char *filePath, const char *layerName);
-
-void printBoundingBox(const struct boundingBox *box);
+void printBoundingBox(const OGREnvelope *box);
 
 #endif // AOI_H

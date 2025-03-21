@@ -12,28 +12,9 @@
 #include <gdal/ogr_srs_api.h>
 #include <time.h>
 
-struct boundingBox *allocBoundingBox(void)
+[[nodiscard]] OGREnvelope *boxFromPath(const char *filePath, const char *layerName)
 {
-  return calloc(1, sizeof(struct boundingBox));
-}
-
-void freeBoundingBox(struct boundingBox *box)
-{
-  free(box);
-  box = NULL;
-}
-
-struct boundingBox *boxFromPath(const char *filePath, const char *layerName)
-{
-  // bigger TODO: each step could be packed into its own function which would make this one more readable
-  struct boundingBox *box;
-
   assert(fileReadable(filePath));
-
-  if ((box = allocBoundingBox()) == NULL) {
-    perror("calloc");
-    return NULL;
-  }
 
   GDALDatasetH aoi = openVector(filePath);
   if (aoi == NULL) {
@@ -68,63 +49,75 @@ struct boundingBox *boxFromPath(const char *filePath, const char *layerName)
   }
 
   char *layerWKT;
-  OGRErr wktErr = OSRExportToWktEx(layerRef, &layerWKT, NULL);
-  if (wktErr != OGRERR_NONE) {
+  if (OSRExportToWktEx(layerRef, &layerWKT, NULL) != OGRERR_NONE) {
     fprintf(stderr, "Failed to export layer WKT\n");
-    //TODO cleanup
+    CPLFree(mbr);
+    closeGDALDataset(aoi);
     return NULL;
   }
 
-  if (EQUAL(layerWKT, SRS_WKT_WGS84_LAT_LONG)) {
-    box->left   = mbr->MinX;
-    box->top    = mbr->MaxY;
-    box->right  = mbr->MaxX;
-    box->bottom = mbr->MinY;
-  } else {
+  if (!EQUAL(layerWKT, SRS_WKT_WGS84_LAT_LONG)) {
     // FIXME: handle crossing of meridians
-    const char *wgs84WKT = SRS_WKT_WGS84_LAT_LONG;
+    const char * const wgs84WKT = SRS_WKT_WGS84_LAT_LONG;
+    
     OGRSpatialReferenceH wgs84Ref = OSRNewSpatialReference(wgs84WKT);
     if (wgs84Ref == NULL) {
       fprintf(stderr, "Failed to create spatial reference object for WGS84 WKT: %s",
               CPLGetLastErrorMsg());
-      // TODO cleanup
+      CPLFree(layerWKT);
+      CPLFree(mbr);
+      closeGDALDataset(aoi);
       return NULL;
     }
+
     OGRCoordinateTransformationH *transformation = OCTNewCoordinateTransformationEx(layerRef, wgs84Ref,
       NULL);
     if (transformation == NULL) {
       fprintf(stderr, "Failed to create transformation object: %s", CPLGetLastErrorMsg());
-      // TODO cleanup
+      OSRDestroySpatialReference(wgs84Ref);
+      CPLFree(layerWKT);
+      CPLFree(mbr);
+      closeGDALDataset(aoi);
       return NULL;
     }
+    
+    OGREnvelope *tmp = CPLCalloc(1, sizeof(OGREnvelope));
+
     if (OCTTransformBounds(
           transformation,
           mbr->MinX, mbr->MinY,
           mbr->MaxX, mbr->MaxY,
-          &(box->left), &(box->bottom),
-          &(box->right), &(box->top),
+          &(tmp->MinX), &(tmp->MinY),
+          &(tmp->MaxX), &(tmp->MaxY),
           21) == FALSE) {
       fprintf(stderr, "Failed to transform bounding box\n");
-      // todo cleanup
+      CPLFree(tmp);
+      OCTDestroyCoordinateTransformation(transformation);
+      OSRDestroySpatialReference(wgs84Ref);
+      CPLFree(layerWKT);
+      CPLFree(mbr);
+      closeGDALDataset(aoi);
       return NULL;
     }
+
+    CPLFree(mbr);
+    mbr = tmp;
 
     OSRDestroySpatialReference(wgs84Ref);
     OCTDestroyCoordinateTransformation(transformation);
   }
 
   CPLFree(layerWKT);
-  CPLFree(mbr);
   closeGDALDataset(aoi);
 
-  return box;
+  return mbr;
 }
 
-void printBoundingBox(const struct boundingBox *box)
+void printBoundingBox(const OGREnvelope *box)
 {
   printf(
     "bounding box: %lf (top), %lf (right), %lf (bottom), %lf (left)\n",
-    box->top, box->right, box->bottom, box->left
+    box->MaxY, box->MaxX, box->MinY, box->MinX
   );
   return;
 }
