@@ -22,11 +22,17 @@ build/aoi.o: src/aoi.c src/aoi.h
 build/haze.o: src/haze.c src/haze.h
 	$(CC) $(DEFINES) $(CFLAGS) -c src/haze.c $(GDALFLAGS) -o $@
 
-build/main.o: main.c
-	$(CC) $(DEFINES) $(CFLAGS) -c main.c -o build/main.o
+build/types.o: src/types.c src/types.h
+	$(CC) $(DEFINES) $(CFLAGS) -c src/types.c $(GDALFLAGS) $(GEOSFLAGS) -o $@
 
-main: build/main.o build/aoi.o build/fscheck.o build/haze.o
-	$(CC) $(DEFINES) $(CFLAGS) $^ $(GDALFLAGS) -o $@
+build/options.o: src/options.c src/options.h
+	$(CC) $(DEFINES) $(CFLAGS) -c src/options.c -o $@
+
+build/main.o: main.c
+	$(CC) $(DEFINES) $(CFLAGS) -c main.c $(GDALFLAGS) $(GEOSFLAGS) $(CURLFLAGS) -o build/main.o
+
+main: build/main.o build/options.o build/types.o
+	$(CC) $(DEFINES) $(CFLAGS) $^ $(GDALFLAGS) $(GEOSFLAGS) $(CURLFLAGS) -o haze
 
 clean:
 	rm -f main
