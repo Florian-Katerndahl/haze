@@ -4,6 +4,7 @@
 
 #include "types.h"
 #include <gdal/gdal.h>
+#include <sys/cdefs.h>
 
 [[nodiscard]] GDALDatasetH openRaster(const char *filePath);
 
@@ -18,5 +19,7 @@ void closeGDALDataset(GDALDatasetH dataset);
 int getRasterMetadata(GDALDatasetH raster, struct geoTransform *geoTransformation);
 
 bool isProjected(const char *Wkt);
+
+OGRCoordinateTransformationH transformationFromWKTs(const char *from, const char *to);
 
 #endif // GDAL_OPS_H

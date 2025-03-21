@@ -34,4 +34,8 @@
 [[nodiscard]] intersection_t *querySTRTree(vectorGeometryList *areasOfInterest,
     GEOSSTRtree *rasterTree);
 
+[[nodiscard]] GEOSGeometry *boundingBoxOfOGRToGEOS(const OGRGeometryH geom);
+
+[[nodiscard]] GEOSGeometry *OGRToGEOS(const OGRGeometryH geom);
+
 #endif // STRTREE_H

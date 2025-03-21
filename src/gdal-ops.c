@@ -5,6 +5,8 @@
 #include <gdal/gdal.h>
 #include <gdal/ogr_core.h>
 #include <gdal/ogr_srs_api.h>
+#include <stdio.h>
+#include <time.h>
 
 [[nodiscard]] GDALDatasetH openRaster(const char *filePath)
 {
@@ -103,4 +105,40 @@ bool isProjected(const char *Wkt)
   OSRDestroySpatialReference(spatialRef);
 
   return isProjected;
+}
+
+OGRCoordinateTransformationH transformationFromWKTs(const char *from, const char *to)
+{
+  assert(from && to);
+
+  OGRCoordinateTransformationH transform = NULL;
+
+  OGRSpatialReferenceH sourceReferenceSystem = OSRNewSpatialReference(from);
+  if (sourceReferenceSystem == NULL) {
+    fprintf(stderr, "Failed to create spatial reference system for source: %s", CPLGetLastErrorMsg());
+    return NULL;
+  }
+
+  OGRSpatialReferenceH targetReferenceSystem = OSRNewSpatialReference(to);
+  if (targetReferenceSystem == NULL) {
+    fprintf(stderr, "Failed to create spatial reference system for target: %s", CPLGetLastErrorMsg());
+    OSRDestroySpatialReference(sourceReferenceSystem);
+    return NULL;
+  }
+
+  transform = OCTNewCoordinateTransformationEx(
+                sourceReferenceSystem,
+                targetReferenceSystem,
+                NULL);
+  if (transform == NULL) {
+    fprintf(stderr, "Failed to create transformation between CRS's: %s", CPLGetLastErrorMsg());
+    OSRDestroySpatialReference(targetReferenceSystem);
+    OSRDestroySpatialReference(sourceReferenceSystem);
+    return NULL;
+  }
+
+  OSRDestroySpatialReference(targetReferenceSystem);
+  OSRDestroySpatialReference(sourceReferenceSystem);
+
+  return transform;
 }

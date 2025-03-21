@@ -56,7 +56,6 @@
     const char *layerName,
     const char *inputReferenceSystem)
 {
-  // todo: return `vectorGeometryList *` instead? could make it a bit nicer!
   vectorGeometryList *geometries = NULL;
 
   GDALDatasetH vectorDataset = openVector(filePath);
@@ -90,50 +89,18 @@
   OGRCoordinateTransformationH transformation = NULL;
 
   if (needsReprojection) {
-    OGRSpatialReferenceH  targetReferenceSystem = OSRNewSpatialReference(inputReferenceSystem);
-    if (targetReferenceSystem == NULL) {
-      fprintf(stderr, "Failed to create spatial reference system for input: %s", CPLGetLastErrorMsg());
-      CPLFree((void *) layerWKT);
-      closeGDALDataset(vectorDataset);
-      return NULL;
-    }
-
-    OGRSpatialReferenceH  sourceReferenceSystem = OSRNewSpatialReference(layerWKT);
-    if (sourceReferenceSystem == NULL) {
-      fprintf(stderr, "Failed to create spatial reference system for target: %s", CPLGetLastErrorMsg());
-      OSRDestroySpatialReference(targetReferenceSystem);
-      CPLFree((void *) layerWKT);
-      closeGDALDataset(vectorDataset);
-      return NULL;
-    }
-
-    transformation = OCTNewCoordinateTransformationEx(sourceReferenceSystem, targetReferenceSystem,
-                     NULL);
+    transformation = transformationFromWKTs(layerWKT, inputReferenceSystem);
     if (transformation == NULL) {
       fprintf(stderr, "Failed to create transformation between CRS's: %s", CPLGetLastErrorMsg());
-      OSRDestroySpatialReference(sourceReferenceSystem);
-      OSRDestroySpatialReference(targetReferenceSystem);
       CPLFree((void *) layerWKT);
       closeGDALDataset(vectorDataset);
       return NULL;
     }
-
-    OSRDestroySpatialReference(targetReferenceSystem);
-    OSRDestroySpatialReference(sourceReferenceSystem);
-  }
-
-  GEOSWKBReader *reader = GEOSWKBReader_create();
-  if (reader == NULL) {
-    fprintf(stderr, "Failed to create WKB reader\n");
-    if (needsReprojection)
-      OCTDestroyCoordinateTransformation(transformation);
-    CPLFree((void *) layerWKT);
-    closeGDALDataset(vectorDataset);
-    return NULL;
   }
 
   OGR_FOR_EACH_FEATURE_BEGIN(feature, layer) {
     OGRGeometryH  geom = OGR_G_Clone(OGR_F_GetGeometryRef(feature)); // take ownership of geometry
+
     if (wkbFlatten(OGR_G_GetGeometryType(geom)) != wkbPolygon) {
       printf("Feature with fid %lld is not a polygon, skipping\n", OGR_F_GetFID(feature));
       OGR_G_DestroyGeometry(geom);
@@ -147,62 +114,31 @@
       continue;
     }
 
-    OGREnvelope *mBr = CPLCalloc(1, sizeof(OGREnvelope));
-
-    OGR_G_GetEnvelope(geom, mBr);
-
-    GEOSGeometry *geosMBR = GEOSGeom_createRectangle(mBr->MinX, mBr->MinY, mBr->MaxX, mBr->MaxY);
-    if (geosMBR == NULL) {
-      fprintf(stderr, "Failed to create GEOS rectangle\n");
-      freeVectorGeometryList(geometries);
-      CPLFree(mBr);
-      OGR_G_DestroyGeometry(geom);
-      OGR_F_Destroy(feature); // current feature as loop is not finished
-      GEOSWKBReader_destroy(reader);
-      if (needsReprojection)
-        OCTDestroyCoordinateTransformation(transformation);
-      CPLFree((void *) layerWKT);
-      closeGDALDataset(vectorDataset);
-      return NULL;
-    }
-
-    unsigned char *OGRWkb = CPLCalloc(OGR_G_WkbSize(geom), sizeof(unsigned char));
-
-    OGR_G_ExportToIsoWkb(geom, wkbNDR, OGRWkb); // returns OGRERR_NONE in all cases
-
     struct vectorGeometry *vecGeom = calloc(1, sizeof(struct vectorGeometry));
     if (vecGeom == NULL) {
       perror("calloc");
       freeVectorGeometryList(geometries);
-      CPLFree(OGRWkb);
-      GEOSGeom_destroy(geosMBR);
-      CPLFree(mBr);
       OGR_G_DestroyGeometry(geom);
       OGR_F_Destroy(feature); // current feature as loop is not finished
-      GEOSWKBReader_destroy(reader);
-      if (needsReprojection)
-        OCTDestroyCoordinateTransformation(transformation);
+      OCTDestroyCoordinateTransformation(transformation);
       CPLFree((void *) layerWKT);
       closeGDALDataset(vectorDataset);
       return NULL;
     }
 
-    vecGeom->geometry = GEOSWKBReader_read(reader, OGRWkb, OGR_G_WkbSize(geom));
-    vecGeom->mbr = geosMBR;
+    vecGeom->geometry = OGRToGEOS(geom);
+    vecGeom->mbr = boundingBoxOfOGRToGEOS(geom);
     vecGeom->id = OGR_F_GetFID(feature);
     vecGeom->OGRGeometry = geom;
-    if (vecGeom == NULL) {
-      fprintf(stderr, "Failed to read OGR geometry as WKB into GEOS\n");
+    if (vecGeom->geometry == NULL || vecGeom->mbr == NULL) {
+      fprintf(stderr, "Failed to convert OGR geometry to GEOS\n");
+      GEOSGeom_destroy(vecGeom->geometry);
+      GEOSGeom_destroy(vecGeom->mbr);
       free(vecGeom);
       freeVectorGeometryList(geometries);
-      CPLFree(OGRWkb);
-      GEOSGeom_destroy(geosMBR);
-      CPLFree(mBr);
       OGR_G_DestroyGeometry(geom);
       OGR_F_Destroy(feature); // current feature as loop is not finished
-      GEOSWKBReader_destroy(reader);
-      if (needsReprojection)
-        OCTDestroyCoordinateTransformation(transformation);
+      OCTDestroyCoordinateTransformation(transformation);
       CPLFree((void *) layerWKT);
       closeGDALDataset(vectorDataset);
       return NULL;
@@ -212,16 +148,13 @@
     vectorGeometryList *node = calloc(1, sizeof(vectorGeometryList));
     if (node == NULL) {
       perror("calloc");
+      GEOSGeom_destroy(vecGeom->geometry);
+      GEOSGeom_destroy(vecGeom->mbr);
       free(vecGeom);
       freeVectorGeometryList(geometries);
-      CPLFree(OGRWkb);
-      GEOSGeom_destroy(geosMBR);
-      CPLFree(mBr);
       OGR_G_DestroyGeometry(geom);
       OGR_F_Destroy(feature); // current feature as loop is not finished
-      GEOSWKBReader_destroy(reader);
-      if (needsReprojection)
-        OCTDestroyCoordinateTransformation(transformation);
+      OCTDestroyCoordinateTransformation(transformation);
       CPLFree((void *) layerWKT);
       closeGDALDataset(vectorDataset);
       return NULL;
@@ -237,15 +170,10 @@
       node->next = geometries;
       geometries = node;
     }
-
-    CPLFree((void *) OGRWkb);
-    CPLFree((void*) mBr);
   }
   OGR_FOR_EACH_FEATURE_END(feature);
 
-  GEOSWKBReader_destroy(reader);
-  if (needsReprojection)
-    OCTDestroyCoordinateTransformation(transformation);
+  OCTDestroyCoordinateTransformation(transformation);
   CPLFree((void *) layerWKT);
   closeGDALDataset(vectorDataset);
 
@@ -412,4 +340,47 @@ void queryCallback(void *item, void *userdata)
   }
 
   return queryResults;
+}
+
+[[nodiscard]] GEOSGeometry *boundingBoxOfOGRToGEOS(const OGRGeometryH geom)
+{
+  assert(geom);
+
+  OGREnvelope *envelope = CPLCalloc(1, sizeof(OGREnvelope));
+
+  OGR_G_GetEnvelope(geom, envelope);
+
+  GEOSGeometry *returnGeometry = GEOSGeom_createRectangle(envelope->MinX, envelope->MinY,
+                                 envelope->MaxX, envelope->MaxY);
+
+  CPLFree(envelope);
+
+  return returnGeometry;
+}
+
+[[nodiscard]] GEOSGeometry *OGRToGEOS(const OGRGeometryH geom)
+{
+  assert(geom);
+
+  GEOSWKBReader *reader = GEOSWKBReader_create();
+  if (reader == NULL) {
+    fprintf(stderr, "Failed to create GEOS WKB reader\n");
+    return NULL;
+  }
+
+  unsigned char *OGRWkb = calloc(OGR_G_WkbSize(geom), sizeof(unsigned char));
+  if (OGRWkb == NULL) {
+    perror("calloc");
+    GEOSWKBReader_destroy(reader);
+    return NULL;
+  }
+
+  OGR_G_ExportToIsoWkb(geom, wkbNDR, OGRWkb); // returns OGRERR_NONE in all cases
+
+  GEOSGeometry *returnGeometry = GEOSWKBReader_read(reader, OGRWkb, OGR_G_WkbSize(geom));
+
+  free(OGRWkb);
+  GEOSWKBReader_destroy(reader);
+
+  return returnGeometry;
 }
