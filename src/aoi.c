@@ -58,8 +58,8 @@
 
   if (!EQUAL(layerWKT, SRS_WKT_WGS84_LAT_LONG)) {
     // FIXME: handle crossing of meridians
-    const char * const wgs84WKT = SRS_WKT_WGS84_LAT_LONG;
-    
+    const char *const wgs84WKT = SRS_WKT_WGS84_LAT_LONG;
+
     OGRSpatialReferenceH wgs84Ref = OSRNewSpatialReference(wgs84WKT);
     if (wgs84Ref == NULL) {
       fprintf(stderr, "Failed to create spatial reference object for WGS84 WKT: %s",
@@ -80,7 +80,7 @@
       closeGDALDataset(aoi);
       return NULL;
     }
-    
+
     OGREnvelope *tmp = CPLCalloc(1, sizeof(OGREnvelope));
 
     if (OCTTransformBounds(
