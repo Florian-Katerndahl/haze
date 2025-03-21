@@ -5,6 +5,11 @@
 #include <geos_c.h>
 #include <gdal/gdal.h>
 
+#define MAXYEAR 100
+#define MAXMONTH 12
+#define MAXDAY 31
+#define MAXHOUR 24
+
 // from haze
 struct rawData
 {
@@ -83,5 +88,20 @@ void freeCellGeometry(struct cellGeometry *node);
 void freeCellGeometryList(cellGeometryList *list);
 
 void freeIntersections(intersection_t *list);
+
+typedef struct options
+{
+  bool printHelp;
+  int years[MAXYEAR];
+  int months[MAXMONTH];
+  int days[MAXDAY];
+  int hours[MAXHOUR];
+  char *areaOfInterest;
+  char *outputDirectory;
+  char *authenticationToken;
+  bool withAllocation;
+} option_t;
+
+void freeOption(option_t *option);
 
 #endif //TYPES_H

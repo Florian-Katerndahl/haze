@@ -62,3 +62,10 @@ void freeIntersections(intersection_t *list)
     list = nextIntersection;
   }
 }
+
+void freeOption(option_t *options)
+{
+  if (options->withAllocation)
+    free(options->authenticationToken);
+  free(options);
+}
