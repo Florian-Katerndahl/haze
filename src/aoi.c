@@ -1,5 +1,5 @@
 #include "aoi.h"
-#include "haze.h"
+#include "gdal-ops.h"
 #include "fscheck.h"
 #include <assert.h>
 #include <stdio.h>
@@ -44,6 +44,13 @@
   OGREnvelope *mbr = CPLCalloc(1, sizeof(OGREnvelope));
   if (OGR_L_GetExtent(layer, mbr, 1) == OGRERR_FAILURE) {
     fprintf(stderr, "Failed to get layer extent: %s", CPLGetLastErrorMsg());
+    closeGDALDataset(aoi);
+    return NULL;
+  }
+
+  if (mbr->MaxX <= mbr->MinX || mbr->MaxY <= mbr->MinY) {
+    fprintf(stderr, "Only north up bounding boxes supported\n");
+    CPLFree(mbr);
     closeGDALDataset(aoi);
     return NULL;
   }
