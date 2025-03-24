@@ -88,15 +88,19 @@ void printHelp(void)
     }
   }
 
-  if (argc - optind != 2) {
+  int positionalArguments = argc - optind;
+  
+  if (positionalArguments == 1) {
+    userOptions->outputDirectory = argv[optind];
+  } else if (positionalArguments == 2) {
+    userOptions->areaOfInterest = argv[optind];
+    optind++;
+    userOptions->outputDirectory = argv[optind];
+  } else {
     fprintf(stderr, "Missing positional arguments\n");
     printHelp();
     exit(1);
-  }
-
-  userOptions->areaOfInterest = argv[optind];
-  optind++;
-  userOptions->outputDirectory = argv[optind];
+  }  
 
   if (getAuthentication(&userOptions->authenticationToken, NULL, &userOptions->withAllocation) == 1) {
     fprintf(stderr, "Failed to get authentication token from enironment or $HOME/.cdsapirc\n");
