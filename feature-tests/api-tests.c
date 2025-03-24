@@ -30,13 +30,13 @@ int main(void) {
   OGREnvelope test_envelope = {-180, 180, -90, 90};
 
 
-  struct curl_slist *headerAddon = customHeader(&test_opts);
+  struct curl_slist *headerAddon = customHeader(NULL, &test_opts);
 
   initializeHandle(&handle, headerAddon);
 
   // cdsGetProductStatus(handle, "8145c17e-f810-4788-9fbf-9f5ace8c8b17");
 
-  cdsRequestProduct(&handle, test_opts.years, test_opts.months, test_opts.days, test_opts.hours, &test_envelope);
+  cdsRequestProduct(&handle, test_opts.years, test_opts.months, test_opts.days, test_opts.hours, &test_envelope, headerAddon);
 
   freeCustomHeader(headerAddon);
   curl_easy_cleanup(handle);

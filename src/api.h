@@ -9,7 +9,8 @@
 
 #define BASEURL "https://cds.climate.copernicus.eu/api"
 
-struct curl_slist *customHeader(const option_t *options);
+// passing NULL as first arg creates new list
+struct curl_slist *customHeader(struct curl_slist *list, const option_t *options);
 
 void freeCustomHeader(struct curl_slist *list);
 
@@ -19,7 +20,7 @@ char *constructURL(const char *basePath, const char *endPoint, const char *reque
 
 size_t writeString(char *ptr, size_t size, size_t nmemb, void *userdata);
 
-char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days, const int *hours, const OGREnvelope *aoi);
+char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days, const int *hours, const OGREnvelope *aoi, struct curl_slist *header);
 
 productStatus cdsGetProductStatus(CURL *handle, const char *requestId); // Result.update
 
@@ -27,7 +28,7 @@ cdsGetServiceStatus();
 
 int cdsWaitForProduct(CURL *handle, const char *requestId);
 
-cdsDownloadProduct();
+cdsDownloadProduct(); // same URL as product status but with /results appended which then returns the actual download URL
 
 int cdsDeleteProductRequest(CURL *handle, const char *requestId); // Result.delete
 

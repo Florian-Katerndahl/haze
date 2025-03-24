@@ -10,18 +10,18 @@
 #include <time.h>
 #include <unistd.h>
 
-struct curl_slist *customHeader(const option_t *options)
+struct curl_slist *customHeader(struct curl_slist *list, const option_t *options)
 {
   assert(options);
   char header[256];
   int charsWritten = snprintf(header, sizeof(header), "PRIVATE-TOKEN:%s",
-                                 options->authenticationToken);
+                              options->authenticationToken);
   if (charsWritten >= 256 || charsWritten < 0) {
     fprintf(stderr, "Failed to assemble custom header\n");
     exit(EXIT_FAILURE); // if login won't be possible, no need to do anything else...
   }
 
-  struct curl_slist *ret = curl_slist_append(NULL, header);
+  struct curl_slist *ret = curl_slist_append(list, header);
   if (ret == NULL) {
     fprintf(stderr, "Failed to generate custom HTTP header\n");
     exit(EXIT_FAILURE); // if login won't be possible, no need to do anything else...
@@ -100,8 +100,7 @@ size_t writeString(char *ptr, size_t size, size_t nmemb, void *userdata)
   return chunkSize;
 }
 
-char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days,
-                        const int *hours, const OGREnvelope *aoi)
+char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days, const int *hours, const OGREnvelope *aoi, struct curl_slist *header)
 {
   CURL *requestHandle = curl_easy_duphandle(handle);
   if (requestHandle == NULL) {
@@ -226,10 +225,11 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
   }
 
   // steals references to JSON objects
-  json_t *jsonRequest = json_pack("{s:[s], s:o, s:o, s:o, s:o, s:o*, s:s, s:s, s:[s]}",
-                                        "product_type", "reanalysis", "year", yearsArray, "month", monthsArray, "day", daysArray, "time",
-                                        hoursArray, "area", aoiArray, "data_format", "grib", "download_format", "unarchived", "variable",
-                                        "total_column_water_vapour");
+  json_t *jsonRequest = json_pack("{s: {s:[s], s:o, s:o, s:o, s:o, s:o*, s:s, s:s, s:[s]}}",
+                                  "inputs", "product_type", "reanalysis", "year", yearsArray, "month", monthsArray, "day", daysArray,
+                                  "time",
+                                  hoursArray, "area", aoiArray, "data_format", "grib", "download_format", "unarchived", "variable",
+                                  "total_column_water_vapour");
   if (jsonRequest == NULL) {
     // todo cleanup
     return NULL;
@@ -242,9 +242,75 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
     return NULL;
   }
 
-  printf("%s\n", stringRequest);
+  char *url = constructURL(BASEURL, "retrieve/v1/processes/reanalysis-era5-single-levels", "execution");
+  if (url == NULL) {
+    fprintf(stderr, "Failed to assemble request URL\n");
+    // todo cleanup
+    return NULL;
+  }
 
-  return stringRequest;
+  fprintf(stderr, "%s\n", url);
+
+  curlString requestResponse = {0};
+
+  curl_easy_setopt(requestHandle, CURLOPT_URL, url);
+  curl_easy_setopt(requestHandle, CURLOPT_POST, 1L);
+  curl_easy_setopt(requestHandle, CURLOPT_POSTFIELDS, stringRequest);
+  curl_easy_setopt(requestHandle, CURLOPT_WRITEFUNCTION, writeString);
+  curl_easy_setopt(requestHandle, CURLOPT_WRITEDATA, (void *) &requestResponse);
+
+
+  // FIXME: that's not the best solution, probably better to build new header with PRIVATE-TOKEN set so I don't mess up the original header list!
+  if ((header = curl_slist_append(header, "Content-Type: application/json")) == NULL) {
+    // todo cleanup
+    return NULL;
+  }
+
+  curl_easy_setopt(requestHandle, CURLOPT_HTTPHEADER, header);
+
+  CURLcode requestResponseCode = curl_easy_perform(requestHandle);
+  if (requestResponseCode != CURLE_OK) {
+    long httpResponse = 0;
+    // not checking validity of httpResponse!
+    curl_easy_getinfo(requestHandle, CURLINFO_RESPONSE_CODE, &httpResponse);
+    fprintf(stderr, "Failed to get product status: %s (%ld)\n", curl_easy_strerror(requestResponseCode),
+            httpResponse);
+    free(requestResponse.string);
+    free(url);
+    curl_easy_cleanup(requestHandle);
+    return NULL;
+  }
+
+  free(stringRequest);
+  
+  curl_slist_append(header, "Content-Type:");
+
+  // parse response and extract jobId
+
+  json_error_t error;
+  json_t *apiResponse = json_loads(requestResponse.string, 0, &error);
+  if (apiResponse == NULL) {
+    // todo error reporting and cleanup
+    return NULL;
+  }
+
+  const json_t *Id = json_object_get(apiResponse, "jobID");
+  if (Id == NULL) {
+    // todo error reporting and cleanup
+    return NULL;
+  }
+
+  const char *jobId = json_string_value(Id);
+  if (jobId == NULL) {
+    fprintf(stderr, "Failed to extract job id from API response\n");
+    // todo cleanup
+    return NULL;
+  }
+
+  fprintf(stderr, "%s\n", jobId);
+  free(requestResponse.string);
+
+  return jobId;
 }
 
 productStatus cdsGetProductStatus(CURL *handle, const char *requestId)
