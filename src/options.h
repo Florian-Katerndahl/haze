@@ -5,8 +5,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#define INITVAL -1
-
 void printHelp(void);
 
 [[nodiscard]] option_t *parseOptions(int argc, char *argv[]);

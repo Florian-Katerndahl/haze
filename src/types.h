@@ -104,4 +104,21 @@ typedef struct options
 
 void freeOption(option_t *option);
 
+// todo move to top?
+#define INITVAL -1
+
+typedef struct curlString {
+  char *string;
+  size_t length;
+} curlString;
+
+typedef enum
+{
+  ACCEPTED,
+  SUCCESSFUL,
+  RUNNING,
+  FAILED,
+  ERROR
+} productStatus;
+
 #endif //TYPES_H
