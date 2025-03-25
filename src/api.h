@@ -20,7 +20,9 @@ char *constructURL(const char *basePath, const char *endPoint, const char *reque
 
 size_t writeString(char *ptr, size_t size, size_t nmemb, void *userdata);
 
-char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days, const int *hours, const OGREnvelope *aoi, struct curl_slist *header);
+size_t discardWrite(char *ptr, size_t size, size_t nmemb, void *userdata);
+
+const char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days, const int *hours, const OGREnvelope *aoi, const option_t *options);
 
 productStatus cdsGetProductStatus(CURL *handle, const char *requestId); // Result.update
 

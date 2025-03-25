@@ -5,7 +5,10 @@
 #include <curl/easy.h>
 #include <gdal/ogr_core.h>
 #include <jansson.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
 int main(void) {
   curl_global_init(CURL_GLOBAL_ALL);
@@ -34,13 +37,26 @@ int main(void) {
 
   initializeHandle(&handle, headerAddon);
 
-  // cdsGetProductStatus(handle, "8145c17e-f810-4788-9fbf-9f5ace8c8b17");
+  const char *requestId = cdsRequestProduct(handle, test_opts.years, test_opts.months, test_opts.days, test_opts.hours, &test_envelope, &test_opts);
 
-  cdsRequestProduct(&handle, test_opts.years, test_opts.months, test_opts.days, test_opts.hours, &test_envelope, headerAddon);
+  printf("Posted product request with Id: %s\n", requestId);
 
+
+  if (cdsWaitForProduct(handle, requestId)) {
+    fprintf(stderr, "Error while waiting for pdroduct");
+    // todo cleanup
+    return EXIT_FAILURE;
+  }
+  printf("Waited for product request with Id: %s\n", requestId);
+
+  cdsDeleteProductRequest(handle, requestId);
+  printf("Deleted product request with Id: %s\n", requestId);
+
+  free(requestId);
   freeCustomHeader(headerAddon);
+  free(test_opts.authenticationToken);
   curl_easy_cleanup(handle);
   curl_global_cleanup();
 
-  return 0;
+  return EXIT_SUCCESS;
 }

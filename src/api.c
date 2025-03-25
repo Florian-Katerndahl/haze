@@ -100,7 +100,11 @@ size_t writeString(char *ptr, size_t size, size_t nmemb, void *userdata)
   return chunkSize;
 }
 
-char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days, const int *hours, const OGREnvelope *aoi, struct curl_slist *header)
+size_t discardWrite(char *ptr, size_t size, size_t nmemb, void *userdata) {
+  return size * nmemb;
+}
+
+const char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days, const int *hours, const OGREnvelope *aoi, const option_t *options)
 {
   CURL *requestHandle = curl_easy_duphandle(handle);
   if (requestHandle == NULL) {
@@ -249,8 +253,6 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
     return NULL;
   }
 
-  fprintf(stderr, "%s\n", url);
-
   curlString requestResponse = {0};
 
   curl_easy_setopt(requestHandle, CURLOPT_URL, url);
@@ -260,13 +262,19 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
   curl_easy_setopt(requestHandle, CURLOPT_WRITEDATA, (void *) &requestResponse);
 
 
-  // FIXME: that's not the best solution, probably better to build new header with PRIVATE-TOKEN set so I don't mess up the original header list!
-  if ((header = curl_slist_append(header, "Content-Type: application/json")) == NULL) {
+  struct curl_slist *requestHeader = customHeader(NULL, options);
+  if (requestHeader == NULL) {
+    fprintf(stderr, "Failed to create custom HTTP header for product request\n");
+    // todo cleanup
+    return NULL;
+  }
+  
+  if ((requestHeader = curl_slist_append(requestHeader, "Content-Type: application/json")) == NULL) {
     // todo cleanup
     return NULL;
   }
 
-  curl_easy_setopt(requestHandle, CURLOPT_HTTPHEADER, header);
+  curl_easy_setopt(requestHandle, CURLOPT_HTTPHEADER, requestHeader);
 
   CURLcode requestResponseCode = curl_easy_perform(requestHandle);
   if (requestResponseCode != CURLE_OK) {
@@ -275,18 +283,14 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
     curl_easy_getinfo(requestHandle, CURLINFO_RESPONSE_CODE, &httpResponse);
     fprintf(stderr, "Failed to get product status: %s (%ld)\n", curl_easy_strerror(requestResponseCode),
             httpResponse);
+    fprintf(stderr, "Server message:\n%s\n", requestResponse.string);
     free(requestResponse.string);
     free(url);
     curl_easy_cleanup(requestHandle);
     return NULL;
   }
 
-  free(stringRequest);
-  
-  curl_slist_append(header, "Content-Type:");
-
   // parse response and extract jobId
-
   json_error_t error;
   json_t *apiResponse = json_loads(requestResponse.string, 0, &error);
   if (apiResponse == NULL) {
@@ -294,21 +298,27 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
     return NULL;
   }
 
-  const json_t *Id = json_object_get(apiResponse, "jobID");
+  const json_t *Id = json_object_get(apiResponse, "jobID"); // borrows reference, no incref needed in my case
   if (Id == NULL) {
     // todo error reporting and cleanup
     return NULL;
   }
 
-  const char *jobId = json_string_value(Id);
+  // no error check of `json_string_value`
+  const char *jobId = strdup(json_string_value(Id));
   if (jobId == NULL) {
     fprintf(stderr, "Failed to extract job id from API response\n");
     // todo cleanup
     return NULL;
   }
 
-  fprintf(stderr, "%s\n", jobId);
+  // todo stack-like cleanup like in other places?!
+  free(url);
+  free(stringRequest);
+  curl_slist_free_all(requestHeader);
+  curl_easy_cleanup(requestHandle);
   free(requestResponse.string);
+  json_decref(apiResponse);
 
   return jobId;
 }
@@ -448,6 +458,7 @@ int cdsDeleteProductRequest(CURL *handle, const char *requestId)
 
   curl_easy_setopt(deleteHandle, CURLOPT_URL, url);
   curl_easy_setopt(deleteHandle, CURLOPT_CUSTOMREQUEST, "DELETE");
+  curl_easy_setopt(deleteHandle, CURLOPT_WRITEFUNCTION, discardWrite);
 
   CURLcode deleteResponse = curl_easy_perform(deleteHandle);
   if (deleteResponse != CURLE_OK) {
@@ -461,6 +472,7 @@ int cdsDeleteProductRequest(CURL *handle, const char *requestId)
   }
 
   curl_easy_cleanup(deleteHandle);
+  free(url);
 
   return 0;
 }
