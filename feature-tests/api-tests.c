@@ -18,7 +18,8 @@ int main(void) {
   option_t test_opts = {0};
   getAuthenticationFromFile(&test_opts.authenticationToken, NULL);
   test_opts.years[0] = 2009;
-  test_opts.years[1] = -1;
+  test_opts.years[1] = 2010;
+  test_opts.years[2] = -1;
   test_opts.months[0] = 1;
   test_opts.months[1] = 2;
   test_opts.months[2] = -1;
@@ -37,8 +38,7 @@ int main(void) {
 
   initializeHandle(&handle, headerAddon);
 
-  const char *requestId = cdsRequestProduct(handle, test_opts.years, test_opts.months, test_opts.days, test_opts.hours, &test_envelope, &test_opts);
-
+  char *requestId = cdsRequestProduct(handle, test_opts.years, test_opts.months, test_opts.days, test_opts.hours, &test_envelope, &test_opts);
   printf("Posted product request with Id: %s\n", requestId);
 
 
@@ -48,6 +48,9 @@ int main(void) {
     return EXIT_FAILURE;
   }
   printf("Waited for product request with Id: %s\n", requestId);
+
+  cdsDownloadProduct(handle, requestId, "../test-download.grib");
+  printf("Downloaded file for product request %s\n", requestId);
 
   cdsDeleteProductRequest(handle, requestId);
   printf("Deleted product request with Id: %s\n", requestId);
