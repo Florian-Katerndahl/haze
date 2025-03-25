@@ -50,12 +50,12 @@ CURL *initializeHandle(CURL **handle, const struct curl_slist *headerList)
   return *handle;
 }
 
-char *constructURL(const char *basePath, const char *endPoint, const char *requestId)
+char *constructURL(const char *basePath, const char *endPoint, const char *requestId, size_t addon)
 {
   size_t basePathLength = strlen(basePath);
   size_t endPointLength = strlen(endPoint);
   size_t requestIdLength = strlen(requestId);
-  size_t totalLength = basePathLength + endPointLength + requestIdLength + 1;
+  size_t totalLength = basePathLength + endPointLength + requestIdLength + addon + 1;
 
   bool baseWithSlash = basePath[basePathLength - 1] == '/';
   totalLength += baseWithSlash ? 1 : 2;
@@ -104,7 +104,66 @@ size_t discardWrite(char *ptr, size_t size, size_t nmemb, void *userdata) {
   return size * nmemb;
 }
 
-const char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days, const int *hours, const OGREnvelope *aoi, const option_t *options)
+json_t *getKeyRecursively(json_t *root, const char *key) {
+  json_t *ret;
+  if ((ret = json_object_get(root, key))) {
+    return ret;
+  } else {
+    const char *entryKey;
+    json_t *value;
+    json_object_foreach(root, entryKey, value) {
+      if (json_is_object(value)) {
+        if ((ret = getKeyRecursively(value, key))) {
+          return ret;
+        }
+      }
+    }
+  }
+  return NULL;
+}
+
+// gets first matching key, depth first
+char *slurpAndGetString(const char *input, const char *key) {
+  json_error_t error;
+  json_t *root = json_loads(input, 0, &error);
+  if (root == NULL) {
+    fprintf(stderr, "Failed to parse JSON response on line %d: %s\n", error.line, error.text);
+    return NULL;
+  }
+
+  if (!json_is_object(root)) {
+    fprintf(stderr, "Supplied JSON must be an object.\n");
+    json_decref(root);
+    return NULL;
+  }
+
+  json_t *keyEntry = getKeyRecursively(root, key);
+  if (keyEntry == NULL) {
+    fprintf(stderr, "Could not find key '%s'.\n", key);
+    json_decref(root);
+    return NULL;
+  }
+
+  const char *value = json_string_value(keyEntry);
+  if (value == NULL) {
+    fprintf(stderr, "Failed to get string value from key '%s'\n", key);
+    json_decref(root);
+    return NULL;
+  }
+
+  char *ret = strdup(value);
+  if (ret == NULL) {
+    fprintf(stderr, "Failed to dupicate string value\n");
+    json_decref(root);
+    return NULL;
+  }
+
+  json_decref(root);
+
+  return ret;
+}
+
+char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days, const int *hours, const OGREnvelope *aoi, const option_t *options)
 {
   CURL *requestHandle = curl_easy_duphandle(handle);
   if (requestHandle == NULL) {
@@ -246,7 +305,7 @@ const char *cdsRequestProduct(CURL *handle, const int *years, const int *months,
     return NULL;
   }
 
-  char *url = constructURL(BASEURL, "retrieve/v1/processes/reanalysis-era5-single-levels", "execution");
+  char *url = constructURL(BASEURL, "retrieve/v1/processes/reanalysis-era5-single-levels", "execution", 0);
   if (url == NULL) {
     fprintf(stderr, "Failed to assemble request URL\n");
     // todo cleanup
@@ -290,27 +349,7 @@ const char *cdsRequestProduct(CURL *handle, const int *years, const int *months,
     return NULL;
   }
 
-  // parse response and extract jobId
-  json_error_t error;
-  json_t *apiResponse = json_loads(requestResponse.string, 0, &error);
-  if (apiResponse == NULL) {
-    // todo error reporting and cleanup
-    return NULL;
-  }
-
-  const json_t *Id = json_object_get(apiResponse, "jobID"); // borrows reference, no incref needed in my case
-  if (Id == NULL) {
-    // todo error reporting and cleanup
-    return NULL;
-  }
-
-  // no error check of `json_string_value`
-  const char *jobId = strdup(json_string_value(Id));
-  if (jobId == NULL) {
-    fprintf(stderr, "Failed to extract job id from API response\n");
-    // todo cleanup
-    return NULL;
-  }
+  char *jobId = slurpAndGetString(requestResponse.string, "jobID"); // null check here or leave up to callee?
 
   // todo stack-like cleanup like in other places?!
   free(url);
@@ -318,7 +357,6 @@ const char *cdsRequestProduct(CURL *handle, const int *years, const int *months,
   curl_slist_free_all(requestHeader);
   curl_easy_cleanup(requestHandle);
   free(requestResponse.string);
-  json_decref(apiResponse);
 
   return jobId;
 }
@@ -331,7 +369,7 @@ productStatus cdsGetProductStatus(CURL *handle, const char *requestId)
     return ERROR;
   }
 
-  char *url = constructURL(BASEURL, "retrieve/v1/jobs", requestId);
+  char *url = constructURL(BASEURL, "retrieve/v1/jobs", requestId, 0);
   if (url == NULL) {
     fprintf(stderr, "Failed to construct url for product status check\n");
     curl_easy_cleanup(statusHandle);
@@ -357,43 +395,12 @@ productStatus cdsGetProductStatus(CURL *handle, const char *requestId)
     return ERROR;
   }
 
-  json_error_t error;
-  json_t *root = json_loads(response.string, 0, &error);
-  if (root == NULL) {
-    fprintf(stderr, "Failed to parse JSON response on line %d: %s\n", error.line, error.text);
-    free(response.string);
-    free(url);
-    curl_easy_cleanup(statusHandle);
-    return ERROR;
-  }
-
-  if (!json_is_object(root)) {
-    fprintf(stderr, "Returned JSON is not of type object\n");
-    json_decref(root);
-    free(response.string);
-    free(url);
-    curl_easy_cleanup(statusHandle);
-    return ERROR;
-  }
-
-  const json_t *state = json_object_get(root,
-                                        "status"); // borrows reference, no incref needed in my case
-  if (state == NULL) {
-    fprintf(stderr, "Failed to find 'status' key in response\n");
-    json_decref(root);
-    free(response.string);
-    free(url);
-    curl_easy_cleanup(statusHandle);
-    return ERROR;
-  }
-
-  const char *statusWord = json_string_value(state);
+  char *statusWord = slurpAndGetString(response.string, "status");
   if (statusWord == NULL) {
-    fprintf(stderr, "Failed to fetch string value of 'state' key\n");
-    json_decref(root);
     free(response.string);
     free(url);
     curl_easy_cleanup(statusHandle);
+    return ERROR;
   }
 
   productStatus status;
@@ -408,7 +415,7 @@ productStatus cdsGetProductStatus(CURL *handle, const char *requestId)
   else
     status = ERROR;
 
-  json_decref(root);
+  free(statusWord);
   free(response.string);
   free(url);
   curl_easy_cleanup(statusHandle);
@@ -441,6 +448,89 @@ int cdsWaitForProduct(CURL *handle, const char *requestId)
   return 0;
 }
 
+int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPath) {
+  CURL *downloadHandle = curl_easy_duphandle(handle);
+  if (downloadHandle == NULL) {
+    fprintf(stderr, "Failed to duplicate CURL handle before product download\n");
+    return 1;
+  }
+
+  char *url = constructURL(BASEURL, "retrieve/v1/jobs", requestId, 8);
+  if (url == NULL) {
+    fprintf(stderr, "Failed to construct jobURL\n");
+    curl_easy_cleanup(downloadHandle);
+    return 1;
+  }
+
+  strcat(url, "/results");
+
+  curlString response = {0};
+  
+  curl_easy_setopt(downloadHandle, CURLOPT_URL, url);
+  curl_easy_setopt(downloadHandle, CURLOPT_WRITEDATA, (void *) &response);
+  curl_easy_setopt(downloadHandle, CURLOPT_WRITEFUNCTION, writeString);
+
+  CURLcode downloadResponse = curl_easy_perform(downloadHandle);
+  if (downloadResponse != CURLE_OK) {
+    long httpResponse = 0;
+    // not checking validity of httpResponse!
+    curl_easy_getinfo(downloadHandle, CURLINFO_RESPONSE_CODE, &httpResponse);
+    fprintf(stderr, "Failed to get product status: %s (%ld)\n", curl_easy_strerror(downloadResponse),
+            httpResponse);
+    fprintf(stderr, "Server message:\n%s\n", response.string);
+    free(response.string);
+    free(url);
+    curl_easy_cleanup(downloadHandle);
+    return 1;
+  }
+
+  char *downloadURL = slurpAndGetString(response.string, "href");
+  if (downloadURL == NULL) {
+    fprintf(stderr, "Failed to get download URL\n");
+    free(url);
+    free(response.string);
+    curl_easy_cleanup(downloadHandle);
+    return 1;
+  }
+
+  FILE *outputFile = fopen(outputPath, "wb");
+  if (outputFile == NULL) {
+    fprintf(stderr, "Could not open file %s for writing\n", outputPath);
+    free(url);
+    free(response.string);
+    curl_easy_cleanup(downloadHandle);
+    return 1;
+  }
+
+  curl_easy_setopt(downloadHandle, CURLOPT_URL, downloadURL);
+  curl_easy_setopt(downloadHandle, CURLOPT_WRITEDATA, (void *) outputFile);
+  curl_easy_setopt(downloadHandle, CURLOPT_WRITEFUNCTION, NULL);
+
+  downloadResponse = curl_easy_perform(downloadHandle);
+  if (downloadResponse != CURLE_OK) {
+    long httpResponse = 0;
+    // not checking validity of httpResponse!
+    curl_easy_getinfo(downloadHandle, CURLINFO_RESPONSE_CODE, &httpResponse);
+    fprintf(stderr, "Failed to get product status: %s (%ld)\n", curl_easy_strerror(downloadResponse),
+            httpResponse);
+    fprintf(stderr, "Server message:\n%s\n", response.string);
+    fclose(outputFile);
+    unlink(outputPath);
+    free(response.string);
+    free(url);
+    curl_easy_cleanup(downloadHandle);
+    return 1;
+  }
+
+  fclose(outputFile);
+  free(downloadURL);
+  free(response.string);
+  free(url);
+  curl_easy_cleanup(downloadHandle);
+
+  return 0;
+}
+
 int cdsDeleteProductRequest(CURL *handle, const char *requestId)
 {
   CURL *deleteHandle = curl_easy_duphandle(handle);
@@ -449,7 +539,7 @@ int cdsDeleteProductRequest(CURL *handle, const char *requestId)
     return 1;
   }
 
-  char *url = constructURL(BASEURL, "retrieve/v1/jobs", requestId);
+  char *url = constructURL(BASEURL, "retrieve/v1/jobs", requestId, 0);
   if (url == NULL) {
     fprintf(stderr, "Failed to construct url for deletion\n");
     curl_easy_cleanup(deleteHandle);
