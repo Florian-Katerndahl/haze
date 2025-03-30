@@ -212,7 +212,9 @@ int getAuthenticationFromFile(char **authenticationToken, const char *filePath)
 {
   FILE *f;
 
-  if (filePath == NULL) {
+  if (filePath) {
+    f = fopen(filePath, "rt");
+  } else {
     const char *home = getenv("HOME");
     if (home == NULL) {
       fprintf(stderr, "Failed to get home directory path\n");
@@ -228,8 +230,6 @@ int getAuthenticationFromFile(char **authenticationToken, const char *filePath)
     }
 
     f = fopen(path, "rt");
-  } else {
-    f = fopen(filePath, "rt");
   }
 
   if (f == NULL) {
@@ -316,5 +316,6 @@ void printOptions(const option_t *options)
   printf("Auth token: '%s'\n", options->authenticationToken);
 
   printf("aoi file: %s\n", options->areaOfInterest);
+
   printf("out directory: %s\n", options->outputDirectory);
 }

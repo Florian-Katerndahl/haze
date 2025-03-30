@@ -27,5 +27,4 @@ int getAuthenticationFromFile(char **authenticationToken, const char *filePath);
 
 void printOptions(const option_t *options);
 
-
 #endif // OPTIONS_H
