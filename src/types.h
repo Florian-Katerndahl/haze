@@ -11,6 +11,8 @@
 // allocate one hour more than possible maximum to break on INITVAL in case user specifies complete hour range
 #define MAXHOUR 25
 
+#define INITVAL -1
+
 // from haze
 struct rawData
 {
@@ -90,6 +92,7 @@ void freeCellGeometryList(cellGeometryList *list);
 
 void freeIntersections(intersection_t *list);
 
+// options
 typedef struct options
 {
   bool printHelp;
@@ -105,9 +108,7 @@ typedef struct options
 
 void freeOption(option_t *option);
 
-// todo move to top?
-#define INITVAL -1
-
+// API communication
 typedef struct curlString {
   char *string;
   size_t length;
