@@ -89,7 +89,7 @@ void printHelp(void)
   }
 
   int positionalArguments = argc - optind;
-  
+
   if (positionalArguments == 1) {
     userOptions->outputDirectory = argv[optind];
   } else if (positionalArguments == 2) {
@@ -100,7 +100,7 @@ void printHelp(void)
     fprintf(stderr, "Missing positional arguments\n");
     printHelp();
     exit(1);
-  }  
+  }
 
   if (getAuthentication(&userOptions->authenticationToken, NULL, &userOptions->withAllocation) == 1) {
     fprintf(stderr, "Failed to get authentication token from enironment or $HOME/.cdsapirc\n");
