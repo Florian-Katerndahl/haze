@@ -29,7 +29,7 @@ build/gdal-ops.o: src/gdal-ops.c src/gdal-ops.h
 	$(CC) $(DEFINES) $(CFLAGS) -c src/gdal-ops.c $(GDALFLAGS) -o $@
 
 build/math-utils.o: src/math-utils.c src/math-utils.h
-	$(CC) $(DEFINES) $(CFLAGS) -c src/math-utils.c $(MATHFLAGS) -o $@
+	$(CC) $(DEFINES) $(CFLAGS) -c src/math-utils.c -o $@
 
 build/options.o: src/options.c src/options.h
 	$(CC) $(DEFINES) $(CFLAGS) -c src/options.c -o $@
@@ -44,7 +44,7 @@ build/main.o: main.c
 	$(CC) $(DEFINES) $(CFLAGS) -c main.c $(GDALFLAGS) $(GEOSFLAGS) $(CURLFLAGS) -o build/main.o
 
 main: build/main.o build/options.o build/types.o build/api.o build/aoi.o build/haze.o build/fscheck.o build/gdal-ops.o build/strtree.o build/math-utils.o
-	$(CC) $(DEFINES) $(CFLAGS) $^ $(GDALFLAGS) $(GEOSFLAGS) $(CURLFLAGS) $(CURLFLAGS) $(JANSONFLAGS) $(MATHFLAGS) -o haze
+	$(CC) $(DEFINES) $(CFLAGS) $^ $(GDALFLAGS) $(GEOSFLAGS) $(CURLFLAGS) $(CURLFLAGS) $(JANSONFLAGS) -o haze
 
 clean:
 	rm -f main
