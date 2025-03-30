@@ -192,6 +192,11 @@ int downloadDaily(const option_t *options, const OGREnvelope *aoi)
 
         char *requestId = cdsRequestProduct(handle, requestYears, requestMonths, requestDays,
                                             options->hours, aoi, options);
+        if (requestId == NULL) {
+          fprintf(stderr, "Failed to request product or extract job id\n");
+          // todo cleanup
+          return -1;
+        }
 #ifdef DEBUG
         printf("Posted product request with Id: %s\n", requestId);
 #endif
@@ -245,11 +250,92 @@ json_t *jsonArrayFromIntegers(const int *arr, int stopVal, const char *formatStr
       json_decref(jsonArray);
       return NULL;
     }
-    json_array_append_new(jsonArray, elementString);
+
+    if (json_array_append_new(jsonArray, elementString)) {
+      json_decref(elementString);
+      json_decref(jsonArray);
+      return NULL;
+    }
+
     arr++;
   }
 
   return jsonArray;
+}
+
+char *constructStringRequest(const int *years, const int *months, const int *days, const int *hours,
+                             const OGREnvelope *aoi)
+{
+  json_t *yearsArray = NULL;
+  json_t *monthsArray = NULL;
+  json_t *daysArray = NULL;
+  json_t *hoursArray = NULL;
+  json_t *aoiArray = NULL;
+  json_t *jsonRequest = NULL;
+
+  if ((yearsArray = jsonArrayFromIntegers(years, INITVAL, "%.4d")) == NULL) {
+    fprintf(stderr, "Failed to create JSON array for requested years\n");
+    goto cleanup;
+  }
+
+  if ((monthsArray = jsonArrayFromIntegers(months, INITVAL, "%.2d")) == NULL) {
+    fprintf(stderr, "Failed to create JSON array for requested months\n");
+    goto cleanup;
+  }
+
+  if ((daysArray = jsonArrayFromIntegers(days, INITVAL, "%.2d")) == NULL) {
+    fprintf(stderr, "Failed to create JSON array for requested days\n");
+    goto cleanup;
+  }
+
+  if ((hoursArray = jsonArrayFromIntegers(hours, INITVAL, "%.2d:00")) == NULL) {
+    fprintf(stderr, "Failed to create JSON array for requested hours\n");
+    goto cleanup;
+  }
+
+  if (aoi == NULL) {
+    aoiArray = NULL;
+  } else {
+    if ((aoiArray = json_array()) == NULL) {
+      fprintf(stderr, "Failed to create JSON array for requested aoi\n");
+      goto cleanup;
+    }
+
+    if (json_array_append_new(aoiArray, json_real(aoi->MaxY)) ||
+        json_array_append_new(aoiArray, json_real(aoi->MinX)) ||
+        json_array_append_new(aoiArray, json_real(aoi->MinY)) ||
+        json_array_append_new(aoiArray, json_real(aoi->MaxX)))
+      goto cleanup;
+  }
+
+  // steals references to JSON objects
+  jsonRequest = json_pack("{s: {s:[s], s:o, s:o, s:o, s:o, s:o*, s:s, s:s, s:[s]}}",
+                          "inputs", "product_type", "reanalysis", "year", yearsArray, "month", monthsArray, "day", daysArray,
+                          "time",
+                          hoursArray, "area", aoiArray, "data_format", "grib", "download_format", "unarchived", "variable",
+                          "total_column_water_vapour");
+
+  if (jsonRequest == NULL) {
+    fprintf(stderr, "Failed to craete complete JSON request\n");
+    goto cleanup;
+  }
+
+  char *stringRequest = json_dumps(jsonRequest, 0);
+
+  json_decref(jsonRequest);
+
+  // callee checks for success
+  return stringRequest;
+
+// jansson checks for NULL before accessing object members
+cleanup:
+  json_decref(hoursArray);
+  json_decref(daysArray);
+  json_decref(monthsArray);
+  json_decref(yearsArray);
+  json_decref(jsonRequest);
+  return NULL;
+
 }
 
 // gets first matching key, depth first
@@ -303,77 +389,10 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
     return NULL;
   }
 
-  json_t *yearsArray = jsonArrayFromIntegers(years, INITVAL, "%.4d");
-  if (yearsArray == NULL) {
-    fprintf(stderr, "Failed to create JSON array for requested years\n");
-    curl_easy_cleanup(requestHandle);
-    return NULL;
-  }
-
-  json_t *monthsArray = jsonArrayFromIntegers(months, INITVAL, "%.2d");
-  if (monthsArray == NULL) {
-    fprintf(stderr, "Failed to create JSON array for requested months\n");
-    json_decref(yearsArray);
-    curl_easy_cleanup(requestHandle);
-    return NULL;
-  }
-
-  json_t *daysArray = jsonArrayFromIntegers(days, INITVAL, "%.2d");
-  if (daysArray == NULL) {
-    fprintf(stderr, "Failed to create JSON array for requested days\n");
-    json_decref(monthsArray);
-    json_decref(yearsArray);
-    curl_easy_cleanup(requestHandle);
-    return NULL;
-  }
-
-  json_t *hoursArray = jsonArrayFromIntegers(hours, INITVAL, "%.2d:00");
-  if (hoursArray == NULL) {
-    fprintf(stderr, "Failed to create JSON array for requested hours\n");
-    json_decref(daysArray);
-    json_decref(monthsArray);
-    json_decref(yearsArray);
-    curl_easy_cleanup(requestHandle);
-    return NULL;
-  }
-
-  json_t *aoiArray;
-  if (aoi == NULL) {
-    aoiArray = NULL;
-  } else {
-    aoiArray = json_array();
-    if (aoiArray == NULL) {
-      fprintf(stderr, "Failed to create JSON array for requested years\n");
-      json_decref(hoursArray);
-      json_decref(daysArray);
-      json_decref(monthsArray);
-      json_decref(yearsArray);
-      curl_easy_cleanup(requestHandle);
-      return NULL;
-    }
-
-    // todo error handling here as well!
-    json_array_append_new(aoiArray, json_real(aoi->MaxY));
-    json_array_append_new(aoiArray, json_real(aoi->MinX));
-    json_array_append_new(aoiArray, json_real(aoi->MinY));
-    json_array_append_new(aoiArray, json_real(aoi->MaxX));
-  }
-
-  // steals references to JSON objects
-  json_t *jsonRequest = json_pack("{s: {s:[s], s:o, s:o, s:o, s:o, s:o*, s:s, s:s, s:[s]}}",
-                                  "inputs", "product_type", "reanalysis", "year", yearsArray, "month", monthsArray, "day", daysArray,
-                                  "time",
-                                  hoursArray, "area", aoiArray, "data_format", "grib", "download_format", "unarchived", "variable",
-                                  "total_column_water_vapour");
-  if (jsonRequest == NULL) {
-    // todo cleanup
-    return NULL;
-  }
-
-  char *stringRequest = json_dumps(jsonRequest, 0);
-  json_decref(jsonRequest);
+  char *stringRequest = constructStringRequest(years, months, days, hours, aoi);
   if (stringRequest == NULL) {
     fprintf(stderr, "Failed to export JSON to string\n");
+    curl_easy_cleanup(requestHandle);
     return NULL;
   }
 
@@ -381,7 +400,8 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
                            "execution", 0);
   if (url == NULL) {
     fprintf(stderr, "Failed to assemble request URL\n");
-    // todo cleanup
+    free(stringRequest);
+    curl_easy_cleanup(requestHandle);
     return NULL;
   }
 
@@ -396,12 +416,17 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
   struct curl_slist *requestHeader = customHeader(NULL, options);
   if (requestHeader == NULL) {
     fprintf(stderr, "Failed to create custom HTTP header for product request\n");
-    // todo cleanup
+    free(url);
+    free(stringRequest);
+    curl_easy_cleanup(requestHandle);
     return NULL;
   }
 
   if ((requestHeader = curl_slist_append(requestHeader, "Content-Type: application/json")) == NULL) {
-    // todo cleanup
+    free(url);
+    curl_slist_free_all(requestHeader);
+    free(stringRequest);
+    curl_easy_cleanup(requestHandle);
     return NULL;
   }
 
@@ -417,19 +442,19 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
     fprintf(stderr, "Server message:\n%s\n", requestResponse.string);
     free(requestResponse.string);
     free(url);
+    curl_slist_free_all(requestHeader);
+    free(stringRequest);
     curl_easy_cleanup(requestHandle);
     return NULL;
   }
 
-  char *jobId = slurpAndGetString(requestResponse.string,
-                                  "jobID"); // null check here or leave up to callee?
+  char *jobId = slurpAndGetString(requestResponse.string, "jobID");
 
-  // todo stack-like cleanup like in other places?!
-  free(url);
-  free(stringRequest);
-  curl_slist_free_all(requestHeader);
-  curl_easy_cleanup(requestHandle);
   free(requestResponse.string);
+  free(url);
+  curl_slist_free_all(requestHeader);
+  free(stringRequest);
+  curl_easy_cleanup(requestHandle);
 
   return jobId;
 }
