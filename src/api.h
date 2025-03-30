@@ -12,8 +12,6 @@
 // passing NULL as first arg creates new list
 struct curl_slist *customHeader(struct curl_slist *list, const option_t *options);
 
-void freeCustomHeader(struct curl_slist *list);
-
 CURL *initializeHandle(CURL **handle, const struct curl_slist *headerList);
 
 char *constructURL(const char *basePath, const char *endPoint, const char *requestId, size_t addon);

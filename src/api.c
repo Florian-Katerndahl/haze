@@ -32,11 +32,6 @@ struct curl_slist *customHeader(struct curl_slist *list, const option_t *options
   return ret;
 }
 
-void freeCustomHeader(struct curl_slist *list)
-{
-  curl_slist_free_all(list);
-}
-
 CURL *initializeHandle(CURL **handle, const struct curl_slist *headerList)
 {
   // HOLY MOLY, for whatever reason, the LegacyApiClient is needed to access data even though the cdsapirc file has to follow the "old" format - the fuck!
@@ -230,7 +225,7 @@ int downloadDaily(const option_t *options, const OGREnvelope *aoi)
     }
   }
 
-  freeCustomHeader(headerAddon);
+  curl_slist_free_all(headerAddon);
   curl_easy_cleanup(handle);
   return 0;
 }
