@@ -8,7 +8,8 @@
 #define MAXYEAR 100
 #define MAXMONTH 12
 #define MAXDAY 31
-#define MAXHOUR 24
+// allocate one hour more than possible maximum to break on INITVAL in case user specifies complete hour range
+#define MAXHOUR 25
 
 // from haze
 struct rawData
