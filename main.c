@@ -1,17 +1,23 @@
+#include "src/aoi.h"
+#include "src/api.h"
 #include "src/options.h"
 #include "src/types.h"
+#include "src/haze.h"
 #include <stdio.h>
+#include <stddef.h>
 #include <geos_c.h>
 #include <gdal/gdal.h>
+#include <gdal/cpl_conv.h>
+#include <gdal/ogr_core.h>
 #include <curl/curl.h>
 
-static void
-geos_msg_handler(const char* fmt, ...)
+/* fucntion from GEOS documentation */
+static void geos_msg_handler(const char* fmt, ...)
 {
-    va_list ap;
-    va_start(ap, fmt);
-    vprintf (fmt, ap);
-    va_end(ap);
+  va_list ap;
+  va_start(ap, fmt);
+  vprintf (fmt, ap);
+  va_end(ap);
 }
 
 int main(int argc, char *argv[])
@@ -28,21 +34,48 @@ int main(int argc, char *argv[])
   printOptions(opts);
 #endif
 
-  // if (downloadProduct(opts) == 1) {
-  //   fprintf(stderr, "Failed to download all datasets\n");
-  //   return 1;
-  // }
+  const OGREnvelope *aoi = boxFromPath(opts->areaOfInterest, NULL);
+  if (aoi == NULL) {
+    /* END OF PROGRAM, FREE STACK OBJECTS */
+    freeOption(opts);
 
-  // if (processProduct(opts) == 1) {
-  //   fprintf(stderr, "Failed to process all datasets\n");
-  //   return 1;
-  // }
+    /* TEARDOWN EXTERNAL LIBRARIES */
+    finishGEOS();
+    curl_global_cleanup();
+    return EXIT_FAILURE;
+  }
 
+  if (downloadDaily(opts, aoi)) {
+    fprintf(stderr, "Failed to download all datasets\n");
+    /* END OF PROGRAM, FREE STACK OBJECTS */
+    CPLFree((void *) aoi);
+    freeOption(opts);
+
+    /* TEARDOWN EXTERNAL LIBRARIES */
+    finishGEOS();
+    curl_global_cleanup();
+    return EXIT_FAILURE;
+  }
+
+  if (processDaily(opts) == 1) {
+    fprintf(stderr, "Failed to process all datasets\n");
+    /* END OF PROGRAM, FREE STACK OBJECTS */
+    CPLFree((void *) aoi);
+    freeOption(opts);
+
+    /* TEARDOWN EXTERNAL LIBRARIES */
+    finishGEOS();
+    curl_global_cleanup();
+    return EXIT_FAILURE;
+  }
+
+  /* END OF PROGRAM, FREE STACK OBJECTS */
+  CPLFree((void *) aoi);
   freeOption(opts);
 
   /* TEARDOWN EXTERNAL LIBRARIES */
   finishGEOS();
   curl_global_cleanup();
 
-  return 0;
+  return EXIT_SUCCESS;
 }
