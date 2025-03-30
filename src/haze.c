@@ -2,13 +2,17 @@
 #include "types.h"
 #include "gdal-ops.h"
 #include "math-utils.h"
+#include "strtree.h"
 #include <assert.h>
+#include <errno.h>
+#include <dirent.h>
 #include <bits/posix2_lim.h>
 #include <gdal/cpl_conv.h>
 #include <geos_c.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <gdal/gdal.h>
 #include <gdal/gdal_version.h>
@@ -464,4 +468,148 @@ double coordinateFromCell(double origin, double axisOfInterest, double pixelExte
 {
   // axisOfInterest is the axis for which coordinate should be caclulated
   return origin + axisOfInterest * pixelExtent + complementaryAxis * rotation;
+}
+
+int processDaily(const option_t *options)
+{
+  // todo always close directory upon return
+  DIR *dir = opendir(options->outputDirectory);
+  if (dir == NULL) {
+    perror("opendir");
+    return -1;
+  }
+
+  struct dirent *dirEntry;
+  errno = 0;
+  while ((dirEntry = readdir(dir)) != NULL) {
+    switch (dirEntry->d_type) {
+      case DT_LNK: // fallthrough
+      case DT_REG:
+        // stuff from "test.c" could be added here as this is where I have a singular file which needs processing!
+        bool endsWithSlash = options->outputDirectory[strlen(options->outputDirectory) - 1] == '/';
+
+        // d_name is char[256]
+        int pathLenth = (int)strlen(options->outputDirectory) + 256;
+
+        if (!endsWithSlash)
+          pathLenth++;
+
+        char *inputFilePath = calloc(pathLenth, sizeof(char));
+        if (inputFilePath == NULL) {
+          perror("calloc");
+          return -1;
+        }
+
+        int charsWritten;
+
+        if (endsWithSlash)
+          charsWritten = snprintf(inputFilePath, pathLenth, "%s%s", options->outputDirectory,
+                                  dirEntry->d_name);
+        else
+          charsWritten = snprintf(inputFilePath, pathLenth, "%s/%s", options->outputDirectory,
+                                  dirEntry->d_name);
+
+        if (charsWritten >= pathLenth || charsWritten < 0) {
+          fprintf(stderr, "Failed to construct input file path \n");
+          free(inputFilePath);
+          return -1;
+        }
+
+        GDALDatasetH ds = openRaster(inputFilePath);
+
+        if (ds == NULL) {
+          free(inputFilePath);
+          return -1;
+        }
+
+        const char *rasterWkt = extractCRSAsWKT(ds, NULL);
+
+        vectorGeometryList *areasOfInterest = buildGEOSGeometriesFromFile(options->areaOfInterest, NULL,
+                                              rasterWkt);
+
+        struct rawData *data = NULL;
+        readRasterDataset(ds, &data);
+        struct geoTransform transform = {0};
+        getRasterMetadata(ds, &transform);
+        closeGDALDataset(ds);
+
+        struct averagedData *average = NULL;
+        averageRawDataWithSizeOffset(data, &average, 0, 0);
+
+        cellGeometryList *rasterCellsAsGEOS = NULL; // todo: document that this should be freed!
+
+        // todo: optionally implement function to crop raster beforehand
+
+        GEOSSTRtree *rasterTree = buildSTRTreefromRaster(average, &transform, &rasterCellsAsGEOS);
+
+        // a function to query the tree constructed by buildSTRTreefromRaster which somehow gets me for each polygon in areasOfInterest
+        // the intersecting polygons of the tree so I can calculate the area-weighted average
+        intersection_t *intersections = querySTRTree(areasOfInterest,
+                                        rasterTree); // todo: free intersections!
+        if (intersections == NULL) {
+          fprintf(stderr, "No intersections found\n");
+          // todo: cleanup
+          return 0;
+        }
+
+        // a functions that (should be split up into smaller pieces)
+        // 1. converts GEOSGeometry back to OGRGeometry (via WKBExport)
+        // 2. given two OGRGeometries (Polygons) computes the intersection
+        // 3. a) depending on the CRS being geodesic or not, calculating the appropriate area
+        // 3. b) query a WKT/dataset for property
+        // 4. calculate area-weighted average
+        // 5. get centroid of polygon
+        mean_t *weightedMeans = calculateAreaWeightedMean(intersections, rasterWkt); // todo: free this!
+        if (weightedMeans == NULL) {
+          fprintf(stderr, "Failed to calculate weighted means\n");
+          // todo: cleanup
+          return 1;
+        }
+
+        // todo: come up with a nicer way to construct file paths?
+        char *textOutputFilePath = strdup(inputFilePath);
+        if (textOutputFilePath == NULL) {
+          perror("calloc");
+          // todo cleanup
+          return -1;
+        }
+
+        char *extension = strrchr(textOutputFilePath, '.');
+        extension++;
+
+        memcpy(extension, "txt", 3);
+
+        // terminate early because file extension has one fewer letter
+        textOutputFilePath[strlen(textOutputFilePath) - 1] = '\0';
+
+        // 6. write tuple (centroid coordinates, average value, ERA5) to a file
+        writeWeightedMeans(weightedMeans, textOutputFilePath);
+
+        freeVectorGeometryList(areasOfInterest);
+        freeCellGeometryList(rasterCellsAsGEOS);
+        freeIntersections(intersections);
+        freeWeightedMeans(weightedMeans);
+
+        GEOSSTRtree_destroy(rasterTree);
+
+        CPLFree((void* ) rasterWkt);
+        freeAverageData(average);
+        freeRawData(data);
+        free(inputFilePath);
+        free(textOutputFilePath);
+        break;
+      default:
+        break;
+    }
+    errno = 0;
+  }
+
+  if (errno) {
+    perror("readdir");
+    closedir(dir);
+    return -1;
+  }
+
+  closedir(dir);
+  return 0;
 }

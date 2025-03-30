@@ -1,6 +1,8 @@
 #ifndef HAZE_H
 #define HAZE_H
 
+#define _DEFAULT_SOURCE
+
 #include "types.h"
 
 #include <stdio.h>
@@ -35,5 +37,7 @@ void freeWeightedMeans(mean_t *list);
 
 double coordinateFromCell(double origin, double axisOfInterest, double pixelExtent,
                           double complementaryAxis, double rotation);
+
+int processDaily(const option_t *options);
 
 #endif // HAZE_H
