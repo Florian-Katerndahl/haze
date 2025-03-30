@@ -54,10 +54,10 @@ CURL *initializeHandle(CURL **handle, const struct curl_slist *headerList)
 
 char *constructURL(const char *basePath, const char *endPoint, const char *requestId, size_t addon)
 {
-  size_t basePathLength = strlen(basePath);
-  size_t endPointLength = strlen(endPoint);
-  size_t requestIdLength = strlen(requestId);
-  size_t totalLength = basePathLength + endPointLength + requestIdLength + addon + 1;
+  int basePathLength = (int) strlen(basePath);
+  int endPointLength = (int) strlen(endPoint);
+  int requestIdLength = (int) strlen(requestId);
+  int totalLength = basePathLength + endPointLength + requestIdLength + addon + 1;
 
   bool baseWithSlash = basePath[basePathLength - 1] == '/';
   totalLength += baseWithSlash ? 1 : 2;
@@ -102,11 +102,14 @@ size_t writeString(char *ptr, size_t size, size_t nmemb, void *userdata)
   return chunkSize;
 }
 
-size_t discardWrite(__attribute__((unused)) char *ptr, size_t size, size_t nmemb, __attribute__((unused)) void *userdata) {
+size_t discardWrite(__attribute__((unused)) char *ptr, size_t size, size_t nmemb,
+                    __attribute__((unused)) void *userdata)
+{
   return size * nmemb;
 }
 
-json_t *getKeyRecursively(json_t *root, const char *key) {
+json_t *getKeyRecursively(json_t *root, const char *key)
+{
   json_t *ret;
   if ((ret = json_object_get(root, key))) {
     return ret;
@@ -124,14 +127,26 @@ json_t *getKeyRecursively(json_t *root, const char *key) {
   return NULL;
 }
 
-int downloadDaily(CURL *handle, const option_t *options, const OGREnvelope *aoi) {
-  for (int *year = (int *) options->years; *year != INITVAL; year++){
+int downloadDaily(const option_t *options, const OGREnvelope *aoi)
+{
+  CURL *handle = curl_easy_init();
+  if (handle == NULL) {
+    fprintf(stderr, "Failed to create CURL handle\n");
+    return -1;
+  }
+
+  struct curl_slist *headerAddon = customHeader(NULL, options);
+
+  initializeHandle(&handle, headerAddon);
+
+  for (int *year = (int *) options->years; *year != INITVAL; year++) {
     for (int *month = (int *) options->months; *month != INITVAL; month++) {
       for (int *day = (int *) options->days; *day != INITVAL; day++) {
         int fileNameLength = 16;
         char *dateString = calloc(fileNameLength, sizeof(char));
         if (dateString == NULL) {
           perror("calloc");
+          curl_easy_cleanup(handle);
           return -1;
         }
 
@@ -139,6 +154,7 @@ int downloadDaily(CURL *handle, const option_t *options, const OGREnvelope *aoi)
         if (charsWritten >= fileNameLength || charsWritten < 0) {
           fprintf(stderr, "Failed to convert date to string format\n");
           free(dateString);
+          curl_easy_cleanup(handle);
           return -1;
         }
 
@@ -153,6 +169,7 @@ int downloadDaily(CURL *handle, const option_t *options, const OGREnvelope *aoi)
         if (outputPath == NULL) {
           perror("calloc");
           free(dateString);
+          curl_easy_cleanup(handle);
           return -1;
         }
 
@@ -165,6 +182,7 @@ int downloadDaily(CURL *handle, const option_t *options, const OGREnvelope *aoi)
           fprintf(stderr, "Failed to construct local file path\n");
           free(dateString);
           free(outputPath);
+          curl_easy_cleanup(handle);
           return -1;
         }
 
@@ -172,23 +190,33 @@ int downloadDaily(CURL *handle, const option_t *options, const OGREnvelope *aoi)
         int requestMonths[2] = {*month, INITVAL};
         int requestDays[2] = {*day, INITVAL};
 
-        char *requestId = cdsRequestProduct(handle, requestYears, requestMonths, requestDays, options->hours, aoi, options);
+        char *requestId = cdsRequestProduct(handle, requestYears, requestMonths, requestDays,
+                                            options->hours, aoi, options);
+#ifdef DEBUG
         printf("Posted product request with Id: %s\n", requestId);
+#endif
 
-         if (cdsWaitForProduct(handle, requestId)) {
+        if (cdsWaitForProduct(handle, requestId)) {
           fprintf(stderr, "Error while waiting for product\n");
           free(requestId);
           free(dateString);
-          free(outputPath);          
+          free(outputPath);
+          curl_easy_cleanup(handle)          ;
           return -1;
         }
+#ifdef DEBUG
         printf("Waited for product request with Id: %s\n", requestId);
+#endif
 
         cdsDownloadProduct(handle, requestId, outputPath);
+#ifdef DEBUG
         printf("Downloaded file for product request %s\n", requestId);
+#endif
 
         cdsDeleteProductRequest(handle, requestId);
+#ifdef DEBUG
         printf("Deleted product request with Id: %s\n", requestId);
+#endif
 
         free(requestId);
         free(dateString);
@@ -196,11 +224,15 @@ int downloadDaily(CURL *handle, const option_t *options, const OGREnvelope *aoi)
       }
     }
   }
+
+  freeCustomHeader(headerAddon);
+  curl_easy_cleanup(handle);
   return 0;
 }
 
 // gets first matching key, depth first
-char *slurpAndGetString(const char *input, const char *key) {
+char *slurpAndGetString(const char *input, const char *key)
+{
   json_error_t error;
   json_t *root = json_loads(input, 0, &error);
   if (root == NULL) {
@@ -240,7 +272,8 @@ char *slurpAndGetString(const char *input, const char *key) {
   return ret;
 }
 
-char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days, const int *hours, const OGREnvelope *aoi, const option_t *options)
+char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days,
+                        const int *hours, const OGREnvelope *aoi, const option_t *options)
 {
   CURL *requestHandle = curl_easy_duphandle(handle);
   if (requestHandle == NULL) {
@@ -382,7 +415,8 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
     return NULL;
   }
 
-  char *url = constructURL(BASEURL, "retrieve/v1/processes/reanalysis-era5-single-levels", "execution", 0);
+  char *url = constructURL(BASEURL, "retrieve/v1/processes/reanalysis-era5-single-levels",
+                           "execution", 0);
   if (url == NULL) {
     fprintf(stderr, "Failed to assemble request URL\n");
     // todo cleanup
@@ -397,14 +431,13 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
   curl_easy_setopt(requestHandle, CURLOPT_WRITEFUNCTION, writeString);
   curl_easy_setopt(requestHandle, CURLOPT_WRITEDATA, (void *) &requestResponse);
 
-
   struct curl_slist *requestHeader = customHeader(NULL, options);
   if (requestHeader == NULL) {
     fprintf(stderr, "Failed to create custom HTTP header for product request\n");
     // todo cleanup
     return NULL;
   }
-  
+
   if ((requestHeader = curl_slist_append(requestHeader, "Content-Type: application/json")) == NULL) {
     // todo cleanup
     return NULL;
@@ -426,7 +459,8 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
     return NULL;
   }
 
-  char *jobId = slurpAndGetString(requestResponse.string, "jobID"); // null check here or leave up to callee?
+  char *jobId = slurpAndGetString(requestResponse.string,
+                                  "jobID"); // null check here or leave up to callee?
 
   // todo stack-like cleanup like in other places?!
   free(url);
@@ -525,7 +559,8 @@ int cdsWaitForProduct(CURL *handle, const char *requestId)
   return 0;
 }
 
-int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPath) {
+int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPath)
+{
   CURL *downloadHandle = curl_easy_duphandle(handle);
   if (downloadHandle == NULL) {
     fprintf(stderr, "Failed to duplicate CURL handle before product download\n");
@@ -542,7 +577,7 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
   strcat(url, "/results");
 
   curlString response = {0};
-  
+
   curl_easy_setopt(downloadHandle, CURLOPT_URL, url);
   curl_easy_setopt(downloadHandle, CURLOPT_WRITEDATA, (void *) &response);
   curl_easy_setopt(downloadHandle, CURLOPT_WRITEFUNCTION, writeString);

@@ -22,7 +22,7 @@ size_t writeString(char *ptr, size_t size, size_t nmemb, void *userdata);
 
 size_t discardWrite(char *ptr, size_t size, size_t nmemb, void *userdata);
 
-int downloadDaily(CURL *handle, const option_t *options, const OGREnvelope *aoi);
+int downloadDaily(const option_t *options, const OGREnvelope *aoi);
 
 char *slurpAndGetString(const char *input, const char *key);
 
