@@ -30,6 +30,7 @@ int main(void) {
   test_opts.hours[2] = 2;
   test_opts.hours[3] = 3;
   test_opts.hours[4] = -1;
+  test_opts.outputDirectory = "/home/florian/git-repos/haze/feature-tests";
 
   OGREnvelope test_envelope = {-180, 180, -90, 90};
 
@@ -38,24 +39,8 @@ int main(void) {
 
   initializeHandle(&handle, headerAddon);
 
-  char *requestId = cdsRequestProduct(handle, test_opts.years, test_opts.months, test_opts.days, test_opts.hours, &test_envelope, &test_opts);
-  printf("Posted product request with Id: %s\n", requestId);
-
-
-  if (cdsWaitForProduct(handle, requestId)) {
-    fprintf(stderr, "Error while waiting for pdroduct");
-    // todo cleanup
-    return EXIT_FAILURE;
-  }
-  printf("Waited for product request with Id: %s\n", requestId);
-
-  cdsDownloadProduct(handle, requestId, "../test-download.grib");
-  printf("Downloaded file for product request %s\n", requestId);
-
-  cdsDeleteProductRequest(handle, requestId);
-  printf("Deleted product request with Id: %s\n", requestId);
-
-  free(requestId);
+  downloadDaily(handle, &test_opts, &test_envelope);
+  
   freeCustomHeader(headerAddon);
   free(test_opts.authenticationToken);
   curl_easy_cleanup(handle);

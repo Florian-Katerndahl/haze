@@ -22,6 +22,8 @@ size_t writeString(char *ptr, size_t size, size_t nmemb, void *userdata);
 
 size_t discardWrite(char *ptr, size_t size, size_t nmemb, void *userdata);
 
+int downloadDaily(CURL *handle, const option_t *options, const OGREnvelope *aoi);
+
 char *slurpAndGetString(const char *input, const char *key);
 
 char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days, const int *hours, const OGREnvelope *aoi, const option_t *options);

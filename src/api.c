@@ -2,8 +2,10 @@
 #include "types.h"
 #include <assert.h>
 #include <curl/easy.h>
+#include <gdal/ogr_core.h>
 #include <jansson.h>
 #include <curl/curl.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -100,7 +102,7 @@ size_t writeString(char *ptr, size_t size, size_t nmemb, void *userdata)
   return chunkSize;
 }
 
-size_t discardWrite(char *ptr, size_t size, size_t nmemb, void *userdata) {
+size_t discardWrite(__attribute__((unused)) char *ptr, size_t size, size_t nmemb, __attribute__((unused)) void *userdata) {
   return size * nmemb;
 }
 
@@ -120,6 +122,81 @@ json_t *getKeyRecursively(json_t *root, const char *key) {
     }
   }
   return NULL;
+}
+
+int downloadDaily(CURL *handle, const option_t *options, const OGREnvelope *aoi) {
+  for (int *year = (int *) options->years; *year != INITVAL; year++){
+    for (int *month = (int *) options->months; *month != INITVAL; month++) {
+      for (int *day = (int *) options->days; *day != INITVAL; day++) {
+        int fileNameLength = 16;
+        char *dateString = calloc(fileNameLength, sizeof(char));
+        if (dateString == NULL) {
+          perror("calloc");
+          return -1;
+        }
+
+        int charsWritten = snprintf(dateString, fileNameLength, "%.4d-%.2d-%.2d.grib", *year, *month, *day);
+        if (charsWritten >= fileNameLength || charsWritten < 0) {
+          fprintf(stderr, "Failed to convert date to string format\n");
+          free(dateString);
+          return -1;
+        }
+
+        int numCharacters = (int) strlen(options->outputDirectory) + fileNameLength;
+        bool endsWithSlash = options->outputDirectory[strlen(options->outputDirectory) - 1] == '/';
+
+        if (!endsWithSlash) {
+          numCharacters++;
+        }
+
+        char *outputPath = calloc(numCharacters, sizeof(char));
+        if (outputPath == NULL) {
+          perror("calloc");
+          free(dateString);
+          return -1;
+        }
+
+        if (endsWithSlash)
+          charsWritten = snprintf(outputPath, numCharacters, "%s%s", options->outputDirectory, dateString);
+        else
+          charsWritten = snprintf(outputPath, numCharacters, "%s/%s", options->outputDirectory, dateString);
+
+        if (charsWritten >= numCharacters || charsWritten < 0) {
+          fprintf(stderr, "Failed to construct local file path\n");
+          free(dateString);
+          free(outputPath);
+          return -1;
+        }
+
+        int requestYears[2] = {*year, INITVAL};
+        int requestMonths[2] = {*month, INITVAL};
+        int requestDays[2] = {*day, INITVAL};
+
+        char *requestId = cdsRequestProduct(handle, requestYears, requestMonths, requestDays, options->hours, aoi, options);
+        printf("Posted product request with Id: %s\n", requestId);
+
+         if (cdsWaitForProduct(handle, requestId)) {
+          fprintf(stderr, "Error while waiting for product\n");
+          free(requestId);
+          free(dateString);
+          free(outputPath);          
+          return -1;
+        }
+        printf("Waited for product request with Id: %s\n", requestId);
+
+        cdsDownloadProduct(handle, requestId, outputPath);
+        printf("Downloaded file for product request %s\n", requestId);
+
+        cdsDeleteProductRequest(handle, requestId);
+        printf("Deleted product request with Id: %s\n", requestId);
+
+        free(requestId);
+        free(dateString);
+        free(outputPath);
+      }
+    }
+  }
+  return 0;
 }
 
 // gets first matching key, depth first
