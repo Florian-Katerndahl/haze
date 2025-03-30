@@ -24,6 +24,11 @@ int dNudge(const double *x, enum how direction)
   }
 }
 
+double kgsqmTocow(double x)
+{
+  return x / 10.0;
+}
+
 double calculateWeightedAverage(const double *values, const double *weights, size_t count)
 {
   assert(values && weights);

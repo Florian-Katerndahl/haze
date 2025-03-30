@@ -444,7 +444,7 @@ void writeWeightedMeans(mean_t *values, const char *filePath)
     fprintf(
       outFile,
       "%.4lf %.4lf %f ERA\n",
-      values->x, values->y, (float) values->value);
+      values->x, values->y, (float) kgsqmTocow(values->value));
 
     values = values->next;
   }
