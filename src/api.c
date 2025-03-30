@@ -230,6 +230,28 @@ int downloadDaily(const option_t *options, const OGREnvelope *aoi)
   return 0;
 }
 
+json_t *jsonArrayFromIntegers(const int *arr, int stopVal, const char *formatString)
+{
+  json_t *jsonArray = json_array();
+  if (jsonArray == NULL) {
+    fprintf(stderr, "Failed to create JSON array\n");
+    return NULL;
+  }
+
+  json_t *elementString;
+  while (*arr != stopVal) {
+    if ((elementString = json_sprintf(formatString, *arr)) == NULL) {
+      fprintf(stderr, "Failed to create JSON string representation of integer\n");
+      json_decref(jsonArray);
+      return NULL;
+    }
+    json_array_append_new(jsonArray, elementString);
+    arr++;
+  }
+
+  return jsonArray;
+}
+
 // gets first matching key, depth first
 char *slurpAndGetString(const char *input, const char *key)
 {
@@ -281,98 +303,38 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
     return NULL;
   }
 
-  // TODO: creation of array and addition of variables could be a function!
-  // Additionally: constructing the JSON request could itself be an entirely different function
-  json_t *yearsArray = json_array();
+  json_t *yearsArray = jsonArrayFromIntegers(years, INITVAL, "%.4d");
   if (yearsArray == NULL) {
     fprintf(stderr, "Failed to create JSON array for requested years\n");
     curl_easy_cleanup(requestHandle);
     return NULL;
   }
 
-  // todo better handling of integer array!
-  json_t *yStr;
-  while (*years != INITVAL) {
-    if ((yStr = json_sprintf("%.4d", *years)) == NULL) {
-      fprintf(stderr, "Failed to create JSON integer\n");
-      json_decref(yearsArray);
-      curl_easy_cleanup(requestHandle);
-      return NULL;
-    }
-    json_array_append_new(yearsArray, yStr);
-    years++;
-  }
-
-  json_t *monthsArray = json_array();
+  json_t *monthsArray = jsonArrayFromIntegers(months, INITVAL, "%.2d");
   if (monthsArray == NULL) {
-    fprintf(stderr, "Failed to create JSON array for requested years\n");
+    fprintf(stderr, "Failed to create JSON array for requested months\n");
     json_decref(yearsArray);
     curl_easy_cleanup(requestHandle);
     return NULL;
   }
 
-  // todo better handling of integer array!
-  json_t *mStr;
-  while (*months != INITVAL) {
-    if ((mStr = json_sprintf("%.2d", *months)) == NULL) {
-      fprintf(stderr, "Failed to create JSON integer\n");
-      json_decref(monthsArray);
-      json_decref(yearsArray);
-      curl_easy_cleanup(requestHandle);
-      return NULL;
-    }
-    json_array_append_new(monthsArray, mStr);
-    months++;
-  }
-
-  json_t *daysArray = json_array();
+  json_t *daysArray = jsonArrayFromIntegers(days, INITVAL, "%.2d");
   if (daysArray == NULL) {
-    fprintf(stderr, "Failed to create JSON array for requested years\n");
+    fprintf(stderr, "Failed to create JSON array for requested days\n");
     json_decref(monthsArray);
     json_decref(yearsArray);
     curl_easy_cleanup(requestHandle);
     return NULL;
   }
 
-  // todo better handling of integer array!
-  json_t *dStr;
-  while (*days != INITVAL) {
-    if ((dStr = json_sprintf("%.2d", *days)) == NULL) {
-      fprintf(stderr, "Failed to create JSON integer\n");
-      json_decref(daysArray);
-      json_decref(monthsArray);
-      json_decref(yearsArray);
-      curl_easy_cleanup(requestHandle);
-      return NULL;
-    }
-    json_array_append_new(daysArray, dStr);
-    days++;
-  }
-
-  json_t *hoursArray = json_array();
+  json_t *hoursArray = jsonArrayFromIntegers(hours, INITVAL, "%.2d:00");
   if (hoursArray == NULL) {
-    fprintf(stderr, "Failed to create JSON array for requested years\n");
+    fprintf(stderr, "Failed to create JSON array for requested hours\n");
     json_decref(daysArray);
     json_decref(monthsArray);
     json_decref(yearsArray);
     curl_easy_cleanup(requestHandle);
     return NULL;
-  }
-
-  // todo better handling of integer array!
-  json_t *hStr;
-  while (*hours != INITVAL) {
-    if ((hStr = json_sprintf("%.2d:00", *hours)) == NULL) {
-      fprintf(stderr, "Failed to create JSON integer\n");
-      json_decref(hoursArray);
-      json_decref(daysArray);
-      json_decref(monthsArray);
-      json_decref(yearsArray);
-      curl_easy_cleanup(requestHandle);
-      return NULL;
-    }
-    json_array_append_new(hoursArray, hStr);
-    hours++;
   }
 
   json_t *aoiArray;
