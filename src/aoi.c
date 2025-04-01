@@ -77,7 +77,7 @@
       return NULL;
     }
 
-    OGRCoordinateTransformationH *transformation = OCTNewCoordinateTransformationEx(layerRef, wgs84Ref,
+    OGRCoordinateTransformationH transformation = OCTNewCoordinateTransformationEx(layerRef, wgs84Ref,
       NULL);
     if (transformation == NULL) {
       fprintf(stderr, "Failed to create transformation object: %s", CPLGetLastErrorMsg());
