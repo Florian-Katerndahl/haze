@@ -180,7 +180,9 @@
     mbr->MaxY = maxFirstOut;
     mbr->MaxX = maxSecondOut;
 
-    // printf("%lf %lf %lf %lf\n", mbr->MinX, mbr->MinY, mbr->MaxX, mbr->MaxY);
+
+    if (mbr->MaxX < mbr->MinX)
+      mbr->MaxX += 360.0; // cds API allows requests with x [-360,360]
 
     OSRDestroySpatialReference(wgs84Ref);
     OCTDestroyCoordinateTransformation(transformation);
