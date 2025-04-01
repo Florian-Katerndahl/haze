@@ -67,7 +67,6 @@
   }
 
   if (!EQUAL(layerWKT, SRS_WKT_WGS84_LAT_LONG)) {
-    // FIXME: handle crossing of meridians
     const char *const wgs84WKT = SRS_WKT_WGS84_LAT_LONG;
 
     OGRSpatialReferenceH wgs84Ref = OSRNewSpatialReference(wgs84WKT);
@@ -147,14 +146,6 @@
       maxFirstIn = mbr->MaxX;
       maxSecondIn = mbr->MaxY;
     }
-
-    // check if we cross the antimeridian following strictly the docs from GDAL (which I find confusing and don't understand)
-    // only applies if destination is geographic (which it always is in this case)
-    // if ((orientation == OAO_East && maxFirstIn < minFirstIn) || (orientation == OAO_North && maxSecondIn < minSecondIn)) {
-    //   fprintf(stderr, "Bounds crossed antimeridian\n");
-    //   // todo cleanup
-    //   return NULL;
-    // }
 
     if (OCTTransformBounds(
           transformation,
