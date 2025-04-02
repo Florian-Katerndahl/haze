@@ -41,8 +41,8 @@ int main(int argc, char *argv[])
     goto teardown;
   }
 
-  stringList *downloadedFiles = downloadDaily(opts, aoi);
-  if (downloadedFiles == NULL) {
+  stringList *downloadedFiles = NULL;
+  if ((downloadedFiles = downloadDaily(opts, aoi)) == NULL) {
     fprintf(stderr, "Error while downloading files\n");
     exit = EXIT_FAILURE;
     goto teardown;
