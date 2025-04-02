@@ -51,13 +51,6 @@
     return NULL;
   }
 
-  if (mbr->MaxX <= mbr->MinX || mbr->MaxY <= mbr->MinY) {
-    fprintf(stderr, "Only north up bounding boxes supported\n");
-    CPLFree(mbr);
-    closeGDALDataset(aoi);
-    return NULL;
-  }
-
   char *layerWKT;
   if (OSRExportToWktEx(layerRef, &layerWKT, NULL) != OGRERR_NONE) {
     fprintf(stderr, "Failed to export layer WKT\n");
@@ -182,6 +175,12 @@
   CPLFree(layerWKT);
   closeGDALDataset(aoi);
 
+  if (mbr->MaxX <= mbr->MinX || mbr->MaxY <= mbr->MinY) {
+    fprintf(stderr, "Only north up bounding boxes supported\n");
+    CPLFree(mbr);
+    closeGDALDataset(aoi);
+    return NULL;
+  }
   return mbr;
 }
 
