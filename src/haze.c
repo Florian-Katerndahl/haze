@@ -500,7 +500,7 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
     // a function to query the tree constructed by buildSTRTreefromRaster which somehow gets me for each polygon in areasOfInterest
     // the intersecting polygons of the tree so I can calculate the area-weighted average
     intersection_t *intersections = querySTRTree(areasOfInterest,
-                                    rasterTree); // todo: free intersections!
+                                    rasterTree);
     if (intersections == NULL) {
       fprintf(stderr, "No intersections found\n"); // this is not treated as an error
       freeVectorGeometryList(areasOfInterest);
