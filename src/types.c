@@ -2,6 +2,7 @@
 #include <gdal/gdal.h>
 #include <geos_c.h>
 #include <stdlib.h>
+#include <time.h>
 
 void freeVectorGeometry(struct vectorGeometry *node)
 {
@@ -68,4 +69,14 @@ void freeOption(option_t *options)
   if (options->withAllocation)
     free(options->authenticationToken);
   free(options);
+}
+
+void freeStringList(stringList *list) {
+  stringList *tmp;
+  while (list != NULL) {
+    tmp = list->next;
+    free(list->string);
+    free(list);
+    list = tmp;
+  }
 }

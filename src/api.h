@@ -24,7 +24,7 @@ json_t *jsonArrayFromIntegers(const int *arr, int stopVal, const char *formatStr
 
 char *constructStringRequest(const int *years, const int *months, const int *days, const int *hours, const OGREnvelope *aoi);
 
-int downloadDaily(const option_t *options, const OGREnvelope *aoi);
+[[nodiscard]] stringList *downloadDaily(const option_t *options, const OGREnvelope *aoi);
 
 char *slurpAndGetString(const char *input, const char *key);
 

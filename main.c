@@ -41,13 +41,14 @@ int main(int argc, char *argv[])
     goto teardown;
   }
 
-  if (downloadDaily(opts, aoi)) {
-    fprintf(stderr, "Failed to download all datasets\n");
+  stringList *downloadedFiles = downloadDaily(opts, aoi);
+  if (downloadedFiles == NULL) {
+    fprintf(stderr, "Error while downloading files\n");
     exit = EXIT_FAILURE;
     goto teardown;
   }
 
-  if (processDaily(opts) == 1) {
+  if (processDaily(downloadedFiles, opts) == 1) {
     fprintf(stderr, "Failed to process all datasets\n");
     exit = EXIT_FAILURE;
     goto teardown;
@@ -57,6 +58,7 @@ teardown:
   /* END OF PROGRAM, FREE STACK OBJECTS */
   CPLFree((void *) aoi);
   freeOption(opts);
+  freeStringList(downloadedFiles);
 
   /* TEARDOWN EXTERNAL LIBRARIES */
   finishGEOS();

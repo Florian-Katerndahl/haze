@@ -108,7 +108,7 @@ typedef struct options
 
 void freeOption(option_t *option);
 
-// API communication
+// API communication etc
 typedef struct curlString {
   char *string;
   size_t length;
@@ -122,5 +122,12 @@ typedef enum
   FAILED,
   ERROR
 } productStatus;
+
+typedef struct stringList {
+  char *string;
+  struct stringList *next;
+} stringList;
+
+void freeStringList(stringList *list);
 
 #endif //TYPES_H

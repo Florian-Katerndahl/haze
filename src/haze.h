@@ -38,6 +38,6 @@ void freeWeightedMeans(mean_t *list);
 double coordinateFromCell(double origin, double axisOfInterest, double pixelExtent,
                           double complementaryAxis, double rotation);
 
-int processDaily(const option_t *options);
+int processDaily(stringList *successfulDownloads, const option_t *options);
 
 #endif // HAZE_H

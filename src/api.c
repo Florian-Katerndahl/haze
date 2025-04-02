@@ -122,17 +122,24 @@ json_t *getKeyRecursively(json_t *root, const char *key)
   return NULL;
 }
 
-int downloadDaily(const option_t *options, const OGREnvelope *aoi)
+[[nodiscard]] stringList *downloadDaily(const option_t *options, const OGREnvelope *aoi)
 {
   CURL *handle = curl_easy_init();
   if (handle == NULL) {
     fprintf(stderr, "Failed to create CURL handle\n");
-    return -1;
+    return NULL;
   }
 
   struct curl_slist *headerAddon = customHeader(NULL, options);
+  if (headerAddon == NULL) {
+    fprintf(stderr, "Failed to create HTTP header for product requests\n");
+    curl_easy_cleanup(handle);
+    return NULL;
+  }
 
   initializeHandle(&handle, headerAddon);
+
+  stringList *root = NULL;
 
   for (int *year = (int *) options->years; *year != INITVAL; year++) {
     for (int *month = (int *) options->months; *month != INITVAL; month++) {
@@ -141,16 +148,16 @@ int downloadDaily(const option_t *options, const OGREnvelope *aoi)
         char *dateString = calloc(fileNameLength, sizeof(char));
         if (dateString == NULL) {
           perror("calloc");
-          curl_easy_cleanup(handle);
-          return -1;
+          fprintf(stderr, "Failed to process data %.4d-%.2d-%.2d. Continuing.\n", *year, *month, *day);
+          continue;
         }
 
         int charsWritten = snprintf(dateString, fileNameLength, "%.4d-%.2d-%.2d.grib", *year, *month, *day);
         if (charsWritten >= fileNameLength || charsWritten < 0) {
           fprintf(stderr, "Failed to convert date to string format\n");
+          fprintf(stderr, "Failed to process data %.4d-%.2d-%.2d. Continuing.\n", *year, *month, *day);
           free(dateString);
-          curl_easy_cleanup(handle);
-          return -1;
+          continue;
         }
 
         int numCharacters = (int) strlen(options->outputDirectory) + fileNameLength;
@@ -164,8 +171,8 @@ int downloadDaily(const option_t *options, const OGREnvelope *aoi)
         if (outputPath == NULL) {
           perror("calloc");
           free(dateString);
-          curl_easy_cleanup(handle);
-          return -1;
+          fprintf(stderr, "Failed to process data %.4d-%.2d-%.2d. Continuing.\n", *year, *month, *day);
+          continue;
         }
 
         if (endsWithSlash)
@@ -177,8 +184,8 @@ int downloadDaily(const option_t *options, const OGREnvelope *aoi)
           fprintf(stderr, "Failed to construct local file path\n");
           free(dateString);
           free(outputPath);
-          curl_easy_cleanup(handle);
-          return -1;
+          fprintf(stderr, "Failed to process data %.4d-%.2d-%.2d. Continuing.\n", *year, *month, *day);
+          continue;
         }
 
         int requestYears[2] = {*year, INITVAL};
@@ -188,9 +195,11 @@ int downloadDaily(const option_t *options, const OGREnvelope *aoi)
         char *requestId = cdsRequestProduct(handle, requestYears, requestMonths, requestDays,
                                             options->hours, aoi, options);
         if (requestId == NULL) {
+          free(dateString);
+          free(outputPath);
           fprintf(stderr, "Failed to request product or extract job id\n");
-          // todo cleanup
-          return -1;
+          fprintf(stderr, "Failed to process data %.4d-%.2d-%.2d. Continuing.\n", *year, *month, *day);
+          continue;
         }
 #ifdef DEBUG
         printf("Posted product request with Id: %s\n", requestId);
@@ -201,14 +210,20 @@ int downloadDaily(const option_t *options, const OGREnvelope *aoi)
           free(requestId);
           free(dateString);
           free(outputPath);
-          curl_easy_cleanup(handle)          ;
-          return -1;
+          fprintf(stderr, "Failed to process data %.4d-%.2d-%.2d. Continuing.\n", *year, *month, *day);
+          continue;
         }
 #ifdef DEBUG
         printf("Waited for product request with Id: %s\n", requestId);
 #endif
 
-        cdsDownloadProduct(handle, requestId, outputPath);
+        if (cdsDownloadProduct(handle, requestId, outputPath)) {
+          free(requestId);
+          free(dateString);
+          free(outputPath);
+          fprintf(stderr, "Failed to download data %.4d-%.2d-%.2d. Continuing.\n", *year, *month, *day);
+          continue;
+        }
 #ifdef DEBUG
         printf("Downloaded file for product request %s\n", requestId);
 #endif
@@ -218,16 +233,35 @@ int downloadDaily(const option_t *options, const OGREnvelope *aoi)
         printf("Deleted product request with Id: %s\n", requestId);
 #endif
 
+        stringList *downloadedFile = calloc(1, sizeof(stringList));
+        if (downloadedFile == NULL) {
+          perror("calloc");
+          free(requestId);
+          free(dateString);
+          free(outputPath);
+          unlink(outputPath);
+          fprintf(stderr, "Failed to process data %.4d-%.2d-%.2d. Deleting file and continuing.\n", *year, *month, *day);
+          continue;
+        }
+
+        downloadedFile->string = outputPath;
+
+        if (root == NULL) {
+          root = downloadedFile;
+        } else {
+          downloadedFile->next = root;
+          root = downloadedFile;
+        }
+
         free(requestId);
         free(dateString);
-        free(outputPath);
       }
     }
   }
 
   curl_slist_free_all(headerAddon);
   curl_easy_cleanup(handle);
-  return 0;
+  return root;
 }
 
 json_t *jsonArrayFromIntegers(const int *arr, int stopVal, const char *formatString)
