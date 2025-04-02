@@ -22,6 +22,7 @@ static void geos_msg_handler(const char* fmt, ...)
 
 int main(int argc, char *argv[])
 {
+  int exit = EXIT_SUCCESS;
   /* SETUP EXTERNAL LIBRARIES */
   initGEOS(geos_msg_handler, geos_msg_handler);
   GDALAllRegister();
@@ -36,39 +37,23 @@ int main(int argc, char *argv[])
 
   const OGREnvelope *aoi = boxFromPath(opts->areaOfInterest, NULL);
   if (aoi == NULL) {
-    /* END OF PROGRAM, FREE STACK OBJECTS */
-    freeOption(opts);
-
-    /* TEARDOWN EXTERNAL LIBRARIES */
-    finishGEOS();
-    curl_global_cleanup();
-    return EXIT_FAILURE;
+    exit = EXIT_FAILURE;
+    goto teardown;
   }
 
   if (downloadDaily(opts, aoi)) {
     fprintf(stderr, "Failed to download all datasets\n");
-    /* END OF PROGRAM, FREE STACK OBJECTS */
-    CPLFree((void *) aoi);
-    freeOption(opts);
-
-    /* TEARDOWN EXTERNAL LIBRARIES */
-    finishGEOS();
-    curl_global_cleanup();
-    return EXIT_FAILURE;
+    exit = EXIT_FAILURE;
+    goto teardown;
   }
 
   if (processDaily(opts) == 1) {
     fprintf(stderr, "Failed to process all datasets\n");
-    /* END OF PROGRAM, FREE STACK OBJECTS */
-    CPLFree((void *) aoi);
-    freeOption(opts);
-
-    /* TEARDOWN EXTERNAL LIBRARIES */
-    finishGEOS();
-    curl_global_cleanup();
-    return EXIT_FAILURE;
+    exit = EXIT_FAILURE;
+    goto teardown;
   }
 
+teardown:
   /* END OF PROGRAM, FREE STACK OBJECTS */
   CPLFree((void *) aoi);
   freeOption(opts);
@@ -77,5 +62,5 @@ int main(int argc, char *argv[])
   finishGEOS();
   curl_global_cleanup();
 
-  return EXIT_SUCCESS;
+  return exit;
 }
