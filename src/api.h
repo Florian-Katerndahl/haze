@@ -32,8 +32,6 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
 
 productStatus cdsGetProductStatus(CURL *handle, const char *requestId); // Result.update
 
-cdsGetServiceStatus();
-
 int cdsWaitForProduct(CURL *handle, const char *requestId);
 
 int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPath); // same URL as product status but with /results appended which then returns the actual download URL
