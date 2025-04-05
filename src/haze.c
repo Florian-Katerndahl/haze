@@ -493,8 +493,6 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
     size_t hoursPerDay = countRequestedHours(options);
     size_t processedDays = 0;
 
-    // TODO: now that monthly images are downloaded, I need to loop over days in here
-    //  while making sure that I don't over access data for different months (30 days or 28/29 vs 31 max)
     for (int *day = options->days; *day != INITVAL; day++) {
 
       int currentYear;
