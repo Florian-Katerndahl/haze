@@ -25,6 +25,8 @@ int getAuthenticationFromEnvironment(char **authenticationToken);
 
 int getAuthenticationFromFile(char **authenticationToken, const char *filePath);
 
+int forceTrailingSlash(option_t *options);
+
 void printOptions(const option_t *options);
 
 #endif // OPTIONS_H

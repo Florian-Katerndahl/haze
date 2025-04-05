@@ -1,4 +1,5 @@
 #define _POSIX_C_SOURCE 200809L
+#define _DEFAULT_SOURCE
 
 #include "options.h"
 #include "types.h"
@@ -102,9 +103,17 @@ void printHelp(void)
     exit(1);
   }
 
+  // todo propagate changes through code base that output directory is now guaruanteed to end with slash
+  if (forceTrailingSlash(userOptions) == 1) {
+    fprintf(stderr, "Failed to append trailing slash to output directory\n");
+    freeOption(userOptions);
+    exit(1);
+  }
+
   if (getAuthentication(&userOptions->authenticationToken, NULL, &userOptions->withAllocation) == 1) {
     fprintf(stderr, "Failed to get authentication token from enironment or $HOME/.cdsapirc\n");
     printHelp();
+    freeOption(userOptions);
     exit(1);
   }
 
@@ -286,6 +295,35 @@ int getAuthenticationFromFile(char **authenticationToken, const char *filePath)
 
   free(key);
   fclose(f);
+
+  return 0;
+}
+
+int forceTrailingSlash(option_t *options) {
+  // FORCE malloc'ed pointer, so reallocarray works
+  char *forcedMalloc = strdup(options->outputDirectory);
+  if (forcedMalloc == NULL) {
+    perror("strdup");
+    return 1;
+  }
+
+
+  size_t outputLength = strlen(forcedMalloc);
+  if (forcedMalloc[outputLength - 1] == '/') return 0;
+
+  // strlen does not count \0, so + 2
+  char *tmp = reallocarray(forcedMalloc, outputLength + 2, sizeof(char));
+  if (tmp == NULL) {
+    free(forcedMalloc);
+    perror("reallocarray");
+    return 1;
+  }
+
+  options->outputDirectory = tmp;
+
+  // length stays the same but indices shift because array grew
+  options->outputDirectory[outputLength] = '/';
+  options->outputDirectory[outputLength + 1] = '\0';
 
   return 0;
 }
