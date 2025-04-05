@@ -18,7 +18,7 @@ void closeGDALDataset(GDALDatasetH dataset);
 
 int getRasterMetadata(GDALDatasetH raster, struct geoTransform *geoTransformation);
 
-bool isProjected(const char *Wkt);
+bool isGeographic(const char *Wkt);
 
 OGRCoordinateTransformationH transformationFromWKTs(const char *from, const char *to);
 

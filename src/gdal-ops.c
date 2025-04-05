@@ -92,7 +92,7 @@ int getRasterMetadata(GDALDatasetH raster, struct geoTransform *geoTransformatio
   return 0;
 }
 
-bool isProjected(const char *Wkt)
+bool isGeographic(const char *Wkt)
 {
   OGRSpatialReferenceH  spatialRef = OSRNewSpatialReference(Wkt);
   if (spatialRef == NULL) {
@@ -100,11 +100,11 @@ bool isProjected(const char *Wkt)
     exit(-1); // todo: doesn't make sense to continue if this fails
   }
 
-  bool isProjected = OSRIsProjected(spatialRef);
+  bool geographic = OSRIsGeographic(spatialRef);
 
   OSRDestroySpatialReference(spatialRef);
 
-  return isProjected;
+  return geographic;
 }
 
 OGRCoordinateTransformationH transformationFromWKTs(const char *from, const char *to)
