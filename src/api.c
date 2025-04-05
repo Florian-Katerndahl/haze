@@ -160,11 +160,6 @@ json_t *getKeyRecursively(json_t *root, const char *key)
         }
 
         int numCharacters = (int) strlen(options->outputDirectory) + fileNameLength;
-        bool endsWithSlash = options->outputDirectory[strlen(options->outputDirectory) - 1] == '/';
-
-        if (!endsWithSlash) {
-          numCharacters++;
-        }
 
         char *outputPath = calloc(numCharacters, sizeof(char));
         if (outputPath == NULL) {
@@ -174,10 +169,7 @@ json_t *getKeyRecursively(json_t *root, const char *key)
           continue;
         }
 
-        if (endsWithSlash)
-          charsWritten = snprintf(outputPath, numCharacters, "%s%s", options->outputDirectory, dateString);
-        else
-          charsWritten = snprintf(outputPath, numCharacters, "%s/%s", options->outputDirectory, dateString);
+        charsWritten = snprintf(outputPath, numCharacters, "%s%s", options->outputDirectory, dateString);
 
         if (charsWritten >= numCharacters || charsWritten < 0) {
           fprintf(stderr, "Failed to construct local file path\n");
