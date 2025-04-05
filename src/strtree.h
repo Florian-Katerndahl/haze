@@ -1,14 +1,9 @@
 #ifndef STRTREE_H
 #define STRTREE_H
 
-#include "aoi.h"
-#include "haze.h"
 #include "types.h"
-#include <gdal/ogr_core.h>
-#include <gdal/cpl_port.h>
+#include <gdal/gdal.h>
 #include <gdal/ogr_api.h>
-#include <stdbool.h>
-#include <stdio.h>
 #include <geos_c.h>
 
 #define TREE_NODE_CAP 100
