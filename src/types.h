@@ -5,10 +5,10 @@
 #include <geos_c.h>
 #include <gdal/gdal.h>
 
-#define MAXYEAR 100
-#define MAXMONTH 12
-#define MAXDAY 31
-// allocate one hour more than possible maximum to break on INITVAL in case user specifies complete hour range
+// allocate one entry more than possible maximum to break on INITVAL in case user specifies complete range
+#define MAXYEAR 101
+#define MAXMONTH 13
+#define MAXDAY 32
 #define MAXHOUR 25
 
 #define INITVAL -1
