@@ -474,6 +474,9 @@ double coordinateFromCell(double origin, double axisOfInterest, double pixelExte
 int processDaily(stringList *successfulDownloads, const option_t *options)
 {
   while (successfulDownloads != NULL) {
+#ifdef DEBUG
+    printf("Processing file %s\n", successfulDownloads->string);
+#endif
     GDALDatasetH ds = openRaster(successfulDownloads->string);
 
     if (ds == NULL)
@@ -490,10 +493,16 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
     getRasterMetadata(ds, &transform);
     closeGDALDataset(ds);
 
+    const int nLayers = GDALGetRasterCount(ds);
+
     size_t hoursPerDay = countRequestedHours(options);
     size_t processedDays = 0;
 
-    for (int *day = options->days; *day != INITVAL; day++) {
+    for (const int *day = options->days; *day != INITVAL
+         && (int) (processedDays * hoursPerDay) < nLayers; day++) {
+#ifdef DEBUG
+      printf("%ld/%d\n", processedDays * hoursPerDay, nLayers);
+#endif
 
       int currentYear;
       int currentMonth;
@@ -512,6 +521,10 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
       }
 
       if (!isValidDate(currentYear, currentMonth, *day)) {
+#ifdef DEBUG
+        printf("Skipping invalid date %.4d-%.2d-%.2d: %s\n", currentYear, currentMonth, *day,
+               successfulDownloads->string);
+#endif
         // check if month has enough days to access current *day, if not we're done processing and can continue
         // no logging because this can happen routinely
         // todo cleanup
@@ -519,6 +532,13 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
       }
 
       struct averagedData *average = NULL;
+
+      // reorderToPixelInterleave(data);
+      // averagePILRawDataWithSizeOffset(data, &average, hoursPerDay, processedDays * hoursPerDay);
+#ifdef DEBUG
+      printf("Averaging bands %ld to %ld\n", processedDays * hoursPerDay,
+             processedDays * hoursPerDay + hoursPerDay);
+#endif
 
       averageRawDataWithSizeOffset(data, &average, hoursPerDay, processedDays * hoursPerDay);
 
