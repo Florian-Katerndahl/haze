@@ -143,19 +143,18 @@ json_t *getKeyRecursively(json_t *root, const char *key)
 
   for (int *year = (int *) options->years; *year != INITVAL; year++) {
     for (int *month = (int *) options->months; *month != INITVAL; month++) {
-      for (int *day = (int *) options->days; *day != INITVAL; day++) {
-        int fileNameLength = 16;
+        int fileNameLength = 13;
         char *dateString = calloc(fileNameLength, sizeof(char));
         if (dateString == NULL) {
           perror("calloc");
-          fprintf(stderr, "Failed to process data %.4d-%.2d-%.2d. Continuing.\n", *year, *month, *day);
+          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", *year, *month);
           continue;
         }
 
-        int charsWritten = snprintf(dateString, fileNameLength, "%.4d-%.2d-%.2d.grib", *year, *month, *day);
+        int charsWritten = snprintf(dateString, fileNameLength, "%.4d-%.2d.grib", *year, *month);
         if (charsWritten >= fileNameLength || charsWritten < 0) {
           fprintf(stderr, "Failed to convert date to string format\n");
-          fprintf(stderr, "Failed to process data %.4d-%.2d-%.2d. Continuing.\n", *year, *month, *day);
+          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", *year, *month);
           free(dateString);
           continue;
         }
@@ -171,7 +170,7 @@ json_t *getKeyRecursively(json_t *root, const char *key)
         if (outputPath == NULL) {
           perror("calloc");
           free(dateString);
-          fprintf(stderr, "Failed to process data %.4d-%.2d-%.2d. Continuing.\n", *year, *month, *day);
+          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", *year, *month);
           continue;
         }
 
@@ -184,21 +183,20 @@ json_t *getKeyRecursively(json_t *root, const char *key)
           fprintf(stderr, "Failed to construct local file path\n");
           free(dateString);
           free(outputPath);
-          fprintf(stderr, "Failed to process data %.4d-%.2d-%.2d. Continuing.\n", *year, *month, *day);
+          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", *year, *month);
           continue;
         }
 
         int requestYears[2] = {*year, INITVAL};
         int requestMonths[2] = {*month, INITVAL};
-        int requestDays[2] = {*day, INITVAL};
 
-        char *requestId = cdsRequestProduct(handle, requestYears, requestMonths, requestDays,
+        char *requestId = cdsRequestProduct(handle, requestYears, requestMonths, options->days,
                                             options->hours, aoi, options);
         if (requestId == NULL) {
           free(dateString);
           free(outputPath);
           fprintf(stderr, "Failed to request product or extract job id\n");
-          fprintf(stderr, "Failed to process data %.4d-%.2d-%.2d. Continuing.\n", *year, *month, *day);
+          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", *year, *month);
           continue;
         }
 #ifdef DEBUG
@@ -210,7 +208,7 @@ json_t *getKeyRecursively(json_t *root, const char *key)
           free(requestId);
           free(dateString);
           free(outputPath);
-          fprintf(stderr, "Failed to process data %.4d-%.2d-%.2d. Continuing.\n", *year, *month, *day);
+          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", *year, *month);
           continue;
         }
 #ifdef DEBUG
@@ -221,7 +219,7 @@ json_t *getKeyRecursively(json_t *root, const char *key)
           free(requestId);
           free(dateString);
           free(outputPath);
-          fprintf(stderr, "Failed to download data %.4d-%.2d-%.2d. Continuing.\n", *year, *month, *day);
+          fprintf(stderr, "Failed to download data %.4d-%.2d. Continuing.\n", *year, *month);
           continue;
         }
 #ifdef DEBUG
@@ -238,9 +236,9 @@ json_t *getKeyRecursively(json_t *root, const char *key)
           perror("calloc");
           free(requestId);
           free(dateString);
-          free(outputPath);
           unlink(outputPath);
-          fprintf(stderr, "Failed to process data %.4d-%.2d-%.2d. Deleting file and continuing.\n", *year, *month, *day);
+          free(outputPath);
+          fprintf(stderr, "Failed to process data %.4d-%.2d. Deleting file and continuing.\n", *year, *month);
           continue;
         }
 
@@ -255,7 +253,6 @@ json_t *getKeyRecursively(json_t *root, const char *key)
 
         free(requestId);
         free(dateString);
-      }
     }
   }
 
