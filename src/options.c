@@ -299,7 +299,8 @@ int getAuthenticationFromFile(char **authenticationToken, const char *filePath)
   return 0;
 }
 
-int forceTrailingSlash(option_t *options) {
+int forceTrailingSlash(option_t *options)
+{
   // FORCE malloc'ed pointer, so reallocarray works
   char *forcedMalloc = strdup(options->outputDirectory);
   if (forcedMalloc == NULL) {
@@ -307,9 +308,12 @@ int forceTrailingSlash(option_t *options) {
     return 1;
   }
 
-
   size_t outputLength = strlen(forcedMalloc);
-  if (forcedMalloc[outputLength - 1] == '/') return 0;
+
+  if (forcedMalloc[outputLength - 1] == '/') {
+    options->outputDirectory = forcedMalloc;
+    return 0;
+  }
 
   // strlen does not count \0, so + 2
   char *tmp = reallocarray(forcedMalloc, outputLength + 2, sizeof(char));

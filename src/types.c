@@ -68,10 +68,12 @@ void freeOption(option_t *options)
 {
   if (options->withAllocation)
     free(options->authenticationToken);
+  free(options->outputDirectory);
   free(options);
 }
 
-void freeStringList(stringList *list) {
+void freeStringList(stringList *list)
+{
   stringList *tmp;
   while (list != NULL) {
     tmp = list->next;
