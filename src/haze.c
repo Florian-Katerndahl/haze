@@ -157,6 +157,7 @@ int averageRawData(const struct rawData *data, struct averagedData **average)
   return 0;
 }
 
+// FIXME: What was the offset?
 int averageRawDataWithSizeOffset(const struct rawData *data, struct averagedData **average,
                                  const size_t size, const size_t offset)
 {
@@ -295,7 +296,7 @@ void reorderToPixelInterleave(struct rawData *data)
   }
 
 #if GDAL_VERSION_NUM >= 3090000
-  const bool isGeodesic = !isProjected(rasterWkt);
+  const bool geographic = isGeographic(rasterWkt);
 #endif
 
   size_t wkbSize;
@@ -326,7 +327,7 @@ void reorderToPixelInterleave(struct rawData *data)
 #if GDAL_VERSION_NUM < 3090000
     double referenceArea = OGR_G_Area(intersections->reference);
 #else
-    double referenceArea = isGeodesic ? OGR_G_GeodesicArea(intersections->reference) : OGR_G_Area(
+    double referenceArea = geographic ? OGR_G_GeodesicArea(intersections->reference) : OGR_G_Area(
                              intersections->reference);
 #endif
     if (referenceArea == -1) {
@@ -384,7 +385,7 @@ void reorderToPixelInterleave(struct rawData *data)
 #if GDAL_VERSION_NUM < 3090000
       double intersectingArea = OGR_G_Area(intersection);
 #else
-      double intersectingArea = isGeodesic ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(intersection);
+      double intersectingArea = geographic ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(intersection);
 #endif
 
       weights[i] = intersectingArea / referenceArea;
@@ -473,6 +474,8 @@ double coordinateFromCell(double origin, double axisOfInterest, double pixelExte
 int processDaily(stringList *successfulDownloads, const option_t *options)
 {
   while (successfulDownloads != NULL) {
+    // TODO: now that monthly images are downloaded, I need to loop over days in here
+    //  while making sure that I don't over access data for different months (30 days or 28/29 vs 31 max)
     GDALDatasetH ds = openRaster(successfulDownloads->string);
 
     if (ds == NULL) return -1;
