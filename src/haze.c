@@ -161,7 +161,7 @@ int averageRawData(const struct rawData *data, struct averagedData **average)
 int averageRawDataWithSizeOffset(const struct rawData *data, struct averagedData **average,
                                  const size_t size, const size_t offset)
 {
-  // now, daily averages can be calculated by setting the size to number of observations per day (see query) and offset to nObservations * nDays
+  // now, daily averages can be calculated by setting the size to number of observations per day (see query) and offset to nObservations * `day of interest (0-based)`
   size_t startBand = offset;
   size_t boundary = size == 0 && startBand == 0 ? data->bands : size + offset;
   assert(startBand < data->bands);
@@ -204,7 +204,7 @@ int averageRawDataWithSizeOffset(const struct rawData *data, struct averagedData
 int averagePILRawDataWithSizeOffset(const struct rawData *data, struct averagedData **average,
                                     const size_t size, const size_t offset)
 {
-  // now, daily averages can be calculated by setting the size to number of observations per day (see query) and offset to nObservations * nDays
+  // now, daily averages can be calculated by setting the size to number of observations per day (see query) and offset to nObservations * `day of interest (0-based)`
   size_t startBand = offset;
   size_t boundary = size == 0 && startBand == 0 ? data->bands : size + offset;
   assert(startBand < data->bands);
@@ -474,11 +474,10 @@ double coordinateFromCell(double origin, double axisOfInterest, double pixelExte
 int processDaily(stringList *successfulDownloads, const option_t *options)
 {
   while (successfulDownloads != NULL) {
-    // TODO: now that monthly images are downloaded, I need to loop over days in here
-    //  while making sure that I don't over access data for different months (30 days or 28/29 vs 31 max)
     GDALDatasetH ds = openRaster(successfulDownloads->string);
 
-    if (ds == NULL) return -1;
+    if (ds == NULL)
+      return -1;
 
     const char *rasterWkt = extractCRSAsWKT(ds, NULL);
 
@@ -491,91 +490,145 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
     getRasterMetadata(ds, &transform);
     closeGDALDataset(ds);
 
-    struct averagedData *average = NULL;
-    averageRawDataWithSizeOffset(data, &average, 0, 0);
+    size_t hoursPerDay = countRequestedHours(options);
+    size_t processedDays = 0;
 
-    cellGeometryList *rasterCellsAsGEOS = NULL; // todo: document that this should be freed!
+    // TODO: now that monthly images are downloaded, I need to loop over days in here
+    //  while making sure that I don't over access data for different months (30 days or 28/29 vs 31 max)
+    for (int *day = options->days; *day != INITVAL; day++) {
 
-    // todo: optionally implement function to crop raster beforehand
+      int currentYear;
+      int currentMonth;
 
-    GEOSSTRtree *rasterTree = buildSTRTreefromRaster(average, &transform, &rasterCellsAsGEOS);
+      const char *inputFileName = strrchr(successfulDownloads->string, '/');
+      if (inputFileName == NULL) {
+        fprintf(stderr, "Malformed file path. Could not get final path delimiter\n");
+        // todo cleanup
+        continue;
+      }
 
-    // a function to query the tree constructed by buildSTRTreefromRaster which somehow gets me for each polygon in areasOfInterest
-    // the intersecting polygons of the tree so I can calculate the area-weighted average
-    intersection_t *intersections = querySTRTree(areasOfInterest,
-                                    rasterTree);
-    if (intersections == NULL) {
-      fprintf(stderr, "No intersections found\n"); // this is not treated as an error
-      freeVectorGeometryList(areasOfInterest);
-      freeRawData(data);
-      freeAverageData(average);
+      if (sscanf(inputFileName, "/%d-%d.grib", &currentYear, &currentMonth) != 2) {
+        fprintf(stderr, "Failed to extract year and month from file name\n");
+        // todo cleanup
+        continue;
+      }
+
+      if (!isValidDate(currentYear, currentMonth, *day)) {
+        // check if month has enough days to access current *day, if not we're done processing and can continue
+        // no logging because this can happen routinely
+        // todo cleanup
+        continue;
+      }
+
+      struct averagedData *average = NULL;
+
+      averageRawDataWithSizeOffset(data, &average, hoursPerDay, processedDays * hoursPerDay);
+
+      cellGeometryList *rasterCellsAsGEOS = NULL; // todo: document that this should be freed!
+
+      // todo: optionally implement function to crop raster beforehand?
+
+      GEOSSTRtree *rasterTree = buildSTRTreefromRaster(average, &transform, &rasterCellsAsGEOS);
+
+      // a function to query the tree constructed by buildSTRTreefromRaster which somehow gets me for each polygon in areasOfInterest
+      // the intersecting polygons of the tree so I can calculate the area-weighted average
+      intersection_t *intersections = querySTRTree(areasOfInterest, rasterTree);
+      if (intersections == NULL) {
+        fprintf(stderr, "No intersections found\n"); // this is not treated as an error
+        // not pretty, but: areasOfInterest, data and rasterWKT are not freed here but after for-loop
+        freeAverageData(average);
+        freeCellGeometryList(rasterCellsAsGEOS);
+        GEOSSTRtree_destroy(rasterTree);
+        break; // break out of foor loop and continue with next raster dataset
+      }
+
+      // a functions that (should be split up into smaller pieces)
+      // 1. converts GEOSGeometry back to OGRGeometry (via WKBExport)
+      // 2. given two OGRGeometries (Polygons) computes the intersection
+      // 3. a) depending on the CRS being geodesic or not, calculating the appropriate area
+      // 3. b) query a WKT/dataset for property
+      // 4. calculate area-weighted average
+      // 5. get centroid of polygon
+      mean_t *weightedMeans = calculateAreaWeightedMean(intersections, rasterWkt);
+      if (weightedMeans == NULL) {
+        fprintf(stderr, "Failed to calculate weighted means\n");
+        freeVectorGeometryList(areasOfInterest);
+        freeRawData(data);
+        freeAverageData(average);
+        freeCellGeometryList(rasterCellsAsGEOS);
+        GEOSSTRtree_destroy(rasterTree);
+        freeIntersections(intersections);
+        CPLFree((void* ) rasterWkt);
+        return 1;
+      }
+
+      // todo: come up with a nicer way to construct file paths?
+      int outputFilePathLength = (int) strlen(options->outputDirectory) + 15; // yyyy-mm-dd.txt + \0 = 15
+
+      char *textOutputFilePath = calloc(outputFilePathLength, sizeof(char));
+      if (textOutputFilePath == NULL) {
+        perror("calloc");
+        // todo cleanup
+        return 1;
+      }
+
+      int charsWritten = snprintf(textOutputFilePath, outputFilePathLength, "%s%.4d-%.2d-%.2d.txt",
+                                  options->outputDirectory, currentYear, currentMonth, *day);
+
+      if (charsWritten >= outputFilePathLength || charsWritten < 0) {
+        fprintf(stderr, "Failed to construct file path for output text file\n");
+        // todo cleanup
+        return 1;
+      }
+
+      // 6. write tuple (centroid coordinates, average value, ERA5) to a file
+      writeWeightedMeans(weightedMeans, textOutputFilePath);
+
       freeCellGeometryList(rasterCellsAsGEOS);
-      GEOSSTRtree_destroy(rasterTree);
-      CPLFree((void* ) rasterWkt);
-      successfulDownloads = successfulDownloads->next;
-      continue;
-    }
-
-    // a functions that (should be split up into smaller pieces)
-    // 1. converts GEOSGeometry back to OGRGeometry (via WKBExport)
-    // 2. given two OGRGeometries (Polygons) computes the intersection
-    // 3. a) depending on the CRS being geodesic or not, calculating the appropriate area
-    // 3. b) query a WKT/dataset for property
-    // 4. calculate area-weighted average
-    // 5. get centroid of polygon
-    mean_t *weightedMeans = calculateAreaWeightedMean(intersections, rasterWkt);
-    if (weightedMeans == NULL) {
-      fprintf(stderr, "Failed to calculate weighted means\n");
-      freeVectorGeometryList(areasOfInterest);
-      freeRawData(data);
-      freeAverageData(average);
-      freeCellGeometryList(rasterCellsAsGEOS);
-      GEOSSTRtree_destroy(rasterTree);
-      freeIntersections(intersections);
-      CPLFree((void* ) rasterWkt);
-      return 1;
-    }
-
-    // todo: come up with a nicer way to construct file paths?
-    char *textOutputFilePath = strdup(successfulDownloads->string);
-    if (textOutputFilePath == NULL) {
-      perror("calloc");
-      freeVectorGeometryList(areasOfInterest);
-      freeRawData(data);
-      freeAverageData(average);
-      freeCellGeometryList(rasterCellsAsGEOS);
-      GEOSSTRtree_destroy(rasterTree);
       freeIntersections(intersections);
       freeWeightedMeans(weightedMeans);
-      CPLFree((void* ) rasterWkt);
-      return 1;
+
+      GEOSSTRtree_destroy(rasterTree);
+
+      freeAverageData(average);
+      free(textOutputFilePath);
+
+      processedDays++;
     }
 
-    char *extension = strrchr(textOutputFilePath, '.');
-    extension++;
-
-    memcpy(extension, "txt", 3);
-
-    // terminate early because file extension has one fewer letter
-    textOutputFilePath[strlen(textOutputFilePath) - 1] = '\0';
-
-    // 6. write tuple (centroid coordinates, average value, ERA5) to a file
-    writeWeightedMeans(weightedMeans, textOutputFilePath);
-
-    freeVectorGeometryList(areasOfInterest);
-    freeCellGeometryList(rasterCellsAsGEOS);
-    freeIntersections(intersections);
-    freeWeightedMeans(weightedMeans);
-
-    GEOSSTRtree_destroy(rasterTree);
-
     CPLFree((void* ) rasterWkt);
-    freeAverageData(average);
+    freeVectorGeometryList(areasOfInterest);
     freeRawData(data);
-    free(textOutputFilePath);
 
     successfulDownloads = successfulDownloads->next;
   }
 
   return 0;
+}
+
+size_t countRequestedHours(const option_t *options)
+{
+  size_t count = 0;
+
+  int *hours = (int *) options->hours;
+
+  while (*hours != INITVAL) {
+    count++;
+    hours++;
+  }
+
+  return count;
+}
+
+bool isValidDate(int year, int month, int day)
+{
+  static int daysPerMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+  // NOTE: year is only checked for posive value
+  bool validYear = year >= 0;
+  bool validMonth = month >= 1 && month <= 12;
+  bool isLeapYear = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+  bool validDay = day >= 1
+                  && day <= (month == 2 ? (isLeapYear ? 29 : daysPerMonth[month - 1]) : daysPerMonth[month - 1]);
+
+  return validYear && validMonth && validDay;
 }

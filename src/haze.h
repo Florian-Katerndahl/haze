@@ -40,4 +40,8 @@ double coordinateFromCell(double origin, double axisOfInterest, double pixelExte
 
 int processDaily(stringList *successfulDownloads, const option_t *options);
 
+size_t countRequestedHours(const option_t *options);
+
+bool isValidDate(int year, int month, int day);
+
 #endif // HAZE_H
