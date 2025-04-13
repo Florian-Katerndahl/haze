@@ -164,9 +164,18 @@
     mbr->MaxY = maxFirstOut;
     mbr->MaxX = maxSecondOut;
 
-
     if (mbr->MaxX < mbr->MinX)
       mbr->MaxX += 360.0; // cds API allows requests with x [-360,360]
+
+    if ((mbr->MaxX - mbr->MinX) > 360.0) {
+      fprintf(stderr, "Area of interest spans globe more than once\n");
+      OSRDestroySpatialReference(wgs84Ref);
+      OCTDestroyCoordinateTransformation(transformation);
+      CPLFree(layerWKT);
+      CPLFree(mbr);
+      closeGDALDataset(aoi);
+      return NULL;
+    }
 
     OSRDestroySpatialReference(wgs84Ref);
     OCTDestroyCoordinateTransformation(transformation);
