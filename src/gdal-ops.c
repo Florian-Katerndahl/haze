@@ -1,7 +1,6 @@
 #include "gdal-ops.h"
 #include "types.h"
 #include "fscheck.h"
-#include <assert.h>
 #include <gdal/gdal.h>
 #include <gdal/ogr_core.h>
 #include <gdal/ogr_srs_api.h>
@@ -11,12 +10,10 @@
 // TODO: rename to openRasterDataset
 [[nodiscard]] GDALDatasetH openRaster(const char *filePath)
 {
-  if (filePath == NULL) {
-    fprintf(stderr, "ERROR: filePath cannot be NULL\n");
+  if (filePath == NULL || fileReadable(filePath) == false) {
+    fprintf(stderr, "ERROR: filePath cannot be NULL or file is not readable\n");
     return NULL;
   }
-
-  assert(fileReadable(filePath));
 
   // TODO could read through entire directory when using sibling files?
   GDALDatasetH raster = GDALOpenEx(filePath, GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
@@ -47,12 +44,10 @@ GDALRasterBandH openRasterBand(GDALDatasetH raster, int index)
 /// TODO: rename to openVectorDataset
 [[nodiscard]] GDALDatasetH openVector(const char *filePath)
 {
-  if (filePath == NULL) {
-    fprintf(stderr, "ERROR: filePath cannot be NULL\n");
+  if (filePath == NULL || fileReadable(filePath) == false) {
+    fprintf(stderr, "ERROR: filePath cannot be NULL or file is not readable\n");
     return NULL;
   }
-
-  assert(fileReadable(filePath));
 
   GDALDatasetH vector = GDALOpenEx(filePath, GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL, NULL);
   if (vector == NULL) {
@@ -111,7 +106,9 @@ bool isGeographic(const char *Wkt)
 
 OGRCoordinateTransformationH transformationFromWKTs(const char *from, const char *to)
 {
-  assert(from && to);
+  if (from == NULL || to == NULL) {
+    return NULL;
+  }
 
   OGRCoordinateTransformationH transform = NULL;
 

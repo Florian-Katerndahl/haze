@@ -1,5 +1,5 @@
 #include "math-utils.h"
-#include <assert.h>
+#include <math.h>
 #include <limits.h>
 #include <stdlib.h>
 
@@ -10,9 +10,10 @@ double kgsqmTocow(double x)
 
 double calculateWeightedAverage(const double *values, const double *weights, size_t count)
 {
-  // This assertion is not nice, better to return +/- INF in this case or even NAN; I like the latter approach the best,
-  // potentially together with some warning message from the caller?
-  assert(values && weights);
+  if (values == NULL || weights == NULL) {
+    return NAN;
+  }
+
   double numerator = 0.0;
   double denominator = 0.0;
 

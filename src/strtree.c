@@ -2,7 +2,6 @@
 #include "haze.h"
 #include "gdal-ops.h"
 #include "types.h"
-#include <assert.h>
 #include <float.h>
 #include <gdal/cpl_conv.h>
 #include <gdal/cpl_error.h>
@@ -354,7 +353,9 @@ void queryCallback(void *item, void *userdata)
 
 [[nodiscard]] GEOSGeometry *boundingBoxOfOGRToGEOS(const OGRGeometryH geom)
 {
-  assert(geom);
+  if (geom == NULL) {
+    return NULL;
+  }
 
   OGREnvelope envelope
 
@@ -368,7 +369,9 @@ void queryCallback(void *item, void *userdata)
 
 [[nodiscard]] GEOSGeometry *OGRToGEOS(const OGRGeometryH geom)
 {
-  assert(geom);
+  if (geom == NULL) {
+    return NULL;
+  }
 
   GEOSWKBReader *reader = GEOSWKBReader_create();
   if (reader == NULL) {

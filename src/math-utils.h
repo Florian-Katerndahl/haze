@@ -37,7 +37,7 @@ double kgsqmTocow(double x);
  * @param values Values to average.
  * @param weights Weights associated with values.
  * @param count Size of arrays.
- * @return double Weighted arithmetic mean.
+ * @return double Weighted arithmetic mean, NAN on error.
  */
 double calculateWeightedAverage(const double *values, const double *weights, size_t count);
 

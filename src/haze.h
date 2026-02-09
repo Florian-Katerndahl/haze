@@ -53,7 +53,7 @@ void freeAverageData(struct averagedData *data);
 /**
  * @brief Read all bands of an GDAL raster dataset into a buffer
  * 
- * @note This function asserts that inputs are of type double/GDT_FLOAT64.
+ * @note This function returns an error if inputs are not of type double/GDT_FLOAT64.
  * 
  * @note After the function returns, the caller owns the dataBuffer object and musst free it after use.
  * 

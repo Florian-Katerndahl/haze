@@ -3,7 +3,6 @@
 #include "gdal-ops.h"
 #include "math-utils.h"
 #include "strtree.h"
-#include <assert.h>
 #include <errno.h>
 #include <dirent.h>
 #include <bits/posix2_lim.h>
@@ -91,11 +90,15 @@ void readRasterDataset(GDALDatasetH raster, struct rawData **dataBuffer)
     return;
   }
   GDALDataType dType    = GDALGetRasterDataType(layer);
-  assert(dType == GDT_Float64);
   size_t byteSize       = (size_t) GDALGetDataTypeSizeBytes(dType);
-  assert(sizeof(double) == byteSize);
   size_t datasetColumns = (size_t) GDALGetRasterBandXSize(layer);
   size_t datasetRows    = (size_t) GDALGetRasterBandYSize(layer);
+
+  if (dType != GDT_Float64 || byteSize != sizeof(double)) {
+    freeRawData(*dataBuffer);
+    *dataBuffer = NULL;
+    return;
+  }
 
   (*dataBuffer)->bands = dataSetBandCount;
   (*dataBuffer)->columns = datasetColumns;
@@ -175,8 +178,10 @@ int averageRawDataWithSizeOffset(const struct rawData *data, struct averagedData
   // now, daily averages can be calculated by setting the size to number of observations per day (see query) and offset to nObservations * `day of interest (0-based)`
   size_t startBand = offset;
   size_t boundary = size == 0 && startBand == 0 ? data->bands : size + offset;
-  assert(startBand < data->bands);
-  assert(boundary <= data->bands);
+
+  if (startBand >= data->bands || boundary >= data->bands) {
+    return 1;
+  }
 
   *average = allocateAverageData();
   if (*average == NULL) {
@@ -218,8 +223,10 @@ int averagePILRawDataWithSizeOffset(const struct rawData *data, struct averagedD
   // now, daily averages can be calculated by setting the size to number of observations per day (see query) and offset to nObservations * `day of interest (0-based)`
   size_t startBand = offset;
   size_t boundary = size == 0 && startBand == 0 ? data->bands : size + offset;
-  assert(startBand < data->bands);
-  assert(boundary <= data->bands);
+  
+  if (startBand >= data->bands || boundary >= data->bands) {
+    return 1;
+  }
 
   *average = allocateAverageData();
   if (*average == NULL) {
@@ -450,9 +457,12 @@ void reorderToPixelInterleave(struct rawData *data)
   return root;
 }
 
+/// TODO: this should return an error!
 void writeWeightedMeans(mean_t *values, const char *filePath)
 {
-  assert(values && filePath);
+  if (values == NULL | filePath == NULL) {
+    reutrn;
+  }
 
   FILE *outFile = fopen(filePath, "wt");
   if (outFile == NULL) {

@@ -1,7 +1,6 @@
 #include "aoi.h"
 #include "gdal-ops.h"
 #include "fscheck.h"
-#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <gdal/gdal.h>
@@ -17,7 +16,9 @@
 // reprojecting as OGR_L_Get... honors axis mapping
 [[nodiscard]] OGREnvelope *boxFromPath(const char *filePath, const char *layerName)
 {
-  assert(fileReadable(filePath));
+  if (fileReadable(filePath) == false) {
+    return NULL;
+  }
 
   GDALDatasetH aoi = openVector(filePath);
   if (aoi == NULL) {

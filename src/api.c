@@ -1,6 +1,5 @@
 #include "api.h"
 #include "types.h"
-#include <assert.h>
 #include <curl/easy.h>
 #include <gdal/ogr_core.h>
 #include <jansson.h>
@@ -15,7 +14,10 @@
 /// FIXME: don't exit but return NULL on error
 struct curl_slist *customHeader(struct curl_slist *list, const option_t *options)
 {
-  assert(options);
+  if (options == NULL) {
+    return NULL;
+  }
+
   char header[256];
   int charsWritten = snprintf(header, sizeof(header), "PRIVATE-TOKEN:%s",
                               options->authenticationToken);
