@@ -25,9 +25,10 @@ void printHelp(void)
   printf("\t--hour:  Hours for which data should be downloaded (zero-based).\n");
   printf("Mandatory positional arguments:\n");
   printf("\taoi:     File path to OGR-readble file containing one or more polygons for which to extract data. First layer is read.\n");
-  printf("\toutdir:  Directory into which output CSV's are written.\n");
+  printf("\toutdir:  Directory into which output CSVs are written.\n");
 }
 
+// TODO: this does more than simply parsing options!
 [[nodiscard]] option_t *parseOptions(int argc, char *argv[])
 {
   option_t *userOptions = calloc(1, sizeof(option_t));
@@ -91,6 +92,7 @@ void printHelp(void)
 
   int positionalArguments = argc - optind;
 
+  /// TODO: test directories and files for accessibility here!
   if (positionalArguments == 1) {
     userOptions->outputDirectory = argv[optind];
   } else if (positionalArguments == 2) {
@@ -103,7 +105,7 @@ void printHelp(void)
     exit(1);
   }
 
-  // todo propagate changes through code base that output directory is now guaruanteed to end with slash
+  // TODO propagate changes through code base that output directory is now guaruanteed to end with slash
   if (forceTrailingSlash(userOptions) == 1) {
     fprintf(stderr, "Failed to append trailing slash to output directory\n");
     freeOption(userOptions);
@@ -140,8 +142,11 @@ int parseIntegers(int *arr, size_t n, char *argString, const int min, const int 
   return 0;
 }
 
+/// FIXME: input (argString) is checked for NULL
+/// FIXME: return an error if range specifies more values than arr can hold
 int parseRange(int *arr, size_t n, const char *argString)
 {
+  /// FIXME: return value of strchr is not checked
   const char *sep = strchr(argString, ':');
   sep++;
   int min = atoi(argString);
@@ -156,14 +161,15 @@ int parseRange(int *arr, size_t n, const char *argString)
   return 0;
 }
 
+/// FIXME: input (argString) is checked for NULL
 int parseList(int *arr, size_t n, char *argString)
 {
-  char *str;
+  char *begin = argString;
   const char *token;
-  size_t i;
 
-  for (i = 0, str = argString; i < n ; i++, str = NULL) {
-    token = strtok(str, ",");
+  for (size_t i = 0; i < n ; i++, argString = NULL) {
+    token = strtok(argString, ",");
+    /// FIXME: include check to see if we're at end of string; if not, return 1 because no more tokens are found but the string is not exhausted
     if (token == NULL)
       break;
     arr[i] = atoi(token);
@@ -178,6 +184,8 @@ int parseSingle(int *arr, const char *argString)
   return 0;
 }
 
+/// TODO: the initval stuff seems like it can be handled better, e.g. by using additional variables to indicate the length and capacity!
+/// TODO: shouldn't this also check for uniqueness of the values as this is also a requirement for API queries?
 bool validateArray(const int *arr, const size_t n, const int min, const int max)
 {
   if (arr[0] == INITVAL)
@@ -206,6 +214,7 @@ int getAuthentication(char **authenticationToken, const char *filePath, bool *ne
   return 1;
 }
 
+// TODO: strncpy token so I always allocate memory OR use a fixed size array on the stack large enough to hold token (probably better)
 int getAuthenticationFromEnvironment(char **authenticationToken)
 {
   *authenticationToken = getenv("ADSAUTH");
@@ -267,7 +276,9 @@ int getAuthenticationFromFile(char **authenticationToken, const char *filePath)
   if (key[charsRead - 1] == '\n')
     key[charsRead - 1] = '\0';
 
-  char *token = strchr(key, ' ');
+  /// TODO: use strstr while looping over all input lines so order is not important
+  //        anymore
+    char *token = strchr(key, ' ');
   if (token == NULL) {
     fprintf(stderr, "'.cdsapirc' is malformed\n");
     free(key);
@@ -302,6 +313,7 @@ int getAuthenticationFromFile(char **authenticationToken, const char *filePath)
 int forceTrailingSlash(option_t *options)
 {
   // FORCE malloc'ed pointer, so reallocarray works
+  // TODO: make this more apparent in some other part of option parsing
   char *forcedMalloc = strdup(options->outputDirectory);
   if (forcedMalloc == NULL) {
     perror("strdup");

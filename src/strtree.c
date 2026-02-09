@@ -99,8 +99,10 @@
   }
 
   OGR_FOR_EACH_FEATURE_BEGIN(feature, layer) {
-    OGRGeometryH  geom = OGR_G_Clone(OGR_F_GetGeometryRef(feature)); // take ownership of geometry
+    /// FIXME: why do I need to tage ownership of the feature?
+    OGRGeometryH geom = OGR_G_Clone(OGR_F_GetGeometryRef(feature)); // take ownership of geometry
 
+    /// FIXME: doesn't this exclude multipolygons?
     if (wkbFlatten(OGR_G_GetGeometryType(geom)) != wkbPolygon) {
       printf("Feature with fid %lld is not a polygon, skipping\n", OGR_F_GetFID(feature));
       OGR_G_DestroyGeometry(geom);
@@ -108,6 +110,9 @@
     }
 
     // WARNING: OGR_G_Transform does not handle the antimeridian (see docs)!!
+    /// TODO: OGR_GeomTransformer_Create and  OGR_GeomTransformer_Transform do, given the correct options (may return split geometries)!
+    /// TODO: wouldn't it be smarter to transform the entire layer in one go instead of each
+    ///       each feature individually?
     if (needsReprojection && OGR_G_Transform(geom, transformation) != OGRERR_NONE) {
       fprintf(stderr, "Failed to transform geometry: %s\n", CPLGetLastErrorMsg());
       OGR_G_DestroyGeometry(geom);
@@ -205,6 +210,7 @@
                                      (double) x, transformation->colRotation);
 
       // the ternary madness is needed because images may not be north-up
+      /// TODO: does this REALLY preserve the rotation/orientation
       GEOSGeometry *geom = GEOSGeom_createRectangle(
                              MIN(x1, x2),
                              MIN(y1, y2),
@@ -226,7 +232,7 @@
       }
 
       cell->geometry = geom;
-      cell->value = *(*data->data + x + y * data->columns);
+      cell->value = *data->data[x + y * data->columns];
 
       cellGeometryList *node = calloc(1, sizeof(cellGeometryList));
       if (node == NULL) {
@@ -269,11 +275,14 @@
   return tree;
 }
 
+// TODO: give this a better name, e.g. "trackIntersectingCells"
 void queryCallback(void *item, void *userdata)
 {
   // fprintf(stderr, "Found intersecting bbox..");
   cellGeometryList **l = (cellGeometryList **) userdata;
   struct cellGeometry *geom = (struct cellGeometry *) item;
+
+  // TODO: test actual intersection with GEOSIntersects (https://libgeos.org/doxygen/geos__c_8h.html#a6f2f2d573ed7c8f39167baa05e5a814d)
 
   cellGeometryList *node = calloc(1, sizeof(cellGeometryList));
   if (node == NULL) {
@@ -314,6 +323,7 @@ void queryCallback(void *item, void *userdata)
     node->intersectionCount = 0;
     node->intersectingCells = NULL;
 
+    // TODO: a rectangular bounding box is created automatically, why do I calculte one myself?
     GEOSSTRtree_query(rasterTree, areasOfInterest->entry->mbr, queryCallback,
                       (void *) &node->intersectingCells);
 
@@ -346,14 +356,12 @@ void queryCallback(void *item, void *userdata)
 {
   assert(geom);
 
-  OGREnvelope *envelope = CPLCalloc(1, sizeof(OGREnvelope));
+  OGREnvelope envelope
 
-  OGR_G_GetEnvelope(geom, envelope);
+  OGR_G_GetEnvelope(geom, &envelope);
 
-  GEOSGeometry *returnGeometry = GEOSGeom_createRectangle(envelope->MinX, envelope->MinY,
-                                 envelope->MaxX, envelope->MaxY);
-
-  CPLFree(envelope);
+  GEOSGeometry *returnGeometry = GEOSGeom_createRectangle(envelope.MinX, envelope.MinY,
+                                 envelope.MaxX, envelope.MaxY);
 
   return returnGeometry;
 }

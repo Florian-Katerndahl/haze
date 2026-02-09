@@ -34,6 +34,7 @@ void freeCellGeometryList(cellGeometryList *list)
 {
   cellGeometryList *node;
   while (list != NULL) {
+    /// FIXME: why not use freeCellGeometry which encapsulates the next two lines?
     GEOSGeom_destroy(list->entry->geometry);
     free(list->entry);
     node = list;
@@ -52,6 +53,7 @@ void freeIntersections(intersection_t *list)
 
     // NOTE: The elements within the nodes are owned by
     // the list created when constructing the tree!
+    /// FIXME: shouldn't this use freeCellGeometryList to correctly free entries?
     while (list->intersectingCells != NULL) {
       nextGeom = list->intersectingCells->next;
       free(list->intersectingCells);

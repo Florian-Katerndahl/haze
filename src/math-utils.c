@@ -10,6 +10,8 @@ double kgsqmTocow(double x)
 
 double calculateWeightedAverage(const double *values, const double *weights, size_t count)
 {
+  // This assertion is not nice, better to return +/- INF in this case or even NAN; I like the latter approach the best,
+  // potentially together with some warning message from the caller?
   assert(values && weights);
   double numerator = 0.0;
   double denominator = 0.0;

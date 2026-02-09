@@ -12,6 +12,8 @@
 #include <curl/curl.h>
 
 /* fucntion from GEOS documentation */
+// TODO: gibt es einen Grund, warum die Funktion `static` ist? Sonst kann ich die ja auch einfach in eine eigene translation Uni packen.
+// VIEL WICHTIGER: aktuell ist das einfach nur `printf`!
 static void geos_msg_handler(const char* fmt, ...)
 {
   va_list ap;

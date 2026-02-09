@@ -12,6 +12,7 @@
 #include <time.h>
 #include <unistd.h>
 
+/// FIXME: don't exit but return NULL on error
 struct curl_slist *customHeader(struct curl_slist *list, const option_t *options)
 {
   assert(options);
@@ -32,6 +33,8 @@ struct curl_slist *customHeader(struct curl_slist *list, const option_t *options
   return ret;
 }
 
+/// FIXME: this should be returning an int since I directly modify the handle structure
+//         but have no way of checking for errors
 CURL *initializeHandle(CURL **handle, const struct curl_slist *headerList)
 {
   // HOLY MOLY, for whatever reason, the LegacyApiClient is needed to access data even though the cdsapirc file has to follow the "old" format - the fuck!
@@ -47,6 +50,7 @@ CURL *initializeHandle(CURL **handle, const struct curl_slist *headerList)
   return *handle;
 }
 
+/// FIXME: allow optional suffix instead of addon
 char *constructURL(const char *basePath, const char *endPoint, const char *requestId, size_t addon)
 {
   int basePathLength = (int) strlen(basePath);
@@ -103,10 +107,12 @@ size_t discardWrite(__attribute__((unused)) char *ptr, size_t size, size_t nmemb
   return size * nmemb;
 }
 
+/// FIXME: everywhere this function is used, a `json_decref` must be used as well!
 json_t *getKeyRecursively(json_t *root, const char *key)
 {
   json_t *ret;
   if ((ret = json_object_get(root, key))) {
+    json_incref(ret);
     return ret;
   } else {
     const char *entryKey;
@@ -114,6 +120,7 @@ json_t *getKeyRecursively(json_t *root, const char *key)
     json_object_foreach(root, entryKey, value) {
       if (json_is_object(value)) {
         if ((ret = getKeyRecursively(value, key))) {
+          json_incref(ret);
           return ret;
         }
       }
@@ -122,6 +129,110 @@ json_t *getKeyRecursively(json_t *root, const char *key)
   return NULL;
 }
 
+json_t *jsonArrayFromIntegers(const int *arr, int stopVal, const char *formatString)
+{
+  json_t *jsonArray = json_array();
+  if (jsonArray == NULL) {
+    fprintf(stderr, "Failed to create JSON array\n");
+    return NULL;
+  }
+
+  json_t *elementString;
+  while (*arr != stopVal) {
+    if ((elementString = json_sprintf(formatString, *arr)) == NULL) {
+      fprintf(stderr, "Failed to create JSON string representation of integer\n");
+      json_decref(jsonArray);
+      return NULL;
+    }
+
+    if (json_array_append_new(jsonArray, elementString)) {
+      json_decref(elementString);
+      json_decref(jsonArray);
+      return NULL;
+    }
+
+    arr++;
+  }
+
+  return jsonArray;
+}
+
+char *constructStringRequest(const int *years, const int *months, const int *days, const int *hours,
+                             const OGREnvelope *aoi)
+{
+  json_t *yearsArray = NULL;
+  json_t *monthsArray = NULL;
+  json_t *daysArray = NULL;
+  json_t *hoursArray = NULL;
+  json_t *aoiArray = NULL;
+  json_t *jsonRequest = NULL;
+
+  if ((yearsArray = jsonArrayFromIntegers(years, INITVAL, "%.4d")) == NULL) {
+    fprintf(stderr, "Failed to create JSON array for requested years\n");
+    goto cleanup;
+  }
+
+  if ((monthsArray = jsonArrayFromIntegers(months, INITVAL, "%.2d")) == NULL) {
+    fprintf(stderr, "Failed to create JSON array for requested months\n");
+    goto cleanup;
+  }
+
+  if ((daysArray = jsonArrayFromIntegers(days, INITVAL, "%.2d")) == NULL) {
+    fprintf(stderr, "Failed to create JSON array for requested days\n");
+    goto cleanup;
+  }
+
+  if ((hoursArray = jsonArrayFromIntegers(hours, INITVAL, "%.2d:00")) == NULL) {
+    fprintf(stderr, "Failed to create JSON array for requested hours\n");
+    goto cleanup;
+  }
+
+  if (aoi == NULL) {
+    aoiArray = NULL;
+  } else {
+    if ((aoiArray = json_array()) == NULL) {
+      fprintf(stderr, "Failed to create JSON array for requested aoi\n");
+      goto cleanup;
+    }
+
+    if (json_array_append_new(aoiArray, json_real(aoi->MaxY)) ||
+        json_array_append_new(aoiArray, json_real(aoi->MinX)) ||
+        json_array_append_new(aoiArray, json_real(aoi->MinY)) ||
+        json_array_append_new(aoiArray, json_real(aoi->MaxX)))
+      goto cleanup;
+  }
+
+  // steals references to JSON objects
+  jsonRequest = json_pack("{s: {s:[s], s:o, s:o, s:o, s:o, s:o*, s:s, s:s, s:[s]}}",
+                          "inputs", "product_type", "reanalysis", "year", yearsArray, "month", monthsArray, "day", daysArray,
+                          "time",
+                          hoursArray, "area", aoiArray, "data_format", "grib", "download_format", "unarchived", "variable",
+                          "total_column_water_vapour");
+
+  if (jsonRequest == NULL) {
+    fprintf(stderr, "Failed to craete complete JSON request\n");
+    goto cleanup;
+  }
+
+  char *stringRequest = json_dumps(jsonRequest, 0);
+
+  json_decref(jsonRequest);
+
+  // callee checks for success
+  return stringRequest;
+
+// jansson checks for NULL before accessing object members
+cleanup:
+  json_decref(hoursArray);
+  json_decref(daysArray);
+  json_decref(monthsArray);
+  json_decref(yearsArray);
+  json_decref(jsonRequest);
+  return NULL;
+
+}
+
+/// FIXME: does it really make sense that this function creates a cURL handle? I don't really think so...
 [[nodiscard]] stringList *downloadDaily(const option_t *options, const OGREnvelope *aoi)
 {
   CURL *handle = curl_easy_init();
@@ -143,7 +254,7 @@ json_t *getKeyRecursively(json_t *root, const char *key)
 
   for (int *year = (int *) options->years; *year != INITVAL; year++) {
     for (int *month = (int *) options->months; *month != INITVAL; month++) {
-        int fileNameLength = 13;
+        int fileNameLength = 13; /// TODO: where does this number come from? Why do I heap allocate it?
         char *dateString = calloc(fileNameLength, sizeof(char));
         if (dateString == NULL) {
           perror("calloc");
@@ -253,109 +364,6 @@ json_t *getKeyRecursively(json_t *root, const char *key)
   return root;
 }
 
-json_t *jsonArrayFromIntegers(const int *arr, int stopVal, const char *formatString)
-{
-  json_t *jsonArray = json_array();
-  if (jsonArray == NULL) {
-    fprintf(stderr, "Failed to create JSON array\n");
-    return NULL;
-  }
-
-  json_t *elementString;
-  while (*arr != stopVal) {
-    if ((elementString = json_sprintf(formatString, *arr)) == NULL) {
-      fprintf(stderr, "Failed to create JSON string representation of integer\n");
-      json_decref(jsonArray);
-      return NULL;
-    }
-
-    if (json_array_append_new(jsonArray, elementString)) {
-      json_decref(elementString);
-      json_decref(jsonArray);
-      return NULL;
-    }
-
-    arr++;
-  }
-
-  return jsonArray;
-}
-
-char *constructStringRequest(const int *years, const int *months, const int *days, const int *hours,
-                             const OGREnvelope *aoi)
-{
-  json_t *yearsArray = NULL;
-  json_t *monthsArray = NULL;
-  json_t *daysArray = NULL;
-  json_t *hoursArray = NULL;
-  json_t *aoiArray = NULL;
-  json_t *jsonRequest = NULL;
-
-  if ((yearsArray = jsonArrayFromIntegers(years, INITVAL, "%.4d")) == NULL) {
-    fprintf(stderr, "Failed to create JSON array for requested years\n");
-    goto cleanup;
-  }
-
-  if ((monthsArray = jsonArrayFromIntegers(months, INITVAL, "%.2d")) == NULL) {
-    fprintf(stderr, "Failed to create JSON array for requested months\n");
-    goto cleanup;
-  }
-
-  if ((daysArray = jsonArrayFromIntegers(days, INITVAL, "%.2d")) == NULL) {
-    fprintf(stderr, "Failed to create JSON array for requested days\n");
-    goto cleanup;
-  }
-
-  if ((hoursArray = jsonArrayFromIntegers(hours, INITVAL, "%.2d:00")) == NULL) {
-    fprintf(stderr, "Failed to create JSON array for requested hours\n");
-    goto cleanup;
-  }
-
-  if (aoi == NULL) {
-    aoiArray = NULL;
-  } else {
-    if ((aoiArray = json_array()) == NULL) {
-      fprintf(stderr, "Failed to create JSON array for requested aoi\n");
-      goto cleanup;
-    }
-
-    if (json_array_append_new(aoiArray, json_real(aoi->MaxY)) ||
-        json_array_append_new(aoiArray, json_real(aoi->MinX)) ||
-        json_array_append_new(aoiArray, json_real(aoi->MinY)) ||
-        json_array_append_new(aoiArray, json_real(aoi->MaxX)))
-      goto cleanup;
-  }
-
-  // steals references to JSON objects
-  jsonRequest = json_pack("{s: {s:[s], s:o, s:o, s:o, s:o, s:o*, s:s, s:s, s:[s]}}",
-                          "inputs", "product_type", "reanalysis", "year", yearsArray, "month", monthsArray, "day", daysArray,
-                          "time",
-                          hoursArray, "area", aoiArray, "data_format", "grib", "download_format", "unarchived", "variable",
-                          "total_column_water_vapour");
-
-  if (jsonRequest == NULL) {
-    fprintf(stderr, "Failed to craete complete JSON request\n");
-    goto cleanup;
-  }
-
-  char *stringRequest = json_dumps(jsonRequest, 0);
-
-  json_decref(jsonRequest);
-
-  // callee checks for success
-  return stringRequest;
-
-// jansson checks for NULL before accessing object members
-cleanup:
-  json_decref(hoursArray);
-  json_decref(daysArray);
-  json_decref(monthsArray);
-  json_decref(yearsArray);
-  json_decref(jsonRequest);
-  return NULL;
-
-}
-
 // gets first matching key, depth first
 char *slurpAndGetString(const char *input, const char *key)
 {
@@ -398,6 +406,10 @@ char *slurpAndGetString(const char *input, const char *key)
   return ret;
 }
 
+// TODO: passing years, months, days and hours with number of elements instead of this "INITVAL" stuff seems neater from my current perspective
+//       ALSO: If I actually want to do daily requests, year month and day should be scalar values and only hours an array. Then, two 
+//             different implementations may make sense. One for scalar year, month day and one for vector years, months, days. Scalar version can
+//             simply call vector version with n = 1
 char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days,
                         const int *hours, const OGREnvelope *aoi, const option_t *options)
 {
@@ -539,6 +551,7 @@ productStatus cdsGetProductStatus(CURL *handle, const char *requestId)
   return status;
 }
 
+/// FIXME: add a max retry parameter
 int cdsWaitForProduct(CURL *handle, const char *requestId)
 {
   unsigned int sleepSeconds = 10;
@@ -549,7 +562,7 @@ int cdsWaitForProduct(CURL *handle, const char *requestId)
         return 0;
       case ACCEPTED: // fallthrough
       case RUNNING:
-        sleep(attempt * sleepSeconds);
+        sleep(attempt * sleepSeconds); /// TODO: use an exponential back-off?
         attempt++;
         break;
       case FAILED:
@@ -579,6 +592,7 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     return 1;
   }
 
+  /// FIXME: use some other way of appending results but not this!
   strcat(url, "/results");
 
   curlString response = {0};
@@ -675,6 +689,7 @@ int cdsDeleteProductRequest(CURL *handle, const char *requestId)
     fprintf(stderr, "Failed to delete product request: %s (%ld)\n", curl_easy_strerror(deleteResponse),
             httpResponse);
     curl_easy_cleanup(deleteHandle);
+    free(url);
     return 1;
   }
 

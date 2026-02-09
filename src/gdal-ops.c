@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <time.h>
 
+// TODO: rename to openRasterDataset
 [[nodiscard]] GDALDatasetH openRaster(const char *filePath)
 {
   if (filePath == NULL) {
@@ -43,6 +44,7 @@ GDALRasterBandH openRasterBand(GDALDatasetH raster, int index)
   return band;
 }
 
+/// TODO: rename to openVectorDataset
 [[nodiscard]] GDALDatasetH openVector(const char *filePath)
 {
   if (filePath == NULL) {
@@ -61,7 +63,7 @@ GDALRasterBandH openRasterBand(GDALDatasetH raster, int index)
   return vector;
 }
 
-OGRLayerH  openVectorLayer(GDALDatasetH vector, const char *name)
+OGRLayerH openVectorLayer(GDALDatasetH vector, const char *name)
 {
   if (name) {
     return OGR_DS_GetLayerByName(vector, name);

@@ -23,6 +23,7 @@
 #include <gdal/ogr_api.h>
 #include <unistd.h>
 
+/// TODO: Why allocate this struct at all and not leave it on stack if it only contains references?!
 [[nodiscard]] struct rawData *allocateRawData(void)
 {
   struct rawData *dataBuffer = calloc(1, sizeof(struct rawData));
@@ -30,6 +31,7 @@
     perror("calloc");
     return NULL;
   }
+  /// TODO: Why allocate the double pointer?
   dataBuffer->data = calloc(1, sizeof(double **));
   if (dataBuffer->data == NULL) {
     perror("calloc");
@@ -47,6 +49,8 @@ void freeRawData(struct rawData *data)
   free(data);
 }
 
+/// TODO: Why allocate this struct at all and not leave it on stack if it only contains references?!
+/// TODO: If the "constructors" and "destructors" for this and the raw data are identical, why note use the same struct definition? Difference should only be the number of bands...
 [[nodiscard]] struct averagedData *allocateAverageData(void)
 {
   struct averagedData *averageBuffer = calloc(1, sizeof(struct averagedData));
@@ -55,6 +59,7 @@ void freeRawData(struct rawData *data)
     return NULL;
   }
 
+  /// TODO: Why allocate the double pointer?
   averageBuffer->data = calloc(1, sizeof(double **));
   if (averageBuffer->data == NULL) {
     perror("calloc");
@@ -97,6 +102,7 @@ void readRasterDataset(GDALDatasetH raster, struct rawData **dataBuffer)
   (*dataBuffer)->rows = datasetRows;
 
   *(*dataBuffer)->data = calloc(datasetRows * datasetColumns * dataSetBandCount, sizeof(double));
+  /// FIXME: checking wrong buffer, should check *(*dataBuffer)->data and set *dataBuffer = NULL on error/free it.
   if (*dataBuffer == NULL) {
     perror("calloc");
     return;
@@ -104,10 +110,11 @@ void readRasterDataset(GDALDatasetH raster, struct rawData **dataBuffer)
 
   // data seems to be BSQ? Or at least it saved into the buffer one scanline at a time
   //  could be helpful to manually transform to PIL
+  // Doesn't GDAL hide this from me? When requesting bands, I get a band no matter how the underlying data is interleaved! I.e., data returned is always BSQ
   CPLErr readErr = GDALDatasetRasterIOEx(
                      raster, GF_Read, 0, 0,
                      (int) datasetColumns, (int) datasetRows,
-                     (void *) * (*dataBuffer)->data, (int) datasetColumns,
+                     (void *) *(*dataBuffer)->data, (int) datasetColumns,
                      (int) datasetRows, dType,
                      dataSetBandCount, NULL, 0, 0, 0, NULL);
 
@@ -121,6 +128,8 @@ void readRasterDataset(GDALDatasetH raster, struct rawData **dataBuffer)
   return;
 }
 
+/// TODO: why not incoprate the freeing and NULLing of output struct as above?
+//        This is so inconsistent! could be void function as well.
 int averageRawData(const struct rawData *data, struct averagedData **average)
 {
   *average = allocateAverageData();
@@ -132,6 +141,7 @@ int averageRawData(const struct rawData *data, struct averagedData **average)
   (*average)->rows = data-> rows;
 
   *(*average)->data = calloc(data->rows * data->columns, sizeof(double));
+  /// FIXME: wrong NULL check again!
   if ((*average)->data == NULL) {
     perror("calloc");
     return 1;
@@ -141,6 +151,7 @@ int averageRawData(const struct rawData *data, struct averagedData **average)
   size_t xOffset;
   size_t yOffset;
   size_t bandOffset;
+  /// TODO: rename variable below to something more useful that communicates clearly that this is the number of bands
   double bandAsDouble = (double) data->bands;
   for (size_t row = 0; row < data->rows; row++) { // y
     yOffset = row * data->columns;
@@ -244,11 +255,12 @@ int averagePILRawDataWithSizeOffset(const struct rawData *data, struct averagedD
   return 0;
 }
 
+/// FIXME: rename to `reorderToBandInterleavedByPixel` as this is the correct term
 void reorderToPixelInterleave(struct rawData *data)
 {
   // hmm, actually unsure if this is beneficial; page faults are not lower with two passes; probably needs testing with longer inputs to fully conclude if this is worth it
   // it becomes apparent however, that IO is THE bottleneck as execution differs only slightly with re-ordered data being 2 seconds faster (probably hot cache paths..)
-  // cache misses grew marginally slower for PIL data
+  // cache misses grew marginally slower for PIL data (did I meant to write that there were fewer cache misses?)
   // BUT without runtime sanitizers and O3: 5 major page faults vs 333 and 152232 minor page faults vs 148721 -> could be worth it for multiple calculations on same data
   double *temporaryArray = calloc(data->columns * data->rows * data->bands, sizeof(double));
   if (temporaryArray == NULL) {
@@ -308,6 +320,7 @@ void reorderToPixelInterleave(struct rawData *data)
   }
 
 #if GDAL_VERSION_NUM < 3090000
+  /// TODO: It's called planar geometries!
   fprintf(stderr, "Calcluating cartesian area regardless of projection\n");
 #endif
 
@@ -374,6 +387,9 @@ void reorderToPixelInterleave(struct rawData *data)
         continue; // is continue really appropriate here?
       }
 
+      // TODO: add to documentation, that STRTree only computes intersection logically but not intersecting geometries?
+      // TODO: wouldn't it make more sense to check for actual intersection in callback **and** compute the intersection there?
+      //       Especially since the docs state this is built upon the GEOS library
       OGRGeometryH intersection = OGR_G_Intersection(intersections->reference, cellAsOGR);
       if (intersection == NULL) {
         fprintf(stderr, "Failed to create intersection-polygon: %s\n", CPLGetLastErrorMsg());
@@ -382,9 +398,12 @@ void reorderToPixelInterleave(struct rawData *data)
       }
       OGR_G_AssignSpatialReference(intersection, spatialRef);
 
+// TODO: since FORCE now relies on GDAL 3.11.3, I can simply scip als this sutff and assume `OGR_G_GeodesicArea` is present
+// NOTE: for documentation or just myself: OGR_G_GeodesicArea is also a method for multipolygons in C++, thus, it can calculate the area of a multipolygon
 #if GDAL_VERSION_NUM < 3090000
       double intersectingArea = OGR_G_Area(intersection);
 #else
+      // TODO: rename 'geographic' variable to 'geodesic'
       double intersectingArea = geographic ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(intersection);
 #endif
 
@@ -507,6 +526,7 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
       int currentYear;
       int currentMonth;
 
+      // TODO: use basename function from stdlib
       const char *inputFileName = strrchr(successfulDownloads->string, '/');
       if (inputFileName == NULL) {
         fprintf(stderr, "Malformed file path. Could not get final path delimiter\n");
@@ -624,6 +644,8 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
   return 0;
 }
 
+/// FIXME: check pointer for NULL and return -1 in that case!
+/// TODO: wouldn't be necessary if storage of year, month, day and hour would be done differently.
 size_t countRequestedHours(const option_t *options)
 {
   size_t count = 0;
@@ -646,7 +668,7 @@ bool isValidDate(int year, int month, int day)
   bool validMonth = month >= 1 && month <= 12;
   bool isLeapYear = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
   bool validDay = day >= 1
-                  && day <= (month == 2 ? (isLeapYear ? 29 : daysPerMonth[month - 1]) : daysPerMonth[month - 1]);
+                  && day <= (month == 2 ? (isLeapYear ? daysPerMonth[month - 1] + 1 : daysPerMonth[month - 1]) : daysPerMonth[month - 1]);
 
   return validYear && validMonth && validDay;
 }

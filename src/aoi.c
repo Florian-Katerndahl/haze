@@ -72,6 +72,7 @@
       return NULL;
     }
 
+    // TODO: why not use "transformationFromWKTs" here as well 
     OGRCoordinateTransformationH transformation = OCTNewCoordinateTransformationEx(layerRef, wgs84Ref,
       NULL);
     if (transformation == NULL) {
@@ -94,6 +95,9 @@
           ORDER[2],
           ANGLEUNIT["degree",0.0174532925199433]],
       mean: -59 lon => 60 west and 58 lat => 58 north
+
+    It's needed because I work with the coordinates directly, would I only be interested in the geometry, e.g. for 
+    area calculation, this wouldn't be necessary!
     */
     int nAxes = 0;
     const int *dataAxisToSRS = OSRGetDataAxisToSRSAxisMapping(layerRef, &nAxes);
@@ -109,6 +113,7 @@
     // get first axis; axes themselves are 1 indexed
     OSRGetAxis(layerRef, NULL, dataAxisToSRS[0] - 1, &orientation);
 
+    // TODO: why do I not allow the first axis to be west or south?
     if (orientation == OAO_West || orientation == OAO_South) {
       fprintf(stderr, "First CRS axis is neither 'north' or 'east'\n");
       // todo cleanup
@@ -164,18 +169,9 @@
     mbr->MaxY = maxFirstOut;
     mbr->MaxX = maxSecondOut;
 
+
     if (mbr->MaxX < mbr->MinX)
       mbr->MaxX += 360.0; // cds API allows requests with x [-360,360]
-
-    if ((mbr->MaxX - mbr->MinX) > 360.0) {
-      fprintf(stderr, "Area of interest spans globe more than once\n");
-      OSRDestroySpatialReference(wgs84Ref);
-      OCTDestroyCoordinateTransformation(transformation);
-      CPLFree(layerWKT);
-      CPLFree(mbr);
-      closeGDALDataset(aoi);
-      return NULL;
-    }
 
     OSRDestroySpatialReference(wgs84Ref);
     OCTDestroyCoordinateTransformation(transformation);
