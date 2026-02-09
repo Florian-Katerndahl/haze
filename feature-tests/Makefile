@@ -9,7 +9,7 @@ GEOSFLAGS=$(shell pkg-config --cflags --libs geos)
 MATHFLAGS=-lm
 LOCALFLAGS=-L
 
-.PHONY: clean test-strtree
+.PHONY: clean test-strtree test-daily
 
 test-strtree:
 	$(CC) $(DEFINES) $(CFLAGS) -c ../src/fscheck.c -o ../build/fscheck.o
@@ -26,7 +26,18 @@ test-api:
 	$(CC) $(DEFINES) $(CFLAGS) -c ../src/api.c $(CURLFLAGS) $(JANSONFLAGS) -o ../build/api.o
 	$(CC) $(DEFINES) $(CFLAGS) -c ../src/options.c $(CURLFLAGS) $(JANSONFLAGS) -o ../build/options.o
 	$(CC) $(DEFINES) $(CFLAGS) -c api-tests.c $(CURLFLAGS) $(JANSONFLAGS) -o ../build/api-tests.o
-	$(CC) $(DEFINES) $(CFLAGS) ../build/types.o ../build/api.o ../build/options.o ../build/api-tests.o $(GDALFLAGS) $(GEOSFLAGS) $(CURLFLAGS) $(JANSONFLAGS) -o api-tests
+	$(CC) $(DEFINES) $(CFLAGS) ../build/types.o ../build/api.o ../build/options.o ../build/api-tests.o $(GDALFLAGS) $(GEOSFLAGS) $(CURLFLAGS) $(JANSONFLAGS) -o test-api
+
+test-daily:
+	$(CC) $(DEFINES) $(CFLAGS) -c ../src/fscheck.c -o ../build/fscheck.o
+	$(CC) $(DEFINES) $(CFLAGS) -c ../src/math-utils.c -o ../build/math-utils.o
+	$(CC) $(DEFINES) $(CFLAGS) -c ../src/types.c $(GDALFLAGS) $(GEOSFLAGS) -o ../build/types.o
+	$(CC) $(DEFINES) $(CFLAGS) -c ../src/options.c $(CURLFLAGS) $(JANSONFLAGS) -o ../build/options.o
+	$(CC) $(DEFINES) $(CFLAGS) -c ../src/gdal-ops.c $(GDALFLAGS) -o ../build/gdal-ops.o
+	$(CC) $(DEFINES) $(CFLAGS) -c ../src/strtree.c $(GDALFLAGS) $(MATHFLAGS) $(GEOSFLAGS) -o ../build/strtree.o
+	$(CC) $(DEFINES) $(CFLAGS) -c ../src/haze.c $(GDALFLAGS) $(MATHFLAGS) $(GEOSFLAGS) -o ../build/haze.o
+	$(CC) $(DEFINES) $(CFLAGS) -c daily-tests.c $(CURLFLAGS) $(JANSONFLAGS) -o ../build/daily-tests.o
+	$(CC) $(DEFINES) $(CFLAGS) ../build/types.o ../build/api.o ../build/strtree.o ../build/math-utils.o ../build/options.o ../build/fscheck.o ../build/gdal-ops.o ../build/haze.o ../build/daily-tests.o $(GDALFLAGS) $(MATHFLAGS) $(GEOSFLAGS) $(CURLFLAGS) $(JANSONFLAGS) -o test-daily
 
 
 clean:

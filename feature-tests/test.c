@@ -1,5 +1,6 @@
 #include "../src/strtree.h"
 #include "../src/haze.h"
+#include "../src/gdal-ops.h"
 #include <gdal/cpl_conv.h>
 #include <gdal/cpl_port.h>
 #include <gdal/cpl_string.h>
@@ -25,7 +26,13 @@ int main(void) {
     CPLPushErrorHandler(CPLQuietErrorHandler);
     GDALAllRegister();
 
-    GDALDatasetH ds = GDALOpenEx("../data/example.grib", GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
+    OCTDestroyCoordinateTransformation(NULL);
+
+    GDALDatasetH ds = GDALOpenEx("gribs/2020-07.grib", GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
+
+    GDALRasterBandH band = GDALGetRasterBand(ds, 1);
+    printf("%s\n", GDALGetMetadataItem(band, "GRIB_REF_TIME", NULL));
+
     const char *rasterWkt = extractCRSAsWKT(ds, NULL);
     
     vectorGeometryList *areasOfInterest = buildGEOSGeometriesFromFile("../data/grid.kml", NULL, rasterWkt);

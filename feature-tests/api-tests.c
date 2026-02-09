@@ -12,9 +12,7 @@
 
 int main(void) {
   curl_global_init(CURL_GLOBAL_ALL);
-
-  CURL *handle = curl_easy_init();
-
+  
   option_t test_opts = {0};
   getAuthenticationFromFile(&test_opts.authenticationToken, NULL);
   test_opts.years[0] = 2009;
@@ -32,18 +30,13 @@ int main(void) {
   test_opts.hours[4] = -1;
   test_opts.outputDirectory = "/home/florian/git-repos/haze/feature-tests";
 
+  
+
   OGREnvelope test_envelope = {-180, 180, -90, 90};
 
-
-  struct curl_slist *headerAddon = customHeader(NULL, &test_opts);
-
-  initializeHandle(&handle, headerAddon);
-
-  downloadDaily(handle, &test_opts, &test_envelope);
+  downloadDaily(&test_opts, &test_envelope);
   
-  freeCustomHeader(headerAddon);
   free(test_opts.authenticationToken);
-  curl_easy_cleanup(handle);
   curl_global_cleanup();
 
   return EXIT_SUCCESS;
