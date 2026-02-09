@@ -5,6 +5,7 @@
 #include <gdal/gdal.h>
 #include <gdal/ogr_core.h>
 #include <gdal/ogr_srs_api.h>
+#include <gdal/gdal_utils.h>
 #include <stdio.h>
 #include <time.h>
 
@@ -141,4 +142,30 @@ OGRCoordinateTransformationH transformationFromWKTs(const char *from, const char
   OSRDestroySpatialReference(sourceReferenceSystem);
 
   return transform;
+}
+
+// FIXME: simply progressing seems wrong, thus bool is not the right data type to use but rather int with -1 representing an error
+bool rasterCrossesAntimeridian(const GDALDatasetH raster) {
+  struct geoTransform transform = {0};
+  if (getRasterMetadata(raster, &transform)) {
+    fprintf(stderr, "Failed to extract geo transfomation array. Assuming no antimerdian crossing\n");
+    return false;
+  }
+
+  // returned rasters from CDS API are always north-up
+  bool maximumExceedsAntimeridian = (transform.xOrigin + transform.pixelWidth * GDALGetRasterXSize(raster)) > 180.0;
+  bool minimumExceedsAntimeridian = transform.xOrigin < -180.0;
+  return maximumExceedsAntimeridian || minimumExceedsAntimeridian;
+}
+
+// https://gis.stackexchange.com/questions/37790/reprojecting-raster-from-0-360-to-180-180-with-cutting-180-meridian-using-gdalw
+GDALDatasetH warpRasterToBounds(const GDALDatasetH raster) {
+  char *strOptions[] = {"SOURCE_EXTRA=1000", "", NULL};
+  GDALWarpAppOptions *warpOptions =  GDALWarpAppOptionsNew();
+  if (warpOptions == NULL) {
+
+  }
+
+  GDALWarp()
+  GDALWarpAppOptionsFree()
 }

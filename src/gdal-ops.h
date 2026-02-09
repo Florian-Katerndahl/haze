@@ -22,4 +22,10 @@ bool isGeographic(const char *Wkt);
 
 OGRCoordinateTransformationH transformationFromWKTs(const char *from, const char *to);
 
+bool rasterTooWide(const GDALDatasetH raster);
+
+bool rasterCrossesAntimeridian(const GDALDatasetH raster);
+
+GDALDatasetH warpRasterToBounds(const GDALDatasetH raster);
+
 #endif // GDAL_OPS_H

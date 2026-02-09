@@ -482,6 +482,21 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
     if (ds == NULL)
       return -1;
 
+    if (rasterTooWide(ds)) {
+      fprintf(FILE *restrict stream, const char *restrict format, ...);
+      closeGDALDataset(ds);
+      return -1;
+    }
+
+    if (rasterCrossesAntimeridian(ds)) {
+      #ifdef DEBUG
+      fprintf(stderr, "Input raster crosses antimeridian, warping to [-180, 90, 180, -90]")
+      #endif
+      GDALDatasetH warpedDS = warpRasterToBounds(ds);
+      closeGDALDataset(ds);
+      ds = warpedDS;
+    }
+
     const char *rasterWkt = extractCRSAsWKT(ds, NULL);
 
     vectorGeometryList *areasOfInterest = buildGEOSGeometriesFromFile(options->areaOfInterest, NULL,
