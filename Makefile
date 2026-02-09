@@ -17,16 +17,16 @@ build/fscheck.o: src/fscheck.c src/fscheck.h
 	$(CC) $(DEFINES) $(CFLAGS) -c src/fscheck.c -o $@
 
 build/aoi.o: src/aoi.c src/aoi.h
-	$(CC) $(DEFINES) $(CFLAGS) -c src/aoi.c $(GDALFLAGS) -o $@
+	$(CC) $(DEFINES) $(CFLAGS) -c src/aoi.c -o $@
 
 build/haze.o: src/haze.c src/haze.h
-	$(CC) $(DEFINES) $(CFLAGS) -c src/haze.c $(GDALFLAGS) -o $@
+	$(CC) $(DEFINES) $(CFLAGS) -c src/haze.c -o $@
 
 build/types.o: src/types.c src/types.h
-	$(CC) $(DEFINES) $(CFLAGS) -c src/types.c $(GDALFLAGS) $(GEOSFLAGS) -o $@
+	$(CC) $(DEFINES) $(CFLAGS) -c src/types.c -o $@
 
 build/gdal-ops.o: src/gdal-ops.c src/gdal-ops.h
-	$(CC) $(DEFINES) $(CFLAGS) -c src/gdal-ops.c $(GDALFLAGS) -o $@
+	$(CC) $(DEFINES) $(CFLAGS) -c src/gdal-ops.c -o $@
 
 build/math-utils.o: src/math-utils.c src/math-utils.h
 	$(CC) $(DEFINES) $(CFLAGS) -c src/math-utils.c -o $@
@@ -35,10 +35,10 @@ build/options.o: src/options.c src/options.h
 	$(CC) $(DEFINES) $(CFLAGS) -c src/options.c -o $@
 
 build/api.o: src/api.c src/api.h
-	$(CC) $(DEFINES) $(CFLAGS) -c src/api.c $(CURLFLAGS) $(JANSONFLAGS) -o $@
+	$(CC) $(DEFINES) $(CFLAGS) -c src/api.c -o $@
 
 build/strtree.o: src/strtree.c src/strtree.h
-	$(CC) $(DEFINES) $(CFLAGS) -c src/strtree.c $(GDALFLAGS) $(GEOSFLAGS) -o $@
+	$(CC) $(DEFINES) $(CFLAGS) -c src/strtree.c -o $@
 
 build/main.o: main.c
 	$(CC) $(DEFINES) $(CFLAGS) -c main.c $(GDALFLAGS) $(GEOSFLAGS) $(CURLFLAGS) -o build/main.o
