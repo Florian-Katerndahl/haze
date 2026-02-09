@@ -3,3 +3,7 @@ build/
 data/
 feature-tests/
 .git/
+.astylerc
+.gitignore
+Doxyfile
+README.md
