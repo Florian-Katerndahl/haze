@@ -1,3 +1,13 @@
+/**
+ * @file api.h
+ * @author Florian Katerndahl <florian@katerndahl.com>
+ * @brief This header file describes function signatures to interact with ECMWF's CDS API.
+ * @version 0.1
+ * @date 2026-02-09
+ * 
+ * @copyright Copyright (c) 2026
+ * 
+ */
 #ifndef API_H
 #define API_H
 
@@ -9,33 +19,201 @@
 
 #define BASEURL "https://cds.climate.copernicus.eu/api"
 
-// passing NULL as first arg creates new list
+/**
+ * @brief Create a new header list for cURL with CDS API token field
+ *
+ * @note After the function returns, the caller owns the returned object and must free it after use.
+ * 
+ * @param list Reference to existing `curl_slist` to append to or `NULL` to create a new list.
+ * @param options Reference to parsed options.
+ * @return struct curl_slist* Reference to cURL header list, potentially pointing to the object passed in as the first argument.
+ */
 struct curl_slist *customHeader(struct curl_slist *list, const option_t *options);
 
+/**
+ * @brief Initialize cURL handle
+ * 
+ * @details This function sets the following options: CURLOPT_FOLLOWLOCATION to 1, CURLOPT_FAILONERROR
+ *          to 1, CURLOPT_SSL_VERIFYHOST to 1, CURLOPT_TIMEOUT to 600 seconds (default value of cdsapi package),
+ *          CURLOPT_USERAGENT to haze and possibly the additional headers.
+ * 
+ * @param handle Indirect reference to a pre-allocated cURL handle.
+ * @param headerList Reference to additional cURL headers or NULL.
+ * @return CURL* Reference to newly created cURL handle.
+ */
 CURL *initializeHandle(CURL **handle, const struct curl_slist *headerList);
 
+/**
+ * @brief Construct a complete URL for requests to the CDS API
+ * 
+ * @note After the function returns, the caller owns the returned object and must free it after use.
+ * 
+ * @param basePath Base URL for API requests.
+ * @param endPoint Endpoint to query.
+ * @param requestId Product request ID.
+ * @param addon Addtional buffer space.
+ * @return char* Reference 
+ */
 char *constructURL(const char *basePath, const char *endPoint, const char *requestId, size_t addon);
 
+/**
+ * @brief Concatenate chunked response from API request into string
+ * 
+ * @note This function is used as a callback for cURL
+ * 
+ * @param ptr Reference to data chunk delivered to cURL.
+ * @param size Size of a byte in bytes, i.e. 1.
+ * @param nmemb Number of bytes delivered to cURL.
+ * @param userdata User data struct to store data in (here: `curlString)`.
+ * @return size_t Number of bytes handled by the callback.
+ */
 size_t writeString(char *ptr, size_t size, size_t nmemb, void *userdata);
 
+/**
+ * @brief Discard delivered data from API request
+ * 
+ * @note This function is used as a callback for cURL and always returns `size * nmemb`.
+ * 
+ * @param ptr Reference to data chunk delivered to cURL.
+ * @param size Size of a byte in bytes, i.e. 1.
+ * @param nmemb Number of bytes delivered to cURL.
+ * @param userdata User data struct to store data in.
+ * @return size_t Number of bytes handled by the callback.
+ */
 size_t discardWrite(char *ptr, size_t size, size_t nmemb, void *userdata);
 
+/**
+ * @brief Search JSON object recursively for a key with DFS and return first occurence
+ * 
+ * @note The returned reference is borrowed and it's reference count must be decremented by the caller after use.
+ * 
+ * @param root Reference to root of JSON object.
+ * @param key Key to search for.
+ * @return json_t* Reference to JSON object or NULL if key is not present.
+ */
+json_t *getKeyRecursively(json_t *root, const char *key);
+
+/**
+ * @brief Convert an array of integers to their string representations with customizable formats
+ * 
+ * @note After the function returns, the caller owns the returned object and musst free it.
+ * 
+ * @param arr Reference to array of integers.
+ * @param stopVal Dedicated stop value up to which elements should be used.
+ * @param formatString Format string to use when converting integers to their string representation, used for each element.
+ * @return json_t* Reference to newly allocated JSON array or NULL on error.
+ */
 json_t *jsonArrayFromIntegers(const int *arr, int stopVal, const char *formatString);
 
+/**
+ * @brief Construct a JSON object for CDS API product request
+ * 
+ * @details This function constructs a JSON object to use in API requests containing
+ *          information about the years, months, days, hours and AOI to query a particular
+ *          CDS API endpoint.
+ *          This function is agnostic to any particular product or API endpoint as it simply
+ *          packs above-mentioned data.
+ *          If the parameter `aoi` is set to NULL, data for the entire globe is queried.
+ * 
+ * @note After the function returns, the caller owns the returned object and musst free it.
+ * 
+ * @param years Reference to array of integers giving years to include in query.
+ * @param months Reference to array of integers giving months to include in query.
+ * @param days Reference to array of integers giving days to include in query.
+ * @param hours Reference to array of integers giving hours to include in query.
+ * @param aoi Reference to a north-up bounding box with EPSG:4326 coordinates to restrict AOI, possibly NULL. 
+ * @return char* Reference to JSON-formatted product request or NULL on error.
+ */
 char *constructStringRequest(const int *years, const int *months, const int *days, const int *hours, const OGREnvelope *aoi);
 
+/**
+ * @brief Perform product request and download of ERA-5 products
+ * 
+ * @details This function takes options specified by the user and an envelope (possibly NULL)
+ *          to query the CDS API, wait for successful processing and downloads file.
+ *          A cURL handle is allocated and de-allocated for the scope of this function
+ * 
+ * @note Contrary to the function's name, data is downloaded for an entire month.
+ * 
+ * @param options Reference to parsed options.
+ * @param aoi Reference to a north-up bounding box with EPSG:4326 coordinates to restrict AOI, possibly NULL.
+ * @return stringList* Reference to linked list containing file paths of downloaded files.
+ */
 [[nodiscard]] stringList *downloadDaily(const option_t *options, const OGREnvelope *aoi);
 
+/**
+ * @brief Construct a JSON object from a JSON string and search for a key in DFS
+ * 
+ * @relates getKeyRecursively
+ * 
+ * @note After the function returns, the caller owns the returned object and musst free it.
+ * 
+ * @param input Reference to string representation of JSON object.
+ * @param key Key to search for. 
+ * @return char* Reference to value associated with key or NULL on error.
+ */
 char *slurpAndGetString(const char *input, const char *key);
 
+/**
+ * @brief Perform product request with CDS API
+ * 
+ * @details This function performs the acutal request to the CDS API by constructing
+ *          a suitable JSON payload and contact the correct API endpoint.
+ *          The function returns the job/request ID assigned by CDS.
+ * 
+ * @note After the function returns, the caller owns the returned object and musst free it.
+ * 
+ * @param handle Reference to existing cURL handle used for request after duplication.
+ * @param years Reference to array of integers giving years to post request for.
+ * @param months Reference to array of integers giving months to post request for.
+ * @param days Reference to array of integers giving days to post request for.
+ * @param hours Reference to array of integers giving hours to post request for.
+ * @param aoi Reference to a north-up bounding box with EPSG:4326 coordinates to restrict AOI, possibly NULL.
+ * @param options Reference to parsed options.
+ * @return char* Job/Request ID, NULL on error.
+ */
 char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days, const int *hours, const OGREnvelope *aoi, const option_t *options);
 
+/**
+ * @brief Query the CDS API for the status of a previously created product request
+ * 
+ * @param handle Reference to existing cURL handle used for request after duplication.
+ * @param requestId Request ID to query.
+ * @return productStatus Product status.
+ */
 productStatus cdsGetProductStatus(CURL *handle, const char *requestId); // Result.update
 
+/**
+ * @brief Wait for a product request to be downloadable with a linear back-off
+ * 
+ * @note An error is returned when the product request failed or a
+ *       general error is encountered.
+ * 
+ * @param handle Reference to existing cURL handle used for request after duplication.
+ * @param requestId Request ID to wait on.
+ * @return int 1 on success, 0 on error.
+ */
 int cdsWaitForProduct(CURL *handle, const char *requestId);
 
+/**
+ * @brief Download data related to previously made request to local file
+ * 
+ * @note This function assumes the order is already processed and ready to download.
+ * 
+ * @param handle Reference to existing cURL handle used for request after duplication.
+ * @param requestId Request ID to download.
+ * @param outputPath File path to download file to.
+ * @return int 0 on success, 1 on failure.
+ */
 int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPath); // same URL as product status but with /results appended which then returns the actual download URL
 
+/**
+ * @brief Delete a prodcut request from personal CDS space
+ * 
+ * @param handle Reference to existing cURL handle used for request after duplication.
+ * @param requestId Request ID to delete.
+ * @return int 0 on success, 1 on failure.
+ */
 int cdsDeleteProductRequest(CURL *handle, const char *requestId); // Result.delete
 
 #endif // API_H
