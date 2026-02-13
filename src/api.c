@@ -35,21 +35,19 @@ struct curl_slist *customHeader(struct curl_slist *list, const option_t *options
   return ret;
 }
 
-/// FIXME: this should be returning an int since I directly modify the handle structure
-//         but have no way of checking for errors
-CURL *initializeHandle(CURL **handle, const struct curl_slist *headerList)
+int initializeHandle(CURL **handle, const struct curl_slist *headerList)
 {
-  // HOLY MOLY, for whatever reason, the LegacyApiClient is needed to access data even though the cdsapirc file has to follow the "old" format - the fuck!
   if (headerList) {
-    curl_easy_setopt(*handle, CURLOPT_HTTPHEADER, headerList);
+    if (curl_easy_setopt(*handle, CURLOPT_HTTPHEADER, headerList) != CURLE_OK) return 1;
   }
-  curl_easy_setopt(*handle, CURLOPT_FOLLOWLOCATION, 1L);
-  curl_easy_setopt(*handle, CURLOPT_FAILONERROR, 1L);
-  curl_easy_setopt(*handle, CURLOPT_SSL_VERIFYHOST, 1L);
-  curl_easy_setopt(*handle, CURLOPT_TIMEOUT, 600); // default timeout value of cdsapi is 60 seconds
-  curl_easy_setopt(*handle, CURLOPT_USERAGENT, "haze");
+  if (curl_easy_setopt(*handle, CURLOPT_FOLLOWLOCATION, 1L) != CURLE_OK) return 1;
+  if (curl_easy_setopt(*handle, CURLOPT_FAILONERROR, 1L) != CURLE_OK) return 1;
+  if (curl_easy_setopt(*handle, CURLOPT_SSL_VERIFYHOST, 1L) != CURLE_OK) return 1;
+  // default timeout value of cdsapi is 60 seconds
+  if (curl_easy_setopt(*handle, CURLOPT_TIMEOUT, 600) != CURLE_OK) return 1;
+  if (curl_easy_setopt(*handle, CURLOPT_USERAGENT, "haze") != CURLE_OK) return 1;
 
-  return *handle;
+  return 0;
 }
 
 size_t writeString(char *ptr, size_t size, size_t nmemb, void *userdata)

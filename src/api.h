@@ -33,7 +33,7 @@
 struct curl_slist *customHeader(struct curl_slist *list, const option_t *options);
 
 /**
- * @brief Initialize cURL handle
+ * @brief Initialize cURL handle in place
  * 
  * @details This function sets the following options: CURLOPT_FOLLOWLOCATION to 1, CURLOPT_FAILONERROR
  *          to 1, CURLOPT_SSL_VERIFYHOST to 1, CURLOPT_TIMEOUT to 600 seconds (default value of cdsapi package),
@@ -41,9 +41,9 @@ struct curl_slist *customHeader(struct curl_slist *list, const option_t *options
  * 
  * @param handle Indirect reference to a pre-allocated cURL handle.
  * @param headerList Reference to additional cURL headers or NULL.
- * @return CURL* Reference to newly created cURL handle.
+ * @return int 0 on success, 1 on failure.
  */
-CURL *initializeHandle(CURL **handle, const struct curl_slist *headerList);
+int initializeHandle(CURL **handle, const struct curl_slist *headerList);
 
 /**
  * @brief Concatenate chunked response from API request into string
