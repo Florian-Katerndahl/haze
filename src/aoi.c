@@ -61,21 +61,8 @@
   }
 
   if (!EQUAL(layerWKT, SRS_WKT_WGS84_LAT_LONG)) {
-    const char *const wgs84WKT = SRS_WKT_WGS84_LAT_LONG;
-
-    OGRSpatialReferenceH wgs84Ref = OSRNewSpatialReference(wgs84WKT);
-    if (wgs84Ref == NULL) {
-      fprintf(stderr, "Failed to create spatial reference object for WGS84 WKT: %s",
-              CPLGetLastErrorMsg());
-      CPLFree(layerWKT);
-      CPLFree(mbr);
-      closeGDALDataset(aoi);
-      return NULL;
-    }
-
-    // TODO: why not use "transformationFromWKTs" here as well 
-    OGRCoordinateTransformationH transformation = OCTNewCoordinateTransformationEx(layerRef, wgs84Ref,
-      NULL);
+    OGRCoordinateTransformationH transformation = transformationFromWKTs(layerWKT, SRS_WKT_WGS84_LAT_LONG);
+    
     if (transformation == NULL) {
       fprintf(stderr, "Failed to create transformation object: %s", CPLGetLastErrorMsg());
       OSRDestroySpatialReference(wgs84Ref);
@@ -155,7 +142,6 @@
           21) == FALSE) {
       fprintf(stderr, "Failed to transform bounding box\n");
       OCTDestroyCoordinateTransformation(transformation);
-      OSRDestroySpatialReference(wgs84Ref);
       CPLFree(layerWKT);
       CPLFree(mbr);
       closeGDALDataset(aoi);
@@ -174,7 +160,6 @@
     if (mbr->MaxX < mbr->MinX)
       mbr->MaxX += 360.0; // cds API allows requests with x [-360,360]
 
-    OSRDestroySpatialReference(wgs84Ref);
     OCTDestroyCoordinateTransformation(transformation);
   }
 
