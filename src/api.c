@@ -1,5 +1,6 @@
 #include "api.h"
 #include "types.h"
+#include "fscheck.h"
 #include <curl/easy.h>
 #include <gdal/ogr_core.h>
 #include <jansson.h>
@@ -52,38 +53,6 @@ CURL *initializeHandle(CURL **handle, const struct curl_slist *headerList)
   curl_easy_setopt(*handle, CURLOPT_USERAGENT, "haze");
 
   return *handle;
-}
-
-/// FIXME: allow optional suffix instead of addon
-char *constructURL(const char *basePath, const char *endPoint, const char *requestId, size_t addon)
-{
-  int basePathLength = (int) strlen(basePath);
-  int endPointLength = (int) strlen(endPoint);
-  int requestIdLength = (int) strlen(requestId);
-  int totalLength = basePathLength + endPointLength + requestIdLength + addon + 1;
-
-  bool baseWithSlash = basePath[basePathLength - 1] == '/';
-  totalLength += baseWithSlash ? 1 : 2;
-
-  char *url = calloc(totalLength, sizeof(char));
-  if (url == NULL) {
-    perror("calloc");
-    return NULL;
-  }
-
-  int charsWritten;
-  if (baseWithSlash) {
-    charsWritten = snprintf(url, totalLength, "%s%s/%s", basePath, endPoint, requestId);
-  } else {
-    charsWritten = snprintf(url, totalLength, "%s/%s/%s", basePath, endPoint, requestId);
-  }
-  if (charsWritten >= totalLength || charsWritten < 0) {
-    fprintf(stderr, "Failed to assemble URL\n");
-    free(url);
-    return NULL;
-  }
-
-  return url;
 }
 
 size_t writeString(char *ptr, size_t size, size_t nmemb, void *userdata)
@@ -432,8 +401,7 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
     return NULL;
   }
 
-  char *url = constructURL(BASEURL, "retrieve/v1/processes/reanalysis-era5-single-levels",
-                           "execution", 0);
+  char *url = constructFormattedPath("%s/%s/%s", BASEURL, "retrieve/v1/processes/reanalysis-era5-single-levels", "execution");
   if (url == NULL) {
     fprintf(stderr, "Failed to assemble request URL\n");
     free(stringRequest);
@@ -503,7 +471,7 @@ productStatus cdsGetProductStatus(CURL *handle, const char *requestId)
     return ERROR;
   }
 
-  char *url = constructURL(BASEURL, "retrieve/v1/jobs", requestId, 0);
+  char *url = constructFormattedPath("%s/%s/%s", BASEURL, "retrieve/v1/jobs", requestId);
   if (url == NULL) {
     fprintf(stderr, "Failed to construct url for product status check\n");
     curl_easy_cleanup(statusHandle);
@@ -604,15 +572,12 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     return 1;
   }
 
-  char *url = constructURL(BASEURL, "retrieve/v1/jobs", requestId, 8);
+  char *url = constructFormattedPath("%s/%s/%s/%s", BASEURL, "retrieve/v1/jobs", requestId, "results");
   if (url == NULL) {
     fprintf(stderr, "Failed to construct jobURL\n");
     curl_easy_cleanup(downloadHandle);
     return 1;
   }
-
-  /// FIXME: use some other way of appending results but not this!
-  strcat(url, "/results");
 
   curlString response = {0};
 
@@ -689,7 +654,7 @@ int cdsDeleteProductRequest(CURL *handle, const char *requestId)
     return 1;
   }
 
-  char *url = constructURL(BASEURL, "retrieve/v1/jobs", requestId, 0);
+  char *url = constructFormattedPath("%s/%s/%s", BASEURL, "retrieve/v1/jobs", requestId);
   if (url == NULL) {
     fprintf(stderr, "Failed to construct url for deletion\n");
     curl_easy_cleanup(deleteHandle);

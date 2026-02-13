@@ -44,19 +44,6 @@ struct curl_slist *customHeader(struct curl_slist *list, const option_t *options
 CURL *initializeHandle(CURL **handle, const struct curl_slist *headerList);
 
 /**
- * @brief Construct a complete URL for requests to the CDS API
- * 
- * @note After the function returns, the caller owns the returned object and must free it after use.
- * 
- * @param basePath Base URL for API requests.
- * @param endPoint Endpoint to query.
- * @param requestId Product request ID.
- * @param addon Addtional buffer space.
- * @return char* Reference 
- */
-char *constructURL(const char *basePath, const char *endPoint, const char *requestId, size_t addon);
-
-/**
  * @brief Concatenate chunked response from API request into string
  * 
  * @note This function is used as a callback for cURL
