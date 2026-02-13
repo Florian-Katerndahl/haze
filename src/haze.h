@@ -118,7 +118,7 @@ int averagePILRawDataWithSizeOffset(const struct rawData *data, struct averagedD
  * 
  * @param data Reference to structure holding data.
  */
-void reorderToPixelInterleave(struct rawData *data);
+void reorderToBandInterleavedByPixel(struct rawData *data);
 
 /**
  * @brief Compute area weighted mean for features of AOI dataset

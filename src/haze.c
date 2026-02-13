@@ -262,8 +262,7 @@ int averagePILRawDataWithSizeOffset(const struct rawData *data, struct averagedD
   return 0;
 }
 
-/// FIXME: rename to `reorderToBandInterleavedByPixel` as this is the correct term
-void reorderToPixelInterleave(struct rawData *data)
+void reorderToBandInterleavedByPixel(struct rawData *data)
 {
   // hmm, actually unsure if this is beneficial; page faults are not lower with two passes; probably needs testing with longer inputs to fully conclude if this is worth it
   // it becomes apparent however, that IO is THE bottleneck as execution differs only slightly with re-ordered data being 2 seconds faster (probably hot cache paths..)
@@ -563,7 +562,7 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
 
       struct averagedData *average = NULL;
 
-      // reorderToPixelInterleave(data);
+      // reorderToBandInterleavedByPixel(data);
       // averagePILRawDataWithSizeOffset(data, &average, hoursPerDay, processedDays * hoursPerDay);
 #ifdef DEBUG
       printf("Averaging bands %ld to %ld\n", processedDays * hoursPerDay,
