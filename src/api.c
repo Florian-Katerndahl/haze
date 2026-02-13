@@ -10,6 +10,8 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <limits.h>
+#include <math.h>
 
 /// FIXME: don't exit but return NULL on error
 struct curl_slist *customHeader(struct curl_slist *list, const option_t *options)
@@ -251,6 +253,8 @@ cleanup:
   }
 
   initializeHandle(&handle, headerAddon);
+
+  const unsigned int maxAttempts = 12;
 
   stringList *root = NULL;
 
@@ -553,18 +557,29 @@ productStatus cdsGetProductStatus(CURL *handle, const char *requestId)
   return status;
 }
 
-/// FIXME: add a max retry parameter
-int cdsWaitForProduct(CURL *handle, const char *requestId)
+inline int binaryExponentialBackoff(int attempt) {
+    if (attempt < 0) return -1;
+
+    double backoff = pow(2.0, (double) attempt);
+
+    if (backoff > (double) INT_MAX || fabs(backoff) == HUGE_VAL || backoff == 0.0 || isnan(backoff)) return -1;
+
+    return (int) backoff;
+}
+
+int cdsWaitForProduct(CURL *handle, const char *requestId, unsigned int maxAttempts)
 {
-  unsigned int sleepSeconds = 10;
+  unsigned int sleepSeconds;
   unsigned int attempt = 1;
-  do {
+  while (attempt <= maxAttempts) {
     switch (cdsGetProductStatus(handle, requestId)) {
       case SUCCESSFUL:
         return 0;
       case ACCEPTED: // fallthrough
       case RUNNING:
-        sleep(attempt * sleepSeconds); /// TODO: use an exponential back-off?
+        sleepSeconds = binaryExponentialBackoff(attempt);
+        if (sleepSeconds == -1) return 1;
+        sleep(sleepSeconds);
         attempt++;
         break;
       case FAILED:
@@ -574,9 +589,11 @@ int cdsWaitForProduct(CURL *handle, const char *requestId)
         fprintf(stderr, "General error occurred while waiting for %s\n", requestId);
         return 1;
     }
-  } while (1);
 
-  return 0;
+    attempt++;
+  };
+
+  return 1;
 }
 
 int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPath)

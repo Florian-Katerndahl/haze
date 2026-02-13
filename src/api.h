@@ -184,16 +184,27 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
 productStatus cdsGetProductStatus(CURL *handle, const char *requestId); // Result.update
 
 /**
- * @brief Wait for a product request to be downloadable with a linear back-off
+ * @brief Compute binary exponential backoff
+ *
+ * @param attempt Attempt for which binary exponential backoff should be computed.
+ * @return int Seconds to wait until next attempt, -1 on overflow/underflow or when attempt is negative.
+ */
+inline int binaryExponentialBackoff(int attempt);
+
+/**
+ * @brief Wait for a product request to be downloadable with a binary exponential backoff
  * 
  * @note An error is returned when the product request failed or a
  *       general error is encountered.
  * 
  * @param handle Reference to existing cURL handle used for request after duplication.
  * @param requestId Request ID to wait on.
- * @return int 1 on success, 0 on error.
+ * @param maxAttempts Maximum number of connections attempts to perform. This should be a rather
+ *                    high value as binary exponential backoff is used to increase time between
+ *                    connection requests.
+ * @return int 0 on success, 1 on error.
  */
-int cdsWaitForProduct(CURL *handle, const char *requestId);
+int cdsWaitForProduct(CURL *handle, const char *requestId, unsigned int maxAttempts);
 
 /**
  * @brief Download data related to previously made request to local file
