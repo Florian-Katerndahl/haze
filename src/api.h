@@ -85,7 +85,8 @@ size_t discardWrite(char *ptr, size_t size, size_t nmemb, void *userdata);
 /**
  * @brief Search JSON object recursively for a key with DFS and return first occurence
  * 
- * @note The returned reference is borrowed and it's reference count must be decremented by the caller after use.
+ * @note The returned reference is borrowed but its reference count is not chnaged. Thus,
+ *       the object is only valid for the lifetime of `root`!
  * 
  * @param root Reference to root of JSON object.
  * @param key Key to search for.

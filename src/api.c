@@ -97,12 +97,11 @@ size_t discardWrite(__attribute__((unused)) char *ptr, size_t size, size_t nmemb
   return size * nmemb;
 }
 
-/// FIXME: everywhere this function is used, a `json_decref` must be used as well!
 json_t *getKeyRecursively(json_t *root, const char *key)
 {
   json_t *ret;
   if ((ret = json_object_get(root, key))) {
-    json_incref(ret);
+    // only valid for lifetime of root!
     return ret;
   } else {
     const char *entryKey;
@@ -110,7 +109,7 @@ json_t *getKeyRecursively(json_t *root, const char *key)
     json_object_foreach(root, entryKey, value) {
       if (json_is_object(value)) {
         if ((ret = getKeyRecursively(value, key))) {
-          json_incref(ret);
+          // only valid for lifetime of root!
           return ret;
         }
       }
