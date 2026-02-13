@@ -45,7 +45,7 @@ GDALRasterBandH openRasterBand(GDALDatasetH raster, int index);
  * @param filePath Vector file to open.
  * @return GDALDatasetH GDAL handle to opened dataset, NULL on failure.
  */
-[[nodiscard]] GDALDatasetH openVector(const char *filePath);
+[[nodiscard]] GDALDatasetH openVectorDataset(const char *filePath);
 
 /**
  * @brief Fetch a vector layer from an opened vector dataset.

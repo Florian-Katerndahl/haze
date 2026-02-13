@@ -20,7 +20,7 @@
     return NULL;
   }
 
-  GDALDatasetH aoi = openVector(filePath);
+  GDALDatasetH aoi = openVectorDataset(filePath);
   if (aoi == NULL) {
     return NULL;
   }

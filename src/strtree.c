@@ -57,7 +57,7 @@
 {
   vectorGeometryList *geometries = NULL;
 
-  GDALDatasetH vectorDataset = openVector(filePath);
+  GDALDatasetH vectorDataset = openVectorDataset(filePath);
   if (vectorDataset == NULL) {
     return NULL;
   }

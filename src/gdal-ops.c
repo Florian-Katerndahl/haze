@@ -14,7 +14,6 @@
     return NULL;
   }
 
-  // TODO could read through entire directory when using sibling files?
   GDALDatasetH raster = GDALOpenEx(filePath, GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, NULL, NULL);
   if (raster == NULL) {
     fprintf(stderr, "ERROR: Failed to open raster dataset %s\n", filePath);
@@ -40,8 +39,7 @@ GDALRasterBandH openRasterBand(GDALDatasetH raster, int index)
   return band;
 }
 
-/// TODO: rename to openVectorDataset
-[[nodiscard]] GDALDatasetH openVector(const char *filePath)
+[[nodiscard]] GDALDatasetH openVectorDataset(const char *filePath)
 {
   if (filePath == NULL || fileReadable(filePath) == false) {
     fprintf(stderr, "ERROR: filePath cannot be NULL or file is not readable\n");
