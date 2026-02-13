@@ -46,6 +46,17 @@ struct curl_slist *customHeader(struct curl_slist *list, const option_t *options
 int initializeHandle(CURL **handle, const struct curl_slist *headerList);
 
 /**
+ * @brief Create a new cURL handle and initialize it
+ * 
+ * @note After the function returns, the caller owns the returned object and must free it with after use.
+ *
+ * @param list Indirect reference to list storing extra headers, needed beacuse cURL doesn't copy the list.
+ * @param options Reference to parsed options, used to access authentication token.
+ * @return CURL* Reference to newly created cURL handle, NULL on error.
+ */
+CURL *newHandleWithOptions(struct curl_slist **list, const option_t *options);
+
+/**
  * @brief Concatenate chunked response from API request into string
  * 
  * @note This function is used as a callback for cURL

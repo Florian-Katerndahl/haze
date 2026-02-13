@@ -25,7 +25,6 @@ struct curl_slist *customHeader(struct curl_slist *list, const option_t *options
   struct curl_slist *ret = curl_slist_append(list, header);
 
   if (ret == NULL) {
-    fprintf(stderr, "Failed to generate custom HTTP header\n");
     curl_slist_free_all(list);
   }
 
@@ -48,6 +47,29 @@ int initializeHandle(CURL **handle, const struct curl_slist *headerList)
   if (curl_easy_setopt(*handle, CURLOPT_USERAGENT, "haze") != CURLE_OK) return 1;
 
   return 0;
+}
+
+CURL *newHandleWithOptions(struct curl_slist **list, const option_t *options)
+{
+  CURL *handle = curl_easy_init();
+  if (handle == NULL) {
+    fprintf(stderr, "Failed to create CURL handle\n");
+    return NULL;
+  }
+
+  struct curl_slist *headerAddon = customHeader(*list, options);
+  if (headerAddon == NULL) {
+    fprintf(stderr, "Failed to create HTTP header for product requests\n");
+    curl_easy_cleanup(handle);
+    return NULL;
+  }
+
+  if (initializeHandle(&handle, headerAddon) == 1) {
+    fprintf(stderr, "Failed to initialize cURL handle\n");
+    return NULL;
+  }
+
+  return handle;
 }
 
 size_t writeString(char *ptr, size_t size, size_t nmemb, void *userdata)
@@ -200,24 +222,8 @@ cleanup:
 
 }
 
-/// FIXME: does it really make sense that this function creates a cURL handle? I don't really think so...
-[[nodiscard]] stringList *downloadDaily(const option_t *options, const OGREnvelope *aoi)
+[[nodiscard]] stringList *downloadDaily(CURL *handle, const option_t *options, const OGREnvelope *aoi)
 {
-  CURL *handle = curl_easy_init();
-  if (handle == NULL) {
-    fprintf(stderr, "Failed to create CURL handle\n");
-    return NULL;
-  }
-
-  struct curl_slist *headerAddon = customHeader(NULL, options);
-  if (headerAddon == NULL) {
-    fprintf(stderr, "Failed to create HTTP header for product requests\n");
-    curl_easy_cleanup(handle);
-    return NULL;
-  }
-
-  initializeHandle(&handle, headerAddon);
-
   const unsigned int maxAttempts = 12;
 
   stringList *root = NULL;
@@ -329,8 +335,6 @@ cleanup:
     }
   }
 
-  curl_slist_free_all(headerAddon);
-  curl_easy_cleanup(handle);
   return root;
 }
 
