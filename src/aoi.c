@@ -65,7 +65,6 @@
     
     if (transformation == NULL) {
       fprintf(stderr, "Failed to create transformation object: %s", CPLGetLastErrorMsg());
-      OSRDestroySpatialReference(wgs84Ref);
       CPLFree(layerWKT);
       CPLFree(mbr);
       closeGDALDataset(aoi);
@@ -82,7 +81,7 @@
         AXIS["geodetic longitude (Lon)",east,
           ORDER[2],
           ANGLEUNIT["degree",0.0174532925199433]],
-      mean: -59 lon => 60 west and 58 lat => 58 north
+      mean: -59 lon => 59 west and 58 lat => 58 north
 
     It's needed because I work with the coordinates directly, would I only be interested in the geometry, e.g. for 
     area calculation, this wouldn't be necessary!
@@ -91,20 +90,24 @@
     const int *dataAxisToSRS = OSRGetDataAxisToSRSAxisMapping(layerRef, &nAxes);
     if (nAxes != 2) {
       fprintf(stderr, "3D CRS are not supported\n");
-      // todo cleanup
+      OCTDestroyCoordinateTransformation(transformation);
+      CPLFree(layerWKT);
+      CPLFree(mbr);
+      closeGDALDataset(aoi);
       return NULL;
     }
 
-    // after getting data axis to srs axis, we still need to query the axis definition; for now
-    // we only know the index in the WKT
+    // after getting data axis to srs axis, we still need to query the axis definition;
+    // for now we only know the index in the WKT
     OGRAxisOrientation orientation;
+    
     // get first axis; axes themselves are 1 indexed
-    OSRGetAxis(layerRef, NULL, dataAxisToSRS[0] - 1, &orientation);
-
-    // TODO: why do I not allow the first axis to be west or south?
-    if (orientation == OAO_West || orientation == OAO_South) {
-      fprintf(stderr, "First CRS axis is neither 'north' or 'east'\n");
-      // todo cleanup
+    if (OSRGetAxis(layerRef, NULL, dataAxisToSRS[0] - 1, &orientation) == NULL) {
+      fprintf(stderr, "Failed to get first coordinate axis form CRS\n");
+      OCTDestroyCoordinateTransformation(transformation);
+      CPLFree(layerWKT);
+      CPLFree(mbr);
+      closeGDALDataset(aoi);
       return NULL;
     }
 
@@ -117,21 +120,30 @@
     double maxFirstOut = 0;
     double maxSecondOut = 0;
 
-    if (orientation == OAO_North) {
-      // first axis is latitude/northing
-      fprintf(stderr, "First data axis is latitude/northing\n");
+    /// TODO: make sure that X and Y indeed relate to the coordinate tuple (X, Y) where the
+    ///       axis order then tells what each X and Y mean; given the notes above, it seems so
+    if (orientation == OAO_North || orientation == OAO_South) {
+      // first axis is northing/southing
       minFirstIn = mbr->MinY;
       minSecondIn = mbr->MinX;
       maxFirstIn = mbr->MaxY;
       maxSecondIn = mbr->MaxX;
-    } else if (orientation == OAO_East) {
-      // first axis is longitude/easting
-      fprintf(stderr, "First data axis is longitude/easting\n");
+    } else if (orientation == OAO_East || orientation == OAO_West) {
+      // first axis is easting/westing
       minFirstIn = mbr->MinX;
       minSecondIn = mbr->MinY;
       maxFirstIn = mbr->MaxX;
       maxSecondIn = mbr->MaxY;
-    }
+    } else {
+      fprintf(stderr, "Unsupported coordinate ordering\n");
+      OCTDestroyCoordinateTransformation(transformation);
+      CPLFree(layerWKT);
+      CPLFree(mbr);
+      closeGDALDataset(aoi);
+      return NULL;
+    }    
+
+    const int defaultDensification = 21;
 
     if (OCTTransformBounds(
           transformation,
@@ -139,7 +151,7 @@
           maxFirstIn, maxSecondIn,
           &minFirstOut, &minSecondOut,
           &maxFirstOut, &maxSecondOut,
-          21) == FALSE) {
+          defaultDensification) == FALSE) {
       fprintf(stderr, "Failed to transform bounding box\n");
       OCTDestroyCoordinateTransformation(transformation);
       CPLFree(layerWKT);
