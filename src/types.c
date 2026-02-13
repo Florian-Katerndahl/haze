@@ -34,9 +34,7 @@ void freeCellGeometryList(cellGeometryList *list)
 {
   cellGeometryList *node;
   while (list != NULL) {
-    /// FIXME: why not use freeCellGeometry which encapsulates the next two lines?
-    GEOSGeom_destroy(list->entry->geometry);
-    free(list->entry);
+    freeCellGeometry(list->entry);
     node = list;
     list = list->next;
     free(node);
