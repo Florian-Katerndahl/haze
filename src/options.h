@@ -136,19 +136,26 @@ int getAuthenticationFromEnvironment(char **authenticationToken);
  * @brief Get CDS API authentication token from a file
  * 
  * @details Get the authentication token from a specified file. In case `filePath` is set
- *          to NULL, the tries to access a file at `$HOME/.cdsapirc` and extract the authentication
+ *          to NULL, try to access the file `$HOME/.cdsapirc` and extract the authentication
  *          token from there.
  * 
- * @note The current implementation expects the file contain two lines: The first one specifying
- *       the url to use for API requests and which is disregarded right now and the key as the second
- *       line. While the file uses a key-value format and may be formatted differently, this is currently
- *       not supported.
- * 
- * @param authenticationToken Pointer to `char *` where token should be stored.
+ * @param authenticationToken Indirect reference to object storing the access token/key.
  * @param filePath File storing CDS API credentials, possibly NULL.
  * @return int 0 on success, 1 on failure.
  */
 int getAuthenticationFromFile(char **authenticationToken, const char *filePath);
+
+/**
+ * @brief Parse `cdsapirc` file and extract the key value
+ *
+ * @note Assumes no padding for value to extract.
+ *
+ * @note After the function returns, the caller owns the returned object and must free it after use.
+ * 
+ * @param cdsapirc File path to `.cdsapirc`.
+ * @return char* Reference to key, NULL on error.
+ */
+char *extractKey(const char *cdsapirc);
 
 /**
  * @brief Force a trailing slash on directory name

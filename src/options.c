@@ -2,6 +2,7 @@
 #define _DEFAULT_SOURCE
 
 #include "options.h"
+#include "fscheck.h"
 #include "types.h"
 #include <stdbool.h>
 #include <stdio.h>
@@ -10,6 +11,7 @@
 #include <sys/types.h>
 #include <time.h>
 #include <getopt.h>
+#include <stddef.h>
 
 void printHelp(void)
 {
@@ -227,86 +229,84 @@ int getAuthenticationFromEnvironment(char **authenticationToken)
 
 int getAuthenticationFromFile(char **authenticationToken, const char *filePath)
 {
-  FILE *f;
+  const char *cdsapirc = filePath;
+  bool heapAlloced = false;
 
-  if (filePath) {
-    f = fopen(filePath, "rt");
-  } else {
+  if (!cdsapirc) {
     const char *home = getenv("HOME");
+
     if (home == NULL) {
       fprintf(stderr, "Failed to get home directory path\n");
       return 1;
     }
 
-    char path[1024];
+    cdsapirc = constructFormattedPath("%s/%s", home, ".cdsapirc");
+    heapAlloced = true;
 
-    int charsWritten = snprintf(path, sizeof(path), "%s/%s", home, ".cdsapirc");
-    if ((size_t) charsWritten >= sizeof(path) || charsWritten < 0) {
+    if (cdsapirc == NULL) {
       fprintf(stderr, "Failed to assemble file path for default location of '.cdsapirc'\n");
+      free((void *) cdsapirc);
       return 1;
     }
-
-    f = fopen(path, "rt");
   }
 
-  if (f == NULL) {
-    perror("fopen");
-    return 1;
-  }
+  *authenticationToken = extractKey(cdsapirc);
 
-  // skip first line by reading chars sequentially
-  while (fgetc(f) != '\n');
-  if (feof(f)) {
-    fprintf(stderr, "Authentication ended unexpectedly\n");
+  if (heapAlloced) free((void *) cdsapirc);
+
+  return (*authenticationToken != NULL) ? 0 : 1;
+}
+
+char *extractKey(const char *cdsapirc) {
+    if (!cdsapirc) return NULL;
+
+    if (fileReadable(cdsapirc) == false) return NULL;
+
+    FILE *f = fopen(cdsapirc, "r");
+
+    if (f == NULL) {
+      perror("fopen");
+      return NULL;
+    }
+
+    char *lineptr = NULL;
+    char *key = NULL;
+    size_t n = 0;
+    ssize_t charsRead;
+    
+    while ((charsRead = getline(&lineptr, &n, f)) != -1) {
+        // does the line read start with the delimeter/parameter we're after?
+        char *startOfDelim = strstr(lineptr, "key: ");
+        
+        if (startOfDelim == NULL) {
+            free(lineptr);
+            lineptr = NULL;
+            continue;
+        }
+
+        // valid because check above already determined that the line includes whitespace
+        char *startOfKey = startOfDelim + 5;
+
+        // cannot return NULL because getline 0-terminates line
+        char *endOfKey = strchr(lineptr, '\0');
+        
+        // length of key
+        ptrdiff_t stringLength = (ptrdiff_t) endOfKey - (ptrdiff_t) startOfKey;
+
+        // if line is terminated by newline, actual key is one byte less then extracted line
+        // assumes no additional padding of file
+        if (*(endOfKey - 1) == '\n') stringLength--;
+
+        key = strndup(startOfKey, stringLength);
+                
+        break;
+    }
+    
+    free(lineptr);
+
     fclose(f);
-    return 1;
-  }
 
-  char *key = NULL;
-  size_t readBytes = 0;
-  ssize_t charsRead = 0;
-  if ((charsRead = getline(&key, &readBytes, f)) == -1) {
-    perror("getline");
-    free(key);
-    fclose(f);
-    return 1;
-  }
-
-  if (key[charsRead - 1] == '\n')
-    key[charsRead - 1] = '\0';
-
-  /// TODO: use strstr while looping over all input lines so order is not important
-  //        anymore
-    char *token = strchr(key, ' ');
-  if (token == NULL) {
-    fprintf(stderr, "'.cdsapirc' is malformed\n");
-    free(key);
-    fclose(f);
-    return 1;
-  }
-
-  token++;
-  if (token == NULL) {
-    fprintf(stderr, "'.cdsapirc' is malformed\n");
-    free(key);
-    fclose(f);
-    return 1;
-  }
-
-  *authenticationToken = calloc(strlen(token) + 1, sizeof(char));
-  if (*authenticationToken == NULL) {
-    perror("calloc");
-    free(key);
-    fclose(f);
-    return 1;
-  }
-
-  strcpy(*authenticationToken, token);
-
-  free(key);
-  fclose(f);
-
-  return 0;
+    return key;
 }
 
 int forceTrailingSlash(option_t *options)
