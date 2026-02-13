@@ -229,39 +229,20 @@ cleanup:
 
   for (int *year = (int *) options->years; *year != INITVAL; year++) {
     for (int *month = (int *) options->months; *month != INITVAL; month++) {
-        int fileNameLength = 13; /// TODO: where does this number come from? Why do I heap allocate it?
-        char *dateString = calloc(fileNameLength, sizeof(char));
-        if (dateString == NULL) {
-          perror("calloc");
-          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", *year, *month);
-          continue;
-        }
+        char *dateString = constructFormattedPath("%.4d-%.2d.grib", *year, *month);
 
-        int charsWritten = snprintf(dateString, fileNameLength, "%.4d-%.2d.grib", *year, *month);
-        if (charsWritten >= fileNameLength || charsWritten < 0) {
+        if (dateString == NULL) {
           fprintf(stderr, "Failed to convert date to string format\n");
           fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", *year, *month);
-          free(dateString);
-          continue;
+          continue;          
         }
+        
+        char *outputPath = constructFormattedPath("%s%s", options->outputDirectory, dateString);
 
-        int numCharacters = (int) strlen(options->outputDirectory) + fileNameLength;
-
-        char *outputPath = calloc(numCharacters, sizeof(char));
         if (outputPath == NULL) {
-          perror("calloc");
-          free(dateString);
-          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", *year, *month);
-          continue;
-        }
-
-        charsWritten = snprintf(outputPath, numCharacters, "%s%s", options->outputDirectory, dateString);
-
-        if (charsWritten >= numCharacters || charsWritten < 0) {
           fprintf(stderr, "Failed to construct local file path\n");
-          free(dateString);
-          free(outputPath);
           fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", *year, *month);
+          free(dateString);
           continue;
         }
 
@@ -271,10 +252,10 @@ cleanup:
         char *requestId = cdsRequestProduct(handle, requestYears, requestMonths, options->days,
                                             options->hours, aoi, options);
         if (requestId == NULL) {
-          free(dateString);
-          free(outputPath);
           fprintf(stderr, "Failed to request product or extract job id\n");
           fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", *year, *month);
+          free(dateString);
+          free(outputPath);
           continue;
         }
 #ifdef DEBUG
@@ -283,10 +264,10 @@ cleanup:
 
         if (cdsWaitForProduct(handle, requestId)) {
           fprintf(stderr, "Error while waiting for product\n");
+          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", *year, *month);
           free(requestId);
           free(dateString);
           free(outputPath);
-          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", *year, *month);
           continue;
         }
 #ifdef DEBUG
@@ -294,10 +275,10 @@ cleanup:
 #endif
 
         if (cdsDownloadProduct(handle, requestId, outputPath)) {
+          fprintf(stderr, "Failed to download data %.4d-%.2d. Continuing.\n", *year, *month);
           free(requestId);
           free(dateString);
           free(outputPath);
-          fprintf(stderr, "Failed to download data %.4d-%.2d. Continuing.\n", *year, *month);
           continue;
         }
 #ifdef DEBUG
@@ -312,11 +293,11 @@ cleanup:
         stringList *downloadedFile = calloc(1, sizeof(stringList));
         if (downloadedFile == NULL) {
           perror("calloc");
+          fprintf(stderr, "Failed to process data %.4d-%.2d. Deleting file and continuing.\n", *year, *month);
           free(requestId);
           free(dateString);
           unlink(outputPath);
           free(outputPath);
-          fprintf(stderr, "Failed to process data %.4d-%.2d. Deleting file and continuing.\n", *year, *month);
           continue;
         }
 
