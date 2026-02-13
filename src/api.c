@@ -14,27 +14,24 @@
 #include <limits.h>
 #include <math.h>
 
-/// FIXME: don't exit but return NULL on error
 struct curl_slist *customHeader(struct curl_slist *list, const option_t *options)
 {
-  if (options == NULL) {
-    return NULL;
-  }
+  if (options == NULL) return NULL;
 
-  char header[256];
-  int charsWritten = snprintf(header, sizeof(header), "PRIVATE-TOKEN:%s",
-                              options->authenticationToken);
-  if (charsWritten >= 256 || charsWritten < 0) {
-    fprintf(stderr, "Failed to assemble custom header\n");
-    exit(EXIT_FAILURE); // if login won't be possible, no need to do anything else...
-  }
+  char *header = constructFormattedPath("PRIVATE-TOKEN:%s", options->authenticationToken);
+
+  if (header == NULL) return NULL;
 
   struct curl_slist *ret = curl_slist_append(list, header);
+
   if (ret == NULL) {
     fprintf(stderr, "Failed to generate custom HTTP header\n");
-    exit(EXIT_FAILURE); // if login won't be possible, no need to do anything else...
+    curl_slist_free_all(list);
   }
 
+  free(header);
+
+  // returns NULL on error as well
   return ret;
 }
 

@@ -22,11 +22,13 @@
 /**
  * @brief Create a new header list for cURL with CDS API token field
  *
- * @note After the function returns, the caller owns the returned object and must free it after use.
+ * @note After the function returns, the caller owns the returned object and must free it with `curl_slist_free_all` after use.
+ *
+ * @note This function may free the object pointed to by `list` when encountering an error.
  * 
  * @param list Reference to existing `curl_slist` to append to or `NULL` to create a new list.
  * @param options Reference to parsed options.
- * @return struct curl_slist* Reference to cURL header list, potentially pointing to the object passed in as the first argument.
+ * @return struct curl_slist* Reference to cURL header list, NULL on error.
  */
 struct curl_slist *customHeader(struct curl_slist *list, const option_t *options);
 
