@@ -25,6 +25,13 @@
 
 #define INITVAL -1
 
+// from gdal-ops
+typedef enum {
+  CRS_GEOGRAPHIC,
+  CRS_PROJECTED,
+  CRS_UNKNOWN
+} CRS_TYPE;
+
 // from haze
 struct rawData
 {

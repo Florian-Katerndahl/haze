@@ -307,14 +307,19 @@ void reorderToBandInterleavedByPixel(struct rawData *data)
 {
   mean_t *root = NULL;
 
-  OGRSpatialReferenceH  spatialRef = OSRNewSpatialReference(rasterWkt);
+  OGRSpatialReferenceH spatialRef = OSRNewSpatialReference(rasterWkt);
   if (spatialRef == NULL) {
     fprintf(stderr, "Could not determine if CRS is projected or not");
     return NULL;
   }
 
 #if GDAL_VERSION_NUM >= 3090000
-  const bool geographic = isGeographic(rasterWkt);
+  CRS_TYPE CRSType = getCRSType(rasterWkt);
+  
+  if (CRSType == CRS_UNKNOWN) {
+    OSRDestroySpatialReference(spatialRef);
+    return NULL
+  }
 #endif
 
   size_t wkbSize;
@@ -346,7 +351,7 @@ void reorderToBandInterleavedByPixel(struct rawData *data)
 #if GDAL_VERSION_NUM < 3090000
     double referenceArea = OGR_G_Area(intersections->reference);
 #else
-    double referenceArea = geographic ? OGR_G_GeodesicArea(intersections->reference) : OGR_G_Area(
+    double referenceArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(intersections->reference) : OGR_G_Area(
                              intersections->reference);
 #endif
     if (referenceArea == -1) {
@@ -409,8 +414,8 @@ void reorderToBandInterleavedByPixel(struct rawData *data)
 #if GDAL_VERSION_NUM < 3090000
       double intersectingArea = OGR_G_Area(intersection);
 #else
-      // TODO: rename 'geographic' variable to 'geodesic'
-      double intersectingArea = geographic ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(intersection);
+      // TODO: rename 'CRSType' variable to 'geodesic'
+      double intersectingArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(intersection);
 #endif
 
       weights[i] = intersectingArea / referenceArea;

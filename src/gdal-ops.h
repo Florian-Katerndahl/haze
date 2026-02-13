@@ -82,13 +82,12 @@ int getRasterMetadata(GDALDatasetH raster, struct geoTransform *geoTransformatio
 /**
  * @brief Determine if a given CRS is geographic or planar/projected.
  * 
- * @note This function may call `exit(-1)` if no spatial reference could be determined.
+ * @note If CRS type couldn't be fetched, CRS_UNKNOWN is returned indicating an error.
  * 
  * @param Wkt String representation of CRS.
- * @return true Return true if dataset is associated with geographic CRS.
- * @return false Return false if dataset is associated with planar/projected CRS.
+ * @return CRS_TYPE Type of CRS.
  */
-bool isGeographic(const char *Wkt);
+CRS_TYPE getCRSType(const char *Wkt);
 
 /**
  * @brief Create a coordinate transformation between to CRS's

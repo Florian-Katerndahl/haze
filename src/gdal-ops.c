@@ -86,19 +86,16 @@ int getRasterMetadata(GDALDatasetH raster, struct geoTransform *geoTransformatio
   return 0;
 }
 
-bool isGeographic(const char *Wkt)
+CRS_TYPE getCRSType(const char *Wkt)
 {
-  OGRSpatialReferenceH  spatialRef = OSRNewSpatialReference(Wkt);
-  if (spatialRef == NULL) {
-    fprintf(stderr, "Could not determine if CRS is projected or not");
-    exit(-1); // todo: doesn't make sense to continue if this fails
-  }
+  OGRSpatialReferenceH spatialRef = OSRNewSpatialReference(Wkt);
+  if (spatialRef == NULL) return CRS_UNKNOWN;
 
   bool geographic = OSRIsGeographic(spatialRef);
 
   OSRDestroySpatialReference(spatialRef);
 
-  return geographic;
+  return geographic == true ? CRS_GEOGRAPHIC : CRS_PROJECTED;
 }
 
 OGRCoordinateTransformationH transformationFromWKTs(const char *from, const char *to)
