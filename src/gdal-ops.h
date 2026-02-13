@@ -23,7 +23,7 @@
  * @param filePath Raster file to open.
  * @return GDALDatasetH GDAL handle to opened dataset, NULL on failure.
  */
-[[nodiscard]] GDALDatasetH openRaster(const char *filePath);
+[[nodiscard]] GDALDatasetH openRasterDataset(const char *filePath);
 
 /**
  * @brief Fetch a raster band from an opened raster dataset.

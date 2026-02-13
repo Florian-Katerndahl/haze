@@ -505,7 +505,7 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
 #ifdef DEBUG
     printf("Processing file %s\n", successfulDownloads->string);
 #endif
-    GDALDatasetH ds = openRaster(successfulDownloads->string);
+    GDALDatasetH ds = openRasterDataset(successfulDownloads->string);
 
     if (ds == NULL)
       return -1;

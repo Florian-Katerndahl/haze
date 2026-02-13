@@ -7,8 +7,7 @@
 #include <stdio.h>
 #include <time.h>
 
-// TODO: rename to openRasterDataset
-[[nodiscard]] GDALDatasetH openRaster(const char *filePath)
+[[nodiscard]] GDALDatasetH openRasterDataset(const char *filePath)
 {
   if (filePath == NULL || fileReadable(filePath) == false) {
     fprintf(stderr, "ERROR: filePath cannot be NULL or file is not readable\n");
