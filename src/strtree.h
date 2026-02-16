@@ -40,7 +40,8 @@
  *          if the layer CRS does not match the one provided in `inputReferenceSystem`.
  *          No attribute information of the layer features is stored/exported.
  * 
- * @remark Only polygon geometries are allowed. Other geometries are skipped and a warning message is printed. 
+ * @remark Geometries that don't describe an area or are not the strict 2D version are not allowed and return an error.
+ *         It's assumed that only one geometry type is associated with each feature.
  * 
  * @note After the function returns, the caller owns the returned object and musst free it after use.
  * 

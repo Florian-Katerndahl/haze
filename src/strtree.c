@@ -62,14 +62,41 @@
     return NULL;
   }
 
-  OGRLayerH  layer = openVectorLayer(vectorDataset, layerName);
+  OGRLayerH layer = openVectorLayer(vectorDataset, layerName);
   if (layer == NULL) {
     fprintf(stderr, "Failed to get vector layer: %s", CPLGetLastErrorMsg());
     closeGDALDataset(vectorDataset);
     return NULL;
   }
 
-  OGRSpatialReferenceH  layerCRS = OGR_L_GetSpatialRef(layer); // reference is owned by dataset
+  switch (OGR_L_GetGeomType(layer)) {
+    // allowed geometry types
+    case wkbPolygon:
+      //fall through
+    case wkbMultipolygon:
+      //fall through
+    case wkbCurvePolygon:
+      //fall through
+    case wkbMultiSurface:
+      //fall through
+    case wkbSurface:
+      //fall through
+    case wkbPolyhedralSurface:
+      //fall through
+    case wkbTIN:
+      //fall through
+    case wkbTriangle:
+      break;
+
+    default:
+    fprintf(stderr, "Layer has unsupported geometry type. "
+                    "Allowed types are: Polygon, Multipolygon, Curvepolygon, Multisurface, "
+                    "Surface, Polyhedralsurface, TIN and triangle.\n");
+    closeGDALDataset(vectorDataset);
+    return NULL;
+  }
+
+  OGRSpatialReferenceH layerCRS = OGR_L_GetSpatialRef(layer); // reference is owned by dataset
   if (layerCRS == NULL) {
     fprintf(stderr, "Failed to get layer CRS: %s", CPLGetLastErrorMsg());
     closeGDALDataset(vectorDataset);
@@ -86,11 +113,33 @@
   const bool needsReprojection = !EQUAL(inputReferenceSystem, layerWKT);
 
   OGRCoordinateTransformationH transformation = NULL;
+  CSLConstList transformerAddonOptions = NULL;
+  OGRGeomTransformerH transformer = NULL;
 
   if (needsReprojection) {
     transformation = transformationFromWKTs(layerWKT, inputReferenceSystem);
+
     if (transformation == NULL) {
       fprintf(stderr, "Failed to create transformation between CRS's: %s", CPLGetLastErrorMsg());
+      CPLFree((void *) layerWKT);
+      closeGDALDataset(vectorDataset);
+      return NULL;
+    }
+
+    if ((transformerAddonOptions = CSLAddStringMayFail(transformerAddonOptions, "WRAPDATELINE=YES")) = NULL) {
+      fprintf(stderr, "Failed to create CRS transformer options\n");
+      OCTDestroyCoordinateTransformation(transformation);
+      CPLFree((void *) layerWKT);
+      closeGDALDataset(vectorDataset);
+      return NULL;
+    }
+
+    transformer = OGR_GeomTransformer_Create(transformation, NULL);
+
+    if (transformer == NULL) {
+      fprintf(stderr, "Failed to create coordinate transformer object\n");
+      CSLDestroy(transformerAddonOptions);
+      OCTDestroyCoordinateTransformation(transformation);
       CPLFree((void *) layerWKT);
       closeGDALDataset(vectorDataset);
       return NULL;
@@ -98,24 +147,23 @@
   }
 
   OGR_FOR_EACH_FEATURE_BEGIN(feature, layer) {
-    /// FIXME: why do I need to tage ownership of the feature?
-    OGRGeometryH geom = OGR_G_Clone(OGR_F_GetGeometryRef(feature)); // take ownership of geometry
+    // take ownership of geometry both because it's possibly reprojected and inserted to linked list
+    // with longer lifetime then the original feature layer
+    OGRGeometryH geom = OGR_G_Clone(OGR_F_GetGeometryRef(feature));
 
-    /// FIXME: doesn't this exclude multipolygons?
-    if (wkbFlatten(OGR_G_GetGeometryType(geom)) != wkbPolygon) {
-      printf("Feature with fid %lld is not a polygon, skipping\n", OGR_F_GetFID(feature));
-      OGR_G_DestroyGeometry(geom);
-      continue;
-    }
+    if (needsReprojection) {
+      OGRGeometryH transformedGeometry = OGR_GeomTransformer_Transform(transformer, geom);
 
-    // WARNING: OGR_G_Transform does not handle the antimeridian (see docs)!!
-    /// TODO: OGR_GeomTransformer_Create and  OGR_GeomTransformer_Transform do, given the correct options (may return split geometries)!
-    /// TODO: wouldn't it be smarter to transform the entire layer in one go instead of each
-    ///       each feature individually?
-    if (needsReprojection && OGR_G_Transform(geom, transformation) != OGRERR_NONE) {
-      fprintf(stderr, "Failed to transform geometry: %s\n", CPLGetLastErrorMsg());
+      // Always destroy original `geom`: `geom` is either replaced, or we encountered an error,
+      // in which case we jump to top of loop and must destroy it as well
       OGR_G_DestroyGeometry(geom);
-      continue;
+
+      if (transformedGeometry == NULL) {
+        fprintf(stderr, "Failed to transform geometry: %s\n", CPLGetLastErrorMsg());
+        continue;
+      }
+
+      geom = transformedGeometry;
     }
 
     struct vectorGeometry *vecGeom = calloc(1, sizeof(struct vectorGeometry));
@@ -124,6 +172,8 @@
       freeVectorGeometryList(geometries);
       OGR_G_DestroyGeometry(geom);
       OGR_F_Destroy(feature); // current feature as loop is not finished
+      CSLDestroy(transformerAddonOptions);
+      OGR_GeomTransformer_Destroy(transformer);
       OCTDestroyCoordinateTransformation(transformation);
       CPLFree((void *) layerWKT);
       closeGDALDataset(vectorDataset);
@@ -142,6 +192,8 @@
       freeVectorGeometryList(geometries);
       OGR_G_DestroyGeometry(geom);
       OGR_F_Destroy(feature); // current feature as loop is not finished
+      CSLDestroy(transformerAddonOptions);
+      OGR_GeomTransformer_Destroy(transformer);
       OCTDestroyCoordinateTransformation(transformation);
       CPLFree((void *) layerWKT);
       closeGDALDataset(vectorDataset);
@@ -158,6 +210,8 @@
       freeVectorGeometryList(geometries);
       OGR_G_DestroyGeometry(geom);
       OGR_F_Destroy(feature); // current feature as loop is not finished
+      CSLDestroy(transformerAddonOptions);
+      OGR_GeomTransformer_Destroy(transformer);
       OCTDestroyCoordinateTransformation(transformation);
       CPLFree((void *) layerWKT);
       closeGDALDataset(vectorDataset);
@@ -177,6 +231,8 @@
   }
   OGR_FOR_EACH_FEATURE_END(feature);
 
+  CSLDestroy(transformerAddonOptions);
+  OGR_GeomTransformer_Destroy(transformer);
   OCTDestroyCoordinateTransformation(transformation);
   CPLFree((void *) layerWKT);
   closeGDALDataset(vectorDataset);
