@@ -150,37 +150,86 @@ int parseIntegers(int *arr, size_t n, char *argString, const int min, const int 
   return 0;
 }
 
-/// FIXME: input (argString) is checked for NULL
-/// FIXME: return an error if range specifies more values than arr can hold
+int convertPositiveIntegerSafely(const char *string)
+{
+  if (string == NULL) {
+    return -1;
+  }
+
+  errno = 0;
+  char *endptr;
+  long value = strtol(string, &endptr, 10);
+
+  if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN))
+      || (errno != 0 && val == 0)
+      || (endptr == string)
+      || (val < INT_MIN || val > INT_MAX)) {
+        return -1;
+      }
+
+  return (int) val;
+}
+
 int parseRange(int *arr, size_t n, const char *argString)
 {
-  /// FIXME: return value of strchr is not checked
-  const char *sep = strchr(argString, ':');
-  sep++;
-  int min = atoi(argString);
-  int max = atoi(sep);
-  if (max < min)
+  if (argString == NULL) {
     return 1;
+  }
+
+  const char *sep = strchr(argString, ':');
+  if (sep == NULL) {
+    return 1;
+  }
+
+  sep++;
+
+  int min = convertPositiveIntegerSafely(argString);
+  int max = convertPositiveIntegerSafely(sep);
+
+  if (max < min || max == -1 || min == -1) {
+    return 1;
+  }
+
   int val = min;
+
   for (size_t i = 0; i < n && val <= max; i++, val++) {
     arr[i] = val;
+  }
+
+  // range not exhausted, i.e. array cannot hold anymore values
+  if (val < max) {
+    return 1;
   }
 
   return 0;
 }
 
-/// FIXME: input (argString) is checked for NULL
 int parseList(int *arr, size_t n, char *argString)
 {
-  char *begin = argString;
+  if (argString == NULL) {
+    return 1;
+  }
+
+  size_t count = 0;
   const char *token;
 
   for (size_t i = 0; i < n ; i++, argString = NULL) {
     token = strtok(argString, ",");
-    /// FIXME: include check to see if we're at end of string; if not, return 1 because no more tokens are found but the string is not exhausted
-    if (token == NULL)
+    if (token == NULL) {
       break;
-    arr[i] = atoi(token);
+    }
+
+    count++;
+    
+    arr[i] = convertPositiveIntegerSafely(token);
+    if (arr[i] == -1) {
+      return 1;
+    }
+  }
+
+  // no token found, immediately jumped to end of string
+  if (count == 0) {
+    return 1;
   }
 
   return 0;
@@ -188,8 +237,8 @@ int parseList(int *arr, size_t n, char *argString)
 
 int parseSingle(int *arr, const char *argString)
 {
-  arr[0] = atoi(argString);
-  return 0;
+  arr[0] = convertPositiveIntegerSafely(argString);
+  return arr[0] == -1;
 }
 
 /// TODO: the initval stuff seems like it can be handled better, e.g. by using additional variables to indicate the length and capacity!

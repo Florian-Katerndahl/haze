@@ -55,11 +55,21 @@ void printHelp(void);
 int parseIntegers(int *arr, size_t n, char *argString, const int min, const int max);
 
 /**
+ * @brief Parse positive integer from string representation to numeric reprentation
+ * 
+ * @details This function is a thin wrapper around `strtol`. In comparison with
+ *          `parseSingle, it directly returns a value instead of storing the
+ *          converted number in an array.
+ * 
+ * @param string String representation of integer.
+ * @return int Parsed integer, -1 on error.
+ */
+int convertPositiveIntegerSafely(const char *string);
+
+/**
  * @brief Parse a range of integers denoted by min:max to list of intgers with closed interval bounds
  * 
- * @note It is not guarantueed that arr is large enough to hold all values specified by the range.
- *       Thus, the list may be truncated silently.
- * @note If max < min, an error is returned.
+ * @note If max < min or the range exceeds the list's capacity, an error is returned.
  * 
  * @param arr Array to store converted values in.
  * @param n Size of array.
@@ -72,23 +82,22 @@ int parseRange(int *arr, size_t n, const char *argString);
  * @brief Parse a comma-separated list of integers to an list of integers
  * 
  * @note The argString argument is modified by replacing all occurences of a comma with NULL.
- * @note This function uses `atoi` and does not catch conversion errors.
+ * 
+ * @note If no comma-separated list was passed, an error is returned.
  * 
  * @param arr Array to store converted values in.
  * @param n Size of array.
  * @param argString String representation of comma-separated intger values.
- * @return int Always return 0.
+ * @return int 0 on success, 1 on failure.
  */
 int parseList(int *arr, size_t n, char *argString);
 
 /**
  * @brief Convert the string representation of an integer to an integer
  * 
- * @note This function uses `atoi` and does not catch conversion errors.
- * 
  * @param arr Array to store converted value in.
  * @param argString String representation of integer.
- * @return int Always return 0.
+ * @return int 0 on success, 1 on failure.
  */
 int parseSingle(int *arr, const char *argString);
 
