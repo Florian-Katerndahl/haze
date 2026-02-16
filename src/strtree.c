@@ -71,20 +71,13 @@
 
   switch (OGR_L_GetGeomType(layer)) {
     // allowed geometry types
-    case wkbPolygon:
-      //fall through
-    case wkbMultipolygon:
-      //fall through
-    case wkbCurvePolygon:
-      //fall through
-    case wkbMultiSurface:
-      //fall through
-    case wkbSurface:
-      //fall through
-    case wkbPolyhedralSurface:
-      //fall through
-    case wkbTIN:
-      //fall through
+    case wkbPolygon: [[fallthrough]]
+    case wkbMultipolygon: [[fallthrough]]
+    case wkbCurvePolygon: [[fallthrough]]
+    case wkbMultiSurface: [[fallthrough]]
+    case wkbSurface: [[fallthrough]]
+    case wkbPolyhedralSurface: [[fallthrough]]
+    case wkbTIN: [[fallthrough]]
     case wkbTriangle:
       break;
 

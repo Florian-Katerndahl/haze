@@ -522,7 +522,7 @@ int cdsWaitForProduct(CURL *handle, const char *requestId, unsigned int maxAttem
     switch (cdsGetProductStatus(handle, requestId)) {
       case SUCCESSFUL:
         return 0;
-      case ACCEPTED: // fallthrough
+      case ACCEPTED: [[fallthrough]]
       case RUNNING:
         sleepSeconds = binaryExponentialBackoff(attempt);
         if (sleepSeconds == -1) return 1;
