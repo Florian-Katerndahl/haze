@@ -29,13 +29,13 @@ void printHelp(void)
   printf("\toutdir:  Directory into which output CSVs are written.\n");
 }
 
-// TODO: this does more than simply parsing options!
 [[nodiscard]] option_t *parseOptions(int argc, char *argv[])
 {
   option_t *userOptions = calloc(1, sizeof(option_t));
   if (userOptions == NULL) {
     perror("calloc");
-    exit(1); // exiting here should be ok
+    fputc('\n', stderr);
+    return NULL;
   }
 
   memset(userOptions->years, INITVAL, MAXYEAR * sizeof(int));
@@ -57,67 +57,74 @@ void printHelp(void)
   while ((opt = getopt_long(argc, argv, "h", long_options, NULL)) != -1) {
     switch (opt) {
       case 'h':
-        printHelp();
-        exit(0);
+        userOptions->printHelp = true;
+        return userOptions;
       case 'y':
         if (parseIntegers(userOptions->years, MAXYEAR, optarg, 1940, 2039)) {
-          fprintf(stderr, "Failed to parse years or argument not specified\n");
-          exit(1);
+          fprintf(stderr, "Failed to parse years or argument not specified\n\n");
+          freeOption(userOptions);
+          return NULL;
         }
         break;
       case 'm':
         if (parseIntegers(userOptions->months, MAXMONTH, optarg, 1, 12)) {
-          fprintf(stderr, "Failed to parse months or argument not specified\n");
-          exit(1);
+          fprintf(stderr, "Failed to parse months or argument not specified\n\n");
+          freeOption(userOptions);
+          return NULL;
         }
         break;
       case 'd':
         if (parseIntegers(userOptions->days, MAXDAY, optarg, 1, 31)) {
-          fprintf(stderr, "Failed to parse days or argument not specified\n");
-          exit(1);
+          fprintf(stderr, "Failed to parse days or argument not specified\n\n");
+          freeOption(userOptions);
+          return NULL;
         }
         break;
       case 't':
         if (parseIntegers(userOptions->hours, MAXHOUR, optarg, 0, 23)) {
-          fprintf(stderr, "Failed to parse hours or argument not specified\n");
-          exit(1);
+          fprintf(stderr, "Failed to parse hours or argument not specified\n\n");
+          freeOption(userOptions);
+          return NULL;
         }
         break;
-      case '?': // erroneous option specified
-        break;
+      case '?': [[fallthrough]]
       default:
-        fprintf(stderr, "Unknown return value: %c. Continuing regardless.\n", opt);
+        fprintf(stderr, "Unknown return value: %c. Continuing regardless.\n\n", opt);
         break;
     }
   }
 
   int positionalArguments = argc - optind;
 
-  /// TODO: test directories and files for accessibility here!
-  if (positionalArguments == 1) {
-    userOptions->outputDirectory = argv[optind];
-  } else if (positionalArguments == 2) {
+  if (positionalArguments == 2) {
     userOptions->areaOfInterest = argv[optind];
     optind++;
     userOptions->outputDirectory = argv[optind];
   } else {
-    fprintf(stderr, "Missing positional arguments\n");
-    printHelp();
-    exit(1);
+    fprintf(stderr, "Missing positional arguments\n\n");
+    freeOption(userOptions);
+    return NULL;
   }
 
-  // TODO propagate changes through code base that output directory is now guaruanteed to end with slash
-  if (forceTrailingSlash(userOptions) == 1) {
-    fprintf(stderr, "Failed to append trailing slash to output directory\n");
+  if (!(fileExists(userOptions->areaOfInterest) && fileReadable(userOptions->areaOfInterest))) {
+    fprintf(stderr, "AOI file not readable\n\n");
     freeOption(userOptions);
-    exit(1);
+    return NULL;
   }
 
-  if (getAuthentication(&userOptions->authenticationToken, NULL, &userOptions->withAllocation) == 1) {
-    fprintf(stderr, "Failed to get authentication token from enironment or $HOME/.cdsapirc\n");
-    printHelp();
+  if (!(fileExists(userOptions->outputDirectory) && fileWritable(userOptions->outputDirectory))) {
+    fprintf(stderr, "Output directory not writable\n\n");
+    freeOptions(userOptions);
+    return NULL;
+  }
+
+  // TODO propagate changes through code base that output directory is now guaruanteed to end without slash
+  forceNoTrailingSlash(userOptions);
+
+  if (getAuthentication(&userOptions->authenticationToken, NULL) == 1) {
+    fprintf(stderr, "Failed to get authentication token from enironment or $HOME/.cdsapirc\n\n");
     freeOption(userOptions);
-    exit(1);
+    return NULL;
   }
 
   return userOptions;
@@ -200,31 +207,24 @@ bool validateArray(const int *arr, const size_t n, const int min, const int max)
   return true;
 }
 
-int getAuthentication(char **authenticationToken, const char *filePath, bool *neededAllocation)
+int getAuthentication(char **authenticationToken, const char *filePath)
 {
   if (getAuthenticationFromEnvironment(authenticationToken) == 0) {
-    *neededAllocation = false;
     return 0;
   }
 
   if (getAuthenticationFromFile(authenticationToken, filePath) == 0) {
-    *neededAllocation = true;
     return 0;
   }
 
   return 1;
 }
 
-// TODO: strncpy token so I always allocate memory OR use a fixed size array on the stack large enough to hold token (probably better)
 int getAuthenticationFromEnvironment(char **authenticationToken)
 {
-  *authenticationToken = getenv("ADSAUTH");
+  *authenticationToken = strdup(getenv("ADSAUTH"));
 
-  if (*authenticationToken == NULL) {
-    return 1;
-  }
-
-  return 0;
+  return (*authenticationToken != NULL) ? 0 : 1;;
 }
 
 int getAuthenticationFromFile(char **authenticationToken, const char *filePath)
@@ -257,7 +257,7 @@ int getAuthenticationFromFile(char **authenticationToken, const char *filePath)
   return (*authenticationToken != NULL) ? 0 : 1;
 }
 
-char *extractKey(const char *cdsapirc) {
+[[nodiscard]] char *extractKey(const char *cdsapirc) {
     if (!cdsapirc) return NULL;
 
     if (fileReadable(cdsapirc) == false) return NULL;
@@ -309,38 +309,14 @@ char *extractKey(const char *cdsapirc) {
     return key;
 }
 
-int forceTrailingSlash(option_t *options)
-{
-  // FORCE malloc'ed pointer, so reallocarray works
-  // TODO: make this more apparent in some other part of option parsing
-  char *forcedMalloc = strdup(options->outputDirectory);
-  if (forcedMalloc == NULL) {
-    perror("strdup");
-    return 1;
+void forceNoTrailingSlash(const option_t *options) {
+  size_t ouputDirectoryLength = strlen(options->outputDirectory);
+
+  if (options->outputDirectory[ouputDirectoryLength] == '/') {
+    options->outputDirectory[ouputDirectoryLength] = '\0';
   }
 
-  size_t outputLength = strlen(forcedMalloc);
-
-  if (forcedMalloc[outputLength - 1] == '/') {
-    options->outputDirectory = forcedMalloc;
-    return 0;
-  }
-
-  // strlen does not count \0, so + 2
-  char *tmp = reallocarray(forcedMalloc, outputLength + 2, sizeof(char));
-  if (tmp == NULL) {
-    free(forcedMalloc);
-    perror("reallocarray");
-    return 1;
-  }
-
-  options->outputDirectory = tmp;
-
-  // length stays the same but indices shift because array grew
-  options->outputDirectory[outputLength] = '/';
-  options->outputDirectory[outputLength + 1] = '\0';
-
-  return 0;
+  return;
 }
 
 void printOptions(const option_t *options)

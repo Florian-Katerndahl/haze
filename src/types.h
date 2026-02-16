@@ -164,7 +164,6 @@ typedef struct options
   char *areaOfInterest;
   char *outputDirectory;
   char *authenticationToken;
-  bool withAllocation;
 } option_t;
 
 /**

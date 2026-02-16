@@ -27,11 +27,11 @@ void printHelp(void);
  * @details Parse command line options specified by user, validate numeric inputs, read
  *          authentication token and force trailing slash on directory paths.
  * 
- * @remark The returned `option_t` object is owned by the caller and must be freed/destroyed after use.
+ * @remark The returned object is owned by the caller and must be freed after use.
  * 
  * @param argc Argument count
  * @param argv Argument values
- * @return option_t* Pointer to option type.
+ * @return option_t* Reference to parsed options, NULL on error.
  */
 [[nodiscard]] option_t *parseOptions(int argc, char *argv[]);
 
@@ -110,13 +110,12 @@ bool validateArray(const int *arr, const size_t n, const int min, const int max)
 /**
  * @brief Get CDS API authentication token from various sources
  * 
- * @details Query both the environment variables of the running process, a specified file
+ * @details Query both the environment variables of the running process, possibly a specified file
  *          path and `$HOME/.cdsapirc` in that order. Returns after the first successfull
  *          token extraction.
  * 
  * @param authenticationToken Pointer to `char *` where token should be stored 
  * @param filePath File storing CDS API credentials, possibly NULL.
- * @param neededAllocation If authentication token was stored in file, the pointer needed heap allocation.
  * @return int 0 on success, 1 on failure.
  */
 int getAuthentication(char **authenticationToken, const char *filePath, bool *neededAllocation);
@@ -127,7 +126,9 @@ int getAuthentication(char **authenticationToken, const char *filePath, bool *ne
  * @details Query the environment of the calling process for a variable called `ADSAUTH`.
  *          If found, the corresponding value is used for authentication.
  * 
- * @param authenticationToken Pointer to `char *` where token should be stored.
+ * @note After the function returns successfully, the caller owns `*authenticationToken` and must free it after use.
+ * 
+ * @param authenticationToken Indirect reference to object storing the access token/key.
  * @return int 0 on success, 1 on failure.
  */
 int getAuthenticationFromEnvironment(char **authenticationToken);
@@ -138,6 +139,8 @@ int getAuthenticationFromEnvironment(char **authenticationToken);
  * @details Get the authentication token from a specified file. In case `filePath` is set
  *          to NULL, try to access the file `$HOME/.cdsapirc` and extract the authentication
  *          token from there.
+ * 
+ * @note After the function returns successfully, the caller owns `*authenticationToken` and must free it after use.
  * 
  * @param authenticationToken Indirect reference to object storing the access token/key.
  * @param filePath File storing CDS API credentials, possibly NULL.
@@ -155,20 +158,14 @@ int getAuthenticationFromFile(char **authenticationToken, const char *filePath);
  * @param cdsapirc File path to `.cdsapirc`.
  * @return char* Reference to key, NULL on error.
  */
-char *extractKey(const char *cdsapirc);
+[[nodiscard]] char *extractKey(const char *cdsapirc);
 
 /**
- * @brief Force a trailing slash on directory name
+ * @brief Enforce file system path doesn't end with a slash
  * 
- * @details Force a re-allocation of the output directory name field and guarantuee that the
- *          directory path ends with a trailing slash. The re-allocation is performed in all
- *          cases, even if the supplied `options->outputDirectory` field already ends with a
- *          trailing slash in order to make freeing the pointer possible.
- * 
- * @param options options struct after successfull CLI parsing.
- * @return int 0 on success, 1 on failure.
+ * @param options Reference to parsed options.
  */
-int forceTrailingSlash(option_t *options);
+void forceNoTrailingSlash(const option_t *options);
 
 /**
  * @brief Print fields of options struct to `stdout`
