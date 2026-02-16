@@ -79,10 +79,10 @@
  * @details Add a new entry to a linked list holding cell geometries. I.e. a list of vectorized
  *          raster cells for a given query polygon.
  * 
- * @param item void-casted `cellGeometry` objects whose MBR intersects with MBR of query polygon.
- * @param userdata void-vasted pointer to `cellGeometryList`.
+ * @param item void-casted `cellGeometry` object whose MBR intersects with MBR of query polygon.
+ * @param userdata void-casted reference to `userdata_t`.
  */
-void queryCallback(void *item, void *userdata);
+void trackIntersectingGeometries(void *item, void *userdata);
 
 /**
  * @brief Query STRTree with MBRs of "extraction" geometries
@@ -91,8 +91,6 @@ void queryCallback(void *item, void *userdata);
  *          previously created STRTree, consisting of vectorized raster cells, for intersections.
  *          Any intersecting cells are added to a list and may be used to calculate area weighted
  *          means of total water column.
- * 
- * @remark Only the MBR of geometries is used for calculating whether an intersection exists.
  * 
  * @note After the function returns, the caller owns the returned object and musst free it after use.
  * 

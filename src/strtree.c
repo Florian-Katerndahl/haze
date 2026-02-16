@@ -209,7 +209,6 @@
                                      (double) x, transformation->colRotation);
 
       // the ternary madness is needed because images may not be north-up
-      /// TODO: does this REALLY preserve the rotation/orientation
       GEOSGeometry *geom = GEOSGeom_createRectangle(
                              MIN(x1, x2),
                              MIN(y1, y2),
@@ -274,14 +273,24 @@
   return tree;
 }
 
-// TODO: give this a better name, e.g. "trackIntersectingCells"
-void queryCallback(void *item, void *userdata)
+void trackIntersectingGeometries(void *item, void *userdata)
 {
-  // fprintf(stderr, "Found intersecting bbox..");
-  cellGeometryList **l = (cellGeometryList **) userdata;
+  userdata_t *ud = (userdata_t *) userdata;
   struct cellGeometry *geom = (struct cellGeometry *) item;
 
-  // TODO: test actual intersection with GEOSIntersects (https://libgeos.org/doxygen/geos__c_8h.html#a6f2f2d573ed7c8f39167baa05e5a814d)
+  switch (GEOSPreparedIntersects(ud->queryGeometry, geom->geometry)) {
+    case '0':
+      return; // actual geometries do not intersect, nothing to do
+    case '1':
+      break; // actual geometries do intersect
+    case '2':
+      fprintf(stderr, "Failed to test for intersection of geometries.\n");
+      return;
+    default:
+      __builtin_unreachable();
+  }
+
+  ud->intersectionCount++;
 
   cellGeometryList *node = calloc(1, sizeof(cellGeometryList));
   if (node == NULL) {
@@ -294,11 +303,11 @@ void queryCallback(void *item, void *userdata)
   node->entry = geom;
   node->next = NULL;
 
-  if (*l == NULL) {
-    *l = node;
+  if (ud->intersectingCells == NULL) {
+    ud->intersectingCells = node;
   } else {
-    node->next = *l;
-    *l = node;
+    node->next = ud->intersectingCells;
+    ud->intersectingCells = node;
   }
 
   return;
@@ -310,33 +319,43 @@ void queryCallback(void *item, void *userdata)
   intersection_t *queryResults = NULL;
 
   while (areasOfInterest != NULL) {
-    intersection_t *node = calloc(1, sizeof(intersection_t));
-    if (node == NULL) {
-      perror("calloc");
+    userdata_t userdata = {
+      .queryGeometry = GEOSPrepare(areasOfInterest->entry->geometry);
+      .intersectingCells = NULL;
+      .intersectionCount = 0;
+    };
+
+    if (userdata.queryGeometry == NULL) {
+      fprintf(stderr, "Failed to prepare geometry for FID %lld\n", areasOfInterest->entry->id);
+      areasOfInterest = areasOfInterest->next;
       continue;
     }
 
-    // NOTE: no ownership of areasOfInterest->entry->OGRGeometry is taken,
-    // owner of `areaOfInterest` is responsible to free object!
-    node->reference = areasOfInterest->entry->OGRGeometry;
-    node->intersectionCount = 0;
-    node->intersectingCells = NULL;
+    GEOSSTRtree_query(rasterTree, areasOfInterest->entry->mbr, trackIntersectingGeometries,
+                      (void *) &userdata);
 
-    // TODO: a rectangular bounding box is created automatically, why do I calculte one myself?
-    GEOSSTRtree_query(rasterTree, areasOfInterest->entry->mbr, queryCallback,
-                      (void *) &node->intersectingCells);
+    GEOSPreparedGeom_destroy(userdata.queryGeometry);
 
     if (node->intersectingCells == NULL) {
       fprintf(stderr, "No intersections found for geometry with FID %lld.\n", areasOfInterest->entry->id);
-      free(node);
+      areasOfInterest = areasOfInterest->next;
       continue;
-    } else {
-      cellGeometryList *temp = node->intersectingCells;
-      while (temp != NULL) {
-        node->intersectionCount++;
-        temp = temp->next;
-      }
     }
+
+    intersection_t *node = malloc(sizeof(intersection_t));
+
+    if (node == NULL) {
+      perror("malloc");
+      freeCellGeometryList(userdata.intersectingCells);
+      areasOfInterest = areasOfInterest->next;
+      continue;
+    }
+
+    /// NOTE: no ownership of areasOfInterest->entry->OGRGeometry is taken,
+    ///       owner of `areaOfInterest` is responsible to free object!
+    node->reference = areasOfInterest->entry->OGRGeometry;
+    node->intersectionCount = userdata.intersectionCount;
+    node->intersectingCells = userdate.intersectingCells;
 
     if (queryResults == NULL) {
       queryResults = node;

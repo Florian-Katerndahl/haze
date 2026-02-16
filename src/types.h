@@ -106,6 +106,13 @@ typedef struct intersection
   struct intersection *next;
 } intersection_t;
 
+typedef struct userdata
+{
+  const GEOSPreparedGeometry *queryGeometry;
+  cellGeometryList *intersectingCells;
+  size_t intersectionCount;
+} userdata_t;
+
 /**
  * @brief Free a single OGR vector geometry node and all encapsulated fields
  * 
