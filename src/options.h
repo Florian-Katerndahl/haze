@@ -127,7 +127,7 @@ bool validateArray(const int *arr, const size_t n, const int min, const int max)
  * @param filePath File storing CDS API credentials, possibly NULL.
  * @return int 0 on success, 1 on failure.
  */
-int getAuthentication(char **authenticationToken, const char *filePath, bool *neededAllocation);
+int getAuthentication(char **authenticationToken, const char *filePath);
 
 /**
  * @brief Get CDS API authentication token from environment
