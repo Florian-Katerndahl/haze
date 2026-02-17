@@ -89,7 +89,7 @@ void printHelp(void)
           return NULL;
         }
         break;
-      case '?': [[fallthrough]]
+      case '?': [[fallthrough]];
       default:
         fprintf(stderr, "Unknown return value: %c. Continuing regardless.\n\n", opt);
         break;
