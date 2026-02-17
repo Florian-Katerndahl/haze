@@ -4,9 +4,9 @@
  * @brief This header file contains function signatures to parse command line options for haze.
  * @version 0.1
  * @date 2026-02-09
- * 
+ *
  * @copyright Copyright (c) 2026
- * 
+ *
  */
 #ifndef OPTIONS_H
 #define OPTIONS_H
@@ -18,18 +18,18 @@
 
 /**
  * @brief Print a help string for haze to `stdout`.
- * 
+ *
  */
 void printHelp(void);
 
 /**
  * @brief Parse command line options for haze
- * 
+ *
  * @details Parse command line options specified by user, validate numeric inputs, read
  *          authentication token and force trailing slash on directory paths.
- * 
+ *
  * @remark The returned object is owned by the caller and must be freed after use.
- * 
+ *
  * @param argc Argument count
  * @param argv Argument values
  * @return option_t* Reference to parsed options, NULL on error.
@@ -38,13 +38,13 @@ void printHelp(void);
 
 /**
  * @brief Parse string representation of integers of various forms to array of integer
- * 
+ *
  * @details This functions performs a series of checks to determine if the string contains a
  *          range of integers (i.e. "min:max") or a comma-separated list of values (i.e. "v1,v2,v3").
  *          If neither format is found, a scalar value is assumed.
  *          After parsing, it is checked that all values are within [min, max], all values are unique.
  *          and the array holds at least one element.
- * 
+ *
  * @param arr Array to store converted values in.
  * @param capacity Maximum capacity of array.
  * @param elements Reference to number of elements in array.
@@ -52,18 +52,19 @@ void printHelp(void);
  * @param min Minimum value, all stored values must be greater or equal than this value.
  * @param max Maximum value, all stored values must be smaller or equal than this value.
  * @return int 0 on success, 1 on failure.
- * 
+ *
  * @related parseRange, parseList, parseSingle
  */
-int parseIntegers(int *arr, size_t capacity, size_t *elements, char *argString, const int min, const int max);
+int parseIntegers(int *arr, size_t capacity, size_t *elements, char *argString, const int min,
+                  const int max);
 
 /**
  * @brief Parse positive integer from string representation to numeric reprentation
- * 
+ *
  * @details This function is a thin wrapper around `strtol`. In comparison with
  *          `parseSingle, it directly returns a value instead of storing the
  *          converted number in an array.
- * 
+ *
  * @param string String representation of integer.
  * @return int Parsed integer, -1 on error.
  */
@@ -71,9 +72,9 @@ int convertPositiveIntegerSafely(const char *string);
 
 /**
  * @brief Parse a range of integers denoted by min:max to list of intgers with closed interval bounds
- * 
+ *
  * @note If max < min or the range exceeds the list's capacity, an error is returned.
- * 
+ *
  * @param arr Array to store converted values in.
  * @param capacity Maximum capacity of array.
  * @param elements Reference to number of elements in array.
@@ -84,11 +85,11 @@ int parseRange(int *arr, size_t capacity, size_t *elements, const char *argStrin
 
 /**
  * @brief Parse a comma-separated list of integers to an list of integers
- * 
+ *
  * @note The argString argument is modified by replacing all occurences of a comma with NULL.
- * 
+ *
  * @note If no comma-separated list was passed, an error is returned.
- * 
+ *
  * @param arr Array to store converted values in.
  * @param capacity Maximum capacity of array.
  * @param elements Reference to number of elements in array.
@@ -99,7 +100,7 @@ int parseList(int *arr, size_t capacity, size_t *elements, char *argString);
 
 /**
  * @brief Convert the string representation of an integer to an integer
- * 
+ *
  * @param arr Array to store converted value in.
  * @param elements Reference to number of elements in array.
  * @param argString String representation of integer.
@@ -109,9 +110,9 @@ int parseSingle(int *arr, size_t *elements, const char *argString);
 
 /**
  * @brief Test if all elements in an array are within range and initialized
- * 
+ *
  * @details Test if all elements in `arr` are in the closed interval [min, max].
- * 
+ *
  * @param arr Array to check.
  * @param elements Number of elements in array.
  * @param min Minimum value, all stored values must be greater or equal than this value.
@@ -123,12 +124,12 @@ bool validateArray(int *arr, const size_t elements, const int min, const int max
 
 /**
  * @brief Get CDS API authentication token from various sources
- * 
+ *
  * @details Query both the environment variables of the running process, possibly a specified file
  *          path and `$HOME/.cdsapirc` in that order. Returns after the first successfull
  *          token extraction.
- * 
- * @param authenticationToken Pointer to `char *` where token should be stored 
+ *
+ * @param authenticationToken Pointer to `char *` where token should be stored
  * @param filePath File storing CDS API credentials, possibly NULL.
  * @return int 0 on success, 1 on failure.
  */
@@ -136,12 +137,12 @@ int getAuthentication(char **authenticationToken, const char *filePath);
 
 /**
  * @brief Get CDS API authentication token from environment
- * 
+ *
  * @details Query the environment of the calling process for a variable called `ADSAUTH`.
  *          If found, the corresponding value is used for authentication.
- * 
+ *
  * @note After the function returns successfully, the caller owns `*authenticationToken` and must free it after use.
- * 
+ *
  * @param authenticationToken Indirect reference to object storing the access token/key.
  * @return int 0 on success, 1 on failure.
  */
@@ -149,13 +150,13 @@ int getAuthenticationFromEnvironment(char **authenticationToken);
 
 /**
  * @brief Get CDS API authentication token from a file
- * 
+ *
  * @details Get the authentication token from a specified file. In case `filePath` is set
  *          to NULL, try to access the file `$HOME/.cdsapirc` and extract the authentication
  *          token from there.
- * 
+ *
  * @note After the function returns successfully, the caller owns `*authenticationToken` and must free it after use.
- * 
+ *
  * @param authenticationToken Indirect reference to object storing the access token/key.
  * @param filePath File storing CDS API credentials, possibly NULL.
  * @return int 0 on success, 1 on failure.
@@ -168,7 +169,7 @@ int getAuthenticationFromFile(char **authenticationToken, const char *filePath);
  * @note Assumes no padding for value to extract.
  *
  * @note After the function returns, the caller owns the returned object and must free it after use.
- * 
+ *
  * @param cdsapirc File path to `.cdsapirc`.
  * @return char* Reference to key, NULL on error.
  */
@@ -176,21 +177,21 @@ int getAuthenticationFromFile(char **authenticationToken, const char *filePath);
 
 /**
  * @brief Enforce file system path doesn't end with a slash
- * 
+ *
  * @param options Reference to parsed options.
  */
 void forceNoTrailingSlash(const option_t *options);
 
 /**
  * @brief Print fields of options struct to `stdout`
- * 
+ *
  * @param options Object whose fields to print.
  */
 void printOptions(const option_t *options);
 
 /**
  * @brief Callback function for `qsort` to compare integers
- * 
+ *
  * @param a Void-casted reference to first value of comparison.
  * @param b Void-casted reference to second value of comparison.
  * @return int Negative value if a < b, 0 if a = b, positive value if a > b.

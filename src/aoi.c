@@ -59,8 +59,9 @@
   }
 
   if (!EQUAL(layerWKT, SRS_WKT_WGS84_LAT_LONG)) {
-    OGRCoordinateTransformationH transformation = transformationFromWKTs(layerWKT, SRS_WKT_WGS84_LAT_LONG);
-    
+    OGRCoordinateTransformationH transformation = transformationFromWKTs(layerWKT,
+      SRS_WKT_WGS84_LAT_LONG);
+
     if (transformation == NULL) {
       fprintf(stderr, "Failed to create transformation object: %s", CPLGetLastErrorMsg());
       CPLFree(layerWKT);
@@ -81,7 +82,7 @@
           ANGLEUNIT["degree",0.0174532925199433]],
       mean: -59 lon => 59 west and 58 lat => 58 north
 
-    It's needed because I work with the coordinates directly, would I only be interested in the geometry, e.g. for 
+    It's needed because I work with the coordinates directly, would I only be interested in the geometry, e.g. for
     area calculation, this wouldn't be necessary!
     */
     int nAxes = 0;
@@ -98,7 +99,7 @@
     // after getting data axis to srs axis, we still need to query the axis definition;
     // for now we only know the index in the WKT
     OGRAxisOrientation orientation;
-    
+
     // get first axis; axes themselves are 1 indexed
     if (OSRGetAxis(layerRef, NULL, dataAxisToSRS[0] - 1, &orientation) == NULL) {
       fprintf(stderr, "Failed to get first coordinate axis form CRS\n");
@@ -139,7 +140,7 @@
       CPLFree(mbr);
       closeGDALDataset(aoi);
       return NULL;
-    }    
+    }
 
     const int defaultDensification = 21;
 
@@ -165,7 +166,6 @@
     mbr->MinX = minSecondOut;
     mbr->MaxY = maxFirstOut;
     mbr->MaxX = maxSecondOut;
-
 
     if (mbr->MaxX < mbr->MinX)
       mbr->MaxX += 360.0; // cds API allows requests with x [-360,360]

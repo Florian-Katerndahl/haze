@@ -16,11 +16,13 @@
 
 struct curl_slist *customHeader(struct curl_slist *list, const option_t *options)
 {
-  if (options == NULL) return NULL;
+  if (options == NULL)
+    return NULL;
 
   char *header = constructURL("PRIVATE-TOKEN:%s", options->authenticationToken);
 
-  if (header == NULL) return NULL;
+  if (header == NULL)
+    return NULL;
 
   struct curl_slist *ret = curl_slist_append(list, header);
 
@@ -37,14 +39,20 @@ struct curl_slist *customHeader(struct curl_slist *list, const option_t *options
 int initializeHandle(CURL **handle, const struct curl_slist *headerList)
 {
   if (headerList) {
-    if (curl_easy_setopt(*handle, CURLOPT_HTTPHEADER, headerList) != CURLE_OK) return 1;
+    if (curl_easy_setopt(*handle, CURLOPT_HTTPHEADER, headerList) != CURLE_OK)
+      return 1;
   }
-  if (curl_easy_setopt(*handle, CURLOPT_FOLLOWLOCATION, 1L) != CURLE_OK) return 1;
-  if (curl_easy_setopt(*handle, CURLOPT_FAILONERROR, 1L) != CURLE_OK) return 1;
-  if (curl_easy_setopt(*handle, CURLOPT_SSL_VERIFYHOST, 1L) != CURLE_OK) return 1;
+  if (curl_easy_setopt(*handle, CURLOPT_FOLLOWLOCATION, 1L) != CURLE_OK)
+    return 1;
+  if (curl_easy_setopt(*handle, CURLOPT_FAILONERROR, 1L) != CURLE_OK)
+    return 1;
+  if (curl_easy_setopt(*handle, CURLOPT_SSL_VERIFYHOST, 1L) != CURLE_OK)
+    return 1;
   // default timeout value of cdsapi is 60 seconds
-  if (curl_easy_setopt(*handle, CURLOPT_TIMEOUT, 600L) != CURLE_OK) return 1;
-  if (curl_easy_setopt(*handle, CURLOPT_USERAGENT, "haze") != CURLE_OK) return 1;
+  if (curl_easy_setopt(*handle, CURLOPT_TIMEOUT, 600L) != CURLE_OK)
+    return 1;
+  if (curl_easy_setopt(*handle, CURLOPT_USERAGENT, "haze") != CURLE_OK)
+    return 1;
 
   return 0;
 }
@@ -127,7 +135,7 @@ json_t *jsonArrayFromIntegers(const int *arr, size_t elements, const char *forma
   }
 
   json_t *elementString;
-  
+
   for (size_t i = 0; i < elements; i++) {
     if ((elementString = json_sprintf(formatString, arr[i])) == NULL) {
       fprintf(stderr, "Failed to create JSON string representation of integer\n");
@@ -221,7 +229,8 @@ cleanup:
 
 }
 
-[[nodiscard]] stringList *downloadDaily(CURL *handle, const option_t *options, const OGREnvelope *aoi)
+[[nodiscard]] stringList *downloadDaily(CURL *handle, const option_t *options,
+                                        const OGREnvelope *aoi)
 {
   const unsigned int maxAttempts = 12;
 
@@ -229,79 +238,79 @@ cleanup:
 
   for (size_t yearIdx = 0; yearIdx < options->yearsElements; yearIdx++) {
     for (size_t monthIdx = 0; monthIdx < options->monthsElements; monthIdx++) {
-        int year = options->years[yearIdx];
-        int month = options->months[monthIdx];
-        
-        char *outputPath = constructFilePath("%s/%.4d-%.2d.grib", options->outputDirectory, year, month);
+      int year = options->years[yearIdx];
+      int month = options->months[monthIdx];
 
-        if (outputPath == NULL) {
-          fprintf(stderr, "Failed to construct local file path\n");
-          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", year, month);
-          continue;
-        }
+      char *outputPath = constructFilePath("%s/%.4d-%.2d.grib", options->outputDirectory, year, month);
 
-        int requestYears[1] = {year};
-        int requestMonths[1] = {month};
+      if (outputPath == NULL) {
+        fprintf(stderr, "Failed to construct local file path\n");
+        fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", year, month);
+        continue;
+      }
 
-        char *requestId = cdsRequestProduct(handle, requestYears, requestMonths, options->days,
-                                            options->hours, 1, 1,
-                                            options->daysElements, options->hoursElements, aoi, options);
-        if (requestId == NULL) {
-          fprintf(stderr, "Failed to request product or extract job id\n");
-          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", year, month);
-          free(outputPath);
-          continue;
-        }
+      int requestYears[1] = {year};
+      int requestMonths[1] = {month};
+
+      char *requestId = cdsRequestProduct(handle, requestYears, requestMonths, options->days,
+                                          options->hours, 1, 1,
+                                          options->daysElements, options->hoursElements, aoi, options);
+      if (requestId == NULL) {
+        fprintf(stderr, "Failed to request product or extract job id\n");
+        fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", year, month);
+        free(outputPath);
+        continue;
+      }
 #ifdef DEBUG
-        printf("Posted product request with Id: %s\n", requestId);
+      printf("Posted product request with Id: %s\n", requestId);
 #endif
 
-        if (cdsWaitForProduct(handle, requestId, maxAttempts)) {
-          fprintf(stderr, "Error while waiting for product\n");
-          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", year, month);
-          free(requestId);
-          free(outputPath);
-          continue;
-        }
-#ifdef DEBUG
-        printf("Waited for product request with Id: %s\n", requestId);
-#endif
-
-        if (cdsDownloadProduct(handle, requestId, outputPath)) {
-          fprintf(stderr, "Failed to download data %.4d-%.2d. Continuing.\n", year, month);
-          free(requestId);
-          free(outputPath);
-          continue;
-        }
-#ifdef DEBUG
-        printf("Downloaded file for product request %s\n", requestId);
-#endif
-
-        cdsDeleteProductRequest(handle, requestId);
-#ifdef DEBUG
-        printf("Deleted product request with Id: %s\n", requestId);
-#endif
-
-        stringList *downloadedFile = calloc(1, sizeof(stringList));
-        if (downloadedFile == NULL) {
-          perror("calloc");
-          fprintf(stderr, "Failed to process data %.4d-%.2d. Deleting file and continuing.\n", year, month);
-          free(requestId);
-          unlink(outputPath);
-          free(outputPath);
-          continue;
-        }
-
-        downloadedFile->string = outputPath;
-
-        if (root == NULL) {
-          root = downloadedFile;
-        } else {
-          downloadedFile->next = root;
-          root = downloadedFile;
-        }
-
+      if (cdsWaitForProduct(handle, requestId, maxAttempts)) {
+        fprintf(stderr, "Error while waiting for product\n");
+        fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", year, month);
         free(requestId);
+        free(outputPath);
+        continue;
+      }
+#ifdef DEBUG
+      printf("Waited for product request with Id: %s\n", requestId);
+#endif
+
+      if (cdsDownloadProduct(handle, requestId, outputPath)) {
+        fprintf(stderr, "Failed to download data %.4d-%.2d. Continuing.\n", year, month);
+        free(requestId);
+        free(outputPath);
+        continue;
+      }
+#ifdef DEBUG
+      printf("Downloaded file for product request %s\n", requestId);
+#endif
+
+      cdsDeleteProductRequest(handle, requestId);
+#ifdef DEBUG
+      printf("Deleted product request with Id: %s\n", requestId);
+#endif
+
+      stringList *downloadedFile = calloc(1, sizeof(stringList));
+      if (downloadedFile == NULL) {
+        perror("calloc");
+        fprintf(stderr, "Failed to process data %.4d-%.2d. Deleting file and continuing.\n", year, month);
+        free(requestId);
+        unlink(outputPath);
+        free(outputPath);
+        continue;
+      }
+
+      downloadedFile->string = outputPath;
+
+      if (root == NULL) {
+        root = downloadedFile;
+      } else {
+        downloadedFile->next = root;
+        root = downloadedFile;
+      }
+
+      free(requestId);
     }
   }
 
@@ -350,9 +359,9 @@ char *slurpAndGetString(const char *input, const char *key)
   return ret;
 }
 
-//       ALSO: If I actually want to do daily requests, year month and day should be scalar values and only hours an array. Then, two 
-//             different implementations may make sense. One for scalar year, month day and one for vector years, months, days. Scalar version can
-//             simply call vector version with n = 1
+// ALSO: If I actually want to do daily requests, year month and day should be scalar values and only hours an array. Then, two
+// different implementations may make sense. One for scalar year, month day and one for vector years, months, days. Scalar version can
+// simply call vector version with n = 1
 char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days,
                         const int *hours, const size_t yearsElements, const size_t monthsElements,
                         const size_t daysElements, const size_t hoursElements,
@@ -365,15 +374,16 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
   }
 
   char *stringRequest = constructStringRequest(years, months, days, hours,
-                                               yearsElements, monthsElements, daysElements, hoursElements,
-                                               aoi);
+                        yearsElements, monthsElements, daysElements, hoursElements,
+                        aoi);
   if (stringRequest == NULL) {
     fprintf(stderr, "Failed to export JSON to string\n");
     curl_easy_cleanup(requestHandle);
     return NULL;
   }
 
-  char *url = constructURL("%s/%s/%s", BASEURL, "retrieve/v1/processes/reanalysis-era5-single-levels", "execution");
+  char *url = constructURL("%s/%s/%s", BASEURL, "retrieve/v1/processes/reanalysis-era5-single-levels",
+                           "execution");
   if (url == NULL) {
     fprintf(stderr, "Failed to assemble request URL\n");
     free(stringRequest);
@@ -438,7 +448,7 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
 productStatus cdsGetProductStatus(CURL *handle, const char *requestId)
 {
   CURL *statusHandle = curl_easy_duphandle(handle);
-  if (statusHandle ==  NULL) {
+  if (statusHandle == NULL) {
     fprintf(stderr, "Failed to duplicate CURL handle before checking product status\n");
     return ERROR;
   }
@@ -497,14 +507,17 @@ productStatus cdsGetProductStatus(CURL *handle, const char *requestId)
   return status;
 }
 
-int binaryExponentialBackoff(int attempt) {
-    if (attempt < 0) return -1;
+int binaryExponentialBackoff(int attempt)
+{
+  if (attempt < 0)
+    return -1;
 
-    double backoff = pow(2.0, (double) attempt);
+  double backoff = pow(2.0, (double) attempt);
 
-    if (backoff > (double) INT_MAX || fabs(backoff) == HUGE_VAL || backoff == 0.0 || isnan(backoff)) return -1;
+  if (backoff > (double) INT_MAX || fabs(backoff) == HUGE_VAL || backoff == 0.0 || isnan(backoff))
+    return -1;
 
-    return (int) backoff;
+  return (int) backoff;
 }
 
 int cdsWaitForProduct(CURL *handle, const char *requestId, unsigned int maxAttempts)
@@ -515,10 +528,12 @@ int cdsWaitForProduct(CURL *handle, const char *requestId, unsigned int maxAttem
     switch (cdsGetProductStatus(handle, requestId)) {
       case SUCCESSFUL:
         return 0;
-      case ACCEPTED: [[fallthrough]];
+      case ACCEPTED:
+        [[fallthrough]];
       case RUNNING:
         sleepSeconds = binaryExponentialBackoff(attempt);
-        if (sleepSeconds == -1) return 1;
+        if (sleepSeconds == -1)
+          return 1;
         break;
       case FAILED:
         fprintf(stderr, "Order %s failed\n", requestId);

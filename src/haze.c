@@ -90,10 +90,10 @@ void readRasterDataset(GDALDatasetH raster, struct rawData **dataBuffer)
     *dataBuffer = NULL;
     return;
   }
-  GDALDataType dType    = GDALGetRasterDataType(layer);
-  size_t byteSize       = (size_t) GDALGetDataTypeSizeBytes(dType);
+  GDALDataType dType = GDALGetRasterDataType(layer);
+  size_t byteSize = (size_t) GDALGetDataTypeSizeBytes(dType);
   size_t datasetColumns = (size_t) GDALGetRasterBandXSize(layer);
-  size_t datasetRows    = (size_t) GDALGetRasterBandYSize(layer);
+  size_t datasetRows = (size_t) GDALGetRasterBandYSize(layer);
 
   if (dType != GDT_Float64 || byteSize != sizeof(double)) {
     freeRawData(*dataBuffer);
@@ -113,12 +113,12 @@ void readRasterDataset(GDALDatasetH raster, struct rawData **dataBuffer)
   }
 
   // data seems to be BSQ? Or at least it saved into the buffer one scanline at a time
-  //  could be helpful to manually transform to PIL
+  // could be helpful to manually transform to PIL
   // Doesn't GDAL hide this from me? When requesting bands, I get a band no matter how the underlying data is interleaved! I.e., data returned is always BSQ
   CPLErr readErr = GDALDatasetRasterIOEx(
                      raster, GF_Read, 0, 0,
                      (int) datasetColumns, (int) datasetRows,
-                     (void *) *(*dataBuffer)->data, (int) datasetColumns,
+                     (void *) * (*dataBuffer)->data, (int) datasetColumns,
                      (int) datasetRows, dType,
                      dataSetBandCount, NULL, 0, 0, 0, NULL);
 
@@ -133,7 +133,7 @@ void readRasterDataset(GDALDatasetH raster, struct rawData **dataBuffer)
 }
 
 /// TODO: why not incoprate the freeing and NULLing of output struct as above?
-//        This is so inconsistent! could be void function as well.
+// This is so inconsistent! could be void function as well.
 int averageRawData(const struct rawData *data, struct averagedData **average)
 {
   *average = allocateAverageData();
@@ -224,7 +224,7 @@ int averagePILRawDataWithSizeOffset(const struct rawData *data, struct averagedD
   // now, daily averages can be calculated by setting the size to number of observations per day (see query) and offset to nObservations * `day of interest (0-based)`
   size_t startBand = offset;
   size_t boundary = size == 0 && startBand == 0 ? data->bands : size + offset;
-  
+
   if (startBand >= data->bands || boundary >= data->bands) {
     return 1;
   }
@@ -316,7 +316,7 @@ void reorderToBandInterleavedByPixel(struct rawData *data)
 
 #if GDAL_VERSION_NUM >= 3090000
   CRS_TYPE CRSType = getCRSType(rasterWkt);
-  
+
   if (CRSType == CRS_UNKNOWN) {
     OSRDestroySpatialReference(spatialRef);
     return NULL;
@@ -352,7 +352,8 @@ void reorderToBandInterleavedByPixel(struct rawData *data)
 #if GDAL_VERSION_NUM < 3090000
     double referenceArea = OGR_G_Area(intersections->reference);
 #else
-    double referenceArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(intersections->reference) : OGR_G_Area(
+    double referenceArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(
+                             intersections->reference) : OGR_G_Area(
                              intersections->reference);
 #endif
     if (referenceArea == -1) {
@@ -401,7 +402,7 @@ void reorderToBandInterleavedByPixel(struct rawData *data)
 
       // TODO: add to documentation, that STRTree only computes intersection logically but not intersecting geometries?
       // TODO: wouldn't it make more sense to check for actual intersection in callback **and** compute the intersection there?
-      //       Especially since the docs state this is built upon the GEOS library
+      // Especially since the docs state this is built upon the GEOS library
       OGRGeometryH intersection = OGR_G_Intersection(intersections->reference, cellAsOGR);
       if (intersection == NULL) {
         fprintf(stderr, "Failed to create intersection-polygon: %s\n", CPLGetLastErrorMsg());
@@ -416,7 +417,8 @@ void reorderToBandInterleavedByPixel(struct rawData *data)
       double intersectingArea = OGR_G_Area(intersection);
 #else
       // TODO: rename 'CRSType' variable to 'geodesic'
-      double intersectingArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(intersection);
+      double intersectingArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(
+                                  intersection);
 #endif
 
       weights[i] = intersectingArea / referenceArea;
@@ -616,8 +618,9 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
         return 1;
       }
 
-      char *textOutputFilePath = constructFilePath("%s/%.4d-%.2d-%.2d.txt", options->outputDirectory, currentYear, currentMonth, day);
-      
+      char *textOutputFilePath = constructFilePath("%s/%.4d-%.2d-%.2d.txt", options->outputDirectory,
+                                 currentYear, currentMonth, day);
+
       if (textOutputFilePath == NULL) {
         fprintf(stderr, "Failed to construct file path for output text file\n");
         freeVectorGeometryList(areasOfInterest);
@@ -661,7 +664,8 @@ bool isValidDate(int year, int month, int day)
   bool validMonth = month >= 1 && month <= 12;
   bool isLeapYear = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
   bool validDay = day >= 1
-                  && day <= (month == 2 ? (isLeapYear ? daysPerMonth[month - 1] + 1 : daysPerMonth[month - 1]) : daysPerMonth[month - 1]);
+                  && day <= (month == 2 ? (isLeapYear ? daysPerMonth[month - 1] + 1 : daysPerMonth[month - 1]) :
+                             daysPerMonth[month - 1]);
 
   return validYear && validMonth && validDay;
 }

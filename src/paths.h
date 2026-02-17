@@ -4,9 +4,9 @@
  * @brief This header file describes two alias functions used to construct file paths and URLs
  * @version 0.1
  * @date 2026-02-17
- * 
+ *
  * @copyright Copyright (c) 2026
- * 
+ *
  */
 #ifndef PATHS_H
 #define PATHS_H

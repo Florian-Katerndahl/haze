@@ -71,22 +71,29 @@
 
   switch (OGR_L_GetGeomType(layer)) {
     // allowed geometry types
-    case wkbPolygon: [[fallthrough]];
-    case wkbMultiPolygon: [[fallthrough]];
-    case wkbCurvePolygon: [[fallthrough]];
-    case wkbMultiSurface: [[fallthrough]];
-    case wkbSurface: [[fallthrough]];
-    case wkbPolyhedralSurface: [[fallthrough]];
-    case wkbTIN: [[fallthrough]];
+    case wkbPolygon:
+      [[fallthrough]];
+    case wkbMultiPolygon:
+      [[fallthrough]];
+    case wkbCurvePolygon:
+      [[fallthrough]];
+    case wkbMultiSurface:
+      [[fallthrough]];
+    case wkbSurface:
+      [[fallthrough]];
+    case wkbPolyhedralSurface:
+      [[fallthrough]];
+    case wkbTIN:
+      [[fallthrough]];
     case wkbTriangle:
       break;
 
     default:
-    fprintf(stderr, "Layer has unsupported geometry type. "
-                    "Allowed types are: Polygon, Multipolygon, Curvepolygon, Multisurface, "
-                    "Surface, Polyhedralsurface, TIN and triangle.\n");
-    closeGDALDataset(vectorDataset);
-    return NULL;
+      fprintf(stderr, "Layer has unsupported geometry type. "
+                      "Allowed types are: Polygon, Multipolygon, Curvepolygon, Multisurface, "
+                      "Surface, Polyhedralsurface, TIN and triangle.\n");
+      closeGDALDataset(vectorDataset);
+      return NULL;
   }
 
   OGRSpatialReferenceH layerCRS = OGR_L_GetSpatialRef(layer); // reference is owned by dataset
@@ -119,7 +126,8 @@
       return NULL;
     }
 
-    if ((transformerAddonOptions = CSLAddStringMayFail(transformerAddonOptions, "WRAPDATELINE=YES")) == NULL) {
+    if ((transformerAddonOptions = CSLAddStringMayFail(transformerAddonOptions,
+                                   "WRAPDATELINE=YES")) == NULL) {
       fprintf(stderr, "Failed to create CRS transformer options\n");
       OCTDestroyCoordinateTransformation(transformation);
       CPLFree((void *) layerWKT);

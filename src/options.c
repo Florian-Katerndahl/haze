@@ -90,7 +90,8 @@ void printHelp(void)
           return NULL;
         }
         break;
-      case '?': [[fallthrough]];
+      case '?':
+        [[fallthrough]];
       default:
         fprintf(stderr, "Unknown return value: %c. Continuing regardless.\n\n", opt);
         break;
@@ -133,7 +134,8 @@ void printHelp(void)
   return userOptions;
 }
 
-int parseIntegers(int *arr, size_t capacity, size_t *elements, char *argString, const int min, const int max)
+int parseIntegers(int *arr, size_t capacity, size_t *elements, char *argString, const int min,
+                  const int max)
 {
   if (strchr(argString, ':') != NULL) {
     if (parseRange(arr, capacity, elements, argString))
@@ -167,8 +169,8 @@ int convertPositiveIntegerSafely(const char *string)
       || (errno != 0 && value == 0)
       || (endptr == string)
       || (value < INT_MIN || value > INT_MAX)) {
-        return -1;
-      }
+    return -1;
+  }
 
   return (int) value;
 }
@@ -222,11 +224,11 @@ int parseList(int *arr, size_t capacity, size_t *elements, char *argString)
     if (token == NULL) {
       break;
     }
-    
+
     if ((val = convertPositiveIntegerSafely(token)) == -1) {
       return 1;
     }
-    
+
     arr[i] = val;
     (*elements)++;
   }
@@ -279,8 +281,8 @@ bool validateArray(int *arr, const size_t elements, const int min, const int max
     if ((c == 0 && r < (ssize_t) elements && arr[c] == arr[r]) ||
         (c == (ssize_t) elements - 1 && arr[l] == arr[c]) ||
         (c > 0 && c < (ssize_t) elements - 1 && (arr[l] == arr[c] || arr[c] == arr[r]))) {
-          return false;
-        }
+      return false;
+    }
   }
 
   return true;
@@ -331,64 +333,70 @@ int getAuthenticationFromFile(char **authenticationToken, const char *filePath)
 
   *authenticationToken = extractKey(cdsapirc);
 
-  if (heapAlloced) free((void *) cdsapirc);
+  if (heapAlloced)
+    free((void *) cdsapirc);
 
   return (*authenticationToken != NULL) ? 0 : 1;
 }
 
-[[nodiscard]] char *extractKey(const char *cdsapirc) {
-    if (!cdsapirc) return NULL;
+[[nodiscard]] char *extractKey(const char *cdsapirc)
+{
+  if (!cdsapirc)
+    return NULL;
 
-    if (fileReadable(cdsapirc) == false) return NULL;
+  if (fileReadable(cdsapirc) == false)
+    return NULL;
 
-    FILE *f = fopen(cdsapirc, "r");
+  FILE *f = fopen(cdsapirc, "r");
 
-    if (f == NULL) {
-      perror("fopen");
-      return NULL;
+  if (f == NULL) {
+    perror("fopen");
+    return NULL;
+  }
+
+  char *lineptr = NULL;
+  char *key = NULL;
+  size_t n = 0;
+  ssize_t charsRead;
+
+  while ((charsRead = getline(&lineptr, &n, f)) != -1) {
+    // does the line read start with the delimeter/parameter we're after?
+    char *startOfDelim = strstr(lineptr, "key: ");
+
+    if (startOfDelim == NULL) {
+      free(lineptr);
+      lineptr = NULL;
+      continue;
     }
 
-    char *lineptr = NULL;
-    char *key = NULL;
-    size_t n = 0;
-    ssize_t charsRead;
-    
-    while ((charsRead = getline(&lineptr, &n, f)) != -1) {
-        // does the line read start with the delimeter/parameter we're after?
-        char *startOfDelim = strstr(lineptr, "key: ");
-        
-        if (startOfDelim == NULL) {
-            free(lineptr);
-            lineptr = NULL;
-            continue;
-        }
+    // valid because check above already determined that the line includes whitespace
+    char *startOfKey = startOfDelim + 5;
 
-        // valid because check above already determined that the line includes whitespace
-        char *startOfKey = startOfDelim + 5;
+    // cannot return NULL because getline 0-terminates line
+    char *endOfKey = strchr(lineptr, '\0');
 
-        // cannot return NULL because getline 0-terminates line
-        char *endOfKey = strchr(lineptr, '\0');
-        
-        // length of key
-        ptrdiff_t stringLength = (ptrdiff_t) endOfKey - (ptrdiff_t) startOfKey;
+    // length of key
+    ptrdiff_t stringLength = (ptrdiff_t) endOfKey - (ptrdiff_t) startOfKey;
 
-        // if line is terminated by newline, actual key is one byte less then extracted line
-        // assumes no additional padding of file
-        if (*(endOfKey - 1) == '\n') stringLength--;
+    // if line is terminated by newline, actual key is one byte less then extracted line
+    // assumes no additional padding of file
+    if (*(endOfKey - 1) == '\n')
+      stringLength--;
 
-        key = strndup(startOfKey, stringLength);
-                
-        break;
-    }
-    
-    free(lineptr);
+    key = strndup(startOfKey, stringLength);
 
-    fclose(f);
+    break;
+  }
 
-    return key;
+  free(lineptr);
+
+  fclose(f);
+
+  return key;
 }
 
-void forceNoTrailingSlash(const option_t *options) {
+void forceNoTrailingSlash(const option_t *options)
+{
   size_t ouputDirectoryLength = strlen(options->outputDirectory);
 
   if (options->outputDirectory[ouputDirectoryLength] == '/') {

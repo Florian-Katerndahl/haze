@@ -56,7 +56,8 @@ void freeIntersections(intersection_t *list)
 
 void freeOption(option_t *options)
 {
-  if (!options) return;
+  if (!options)
+    return;
 
   free(options->authenticationToken);
   free(options);

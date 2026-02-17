@@ -75,10 +75,10 @@ int getRasterMetadata(GDALDatasetH raster, struct geoTransform *geoTransformatio
   double tmp[6];
   if (GDALGetGeoTransform(raster, tmp) == CE_Failure)
     return 1;
-  geoTransformation->xOrigin     = tmp[0];
-  geoTransformation->pixelWidth  = tmp[1];
+  geoTransformation->xOrigin = tmp[0];
+  geoTransformation->pixelWidth = tmp[1];
   geoTransformation->rowRotation = tmp[2];
-  geoTransformation->yOrigin     = tmp[3];
+  geoTransformation->yOrigin = tmp[3];
   geoTransformation->colRotation = tmp[4];
   geoTransformation->pixelHeight = tmp[5];
 
@@ -88,7 +88,8 @@ int getRasterMetadata(GDALDatasetH raster, struct geoTransform *geoTransformatio
 CRS_TYPE getCRSType(const char *Wkt)
 {
   OGRSpatialReferenceH spatialRef = OSRNewSpatialReference(Wkt);
-  if (spatialRef == NULL) return CRS_UNKNOWN;
+  if (spatialRef == NULL)
+    return CRS_UNKNOWN;
 
   bool geographic = OSRIsGeographic(spatialRef);
 
