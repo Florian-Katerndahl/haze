@@ -5,7 +5,6 @@
 #include <gdal/ogr_core.h>
 #include <gdal/ogr_srs_api.h>
 #include <stdio.h>
-#include <time.h>
 
 [[nodiscard]] GDALDatasetH openRasterDataset(const char *filePath)
 {

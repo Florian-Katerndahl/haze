@@ -1,6 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
 #define _DEFAULT_SOURCE
 
+#include "paths.h"
 #include "options.h"
 #include "fscheck.h"
 #include "types.h"
@@ -318,7 +319,7 @@ int getAuthenticationFromFile(char **authenticationToken, const char *filePath)
       return 1;
     }
 
-    cdsapirc = constructFormattedPath("%s/%s", home, ".cdsapirc");
+    cdsapirc = constructFilePath("%s/%s", home, ".cdsapirc");
     heapAlloced = true;
 
     if (cdsapirc == NULL) {

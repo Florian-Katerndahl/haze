@@ -2,14 +2,12 @@
 #include "gdal-ops.h"
 #include "fscheck.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <gdal/gdal.h>
 #include <gdal/cpl_conv.h>
 #include <gdal/cpl_error.h>
 #include <gdal/ogr_core.h>
 #include <gdal/ogr_api.h>
 #include <gdal/ogr_srs_api.h>
-#include <time.h>
 
 // NOTE: the output envelope follows cartesian logic what minx, miny, maxx, maxy mean.
 // input coordinates may differ because of CRS axis mapping => latter only relevant when

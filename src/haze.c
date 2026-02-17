@@ -1,5 +1,5 @@
 #include "haze.h"
-#include "fscheck.h"
+#include "paths.h"
 #include "types.h"
 #include "gdal-ops.h"
 #include "math-utils.h"
@@ -616,7 +616,7 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
         return 1;
       }
 
-      char *textOutputFilePath = constructFormattedPath("%s/%.4d-%.2d-%.2d.txt", options->outputDirectory, currentYear, currentMonth, day);
+      char *textOutputFilePath = constructFilePath("%s/%.4d-%.2d-%.2d.txt", options->outputDirectory, currentYear, currentMonth, day);
       
       if (textOutputFilePath == NULL) {
         fprintf(stderr, "Failed to construct file path for output text file\n");

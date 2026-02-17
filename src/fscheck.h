@@ -13,22 +13,6 @@
 
 #include <stdbool.h>
 
-#define MAX_PATH_LENGTH 1024
-
-/// FIXME: this definitvely needs refactoring now as this function doesn't fit the file but I also don't really know where else to put it...
-/**
- * @brief Construct file system paths and URLs with dynamic content up to fixed size
- *
- * @note After the function returns, the caller owns the returned object and musst free it after use with.
- *
- * @note The URL can't be longer than `MAX_PATH_LENGTH` - 1 characters.
- *
- * @param fmt Format string for the path/URL.
- * @param ... Arguments for format placeholders.
- * @return char* Reference to heap-allocated path/URL, NULL on error.
- */
-char *constructFormattedPath(const char *fmt, ...);
-
 /**
  * @brief Check if a file exists.
  * 

@@ -1,6 +1,6 @@
 #include "api.h"
 #include "types.h"
-#include "fscheck.h"
+#include "paths.h"
 #include <curl/easy.h>
 #include <gdal/ogr_core.h>
 #include <jansson.h>
@@ -18,7 +18,7 @@ struct curl_slist *customHeader(struct curl_slist *list, const option_t *options
 {
   if (options == NULL) return NULL;
 
-  char *header = constructFormattedPath("PRIVATE-TOKEN:%s", options->authenticationToken);
+  char *header = constructURL("PRIVATE-TOKEN:%s", options->authenticationToken);
 
   if (header == NULL) return NULL;
 
@@ -231,21 +231,12 @@ cleanup:
     for (size_t monthIdx = 0; monthIdx < options->monthsElements; monthIdx++) {
         int year = options->years[yearIdx];
         int month = options->months[monthIdx];
-
-        char *dateString = constructFormattedPath("%.4d-%.2d.grib", year, month);
-
-        if (dateString == NULL) {
-          fprintf(stderr, "Failed to convert date to string format\n");
-          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", year, month);
-          continue;          
-        }
         
-        char *outputPath = constructFormattedPath("%s%s", options->outputDirectory, dateString);
+        char *outputPath = constructFilePath("%s/%.4d-%.2d.grib", options->outputDirectory, year, month);
 
         if (outputPath == NULL) {
           fprintf(stderr, "Failed to construct local file path\n");
           fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", year, month);
-          free(dateString);
           continue;
         }
 
@@ -258,7 +249,6 @@ cleanup:
         if (requestId == NULL) {
           fprintf(stderr, "Failed to request product or extract job id\n");
           fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", year, month);
-          free(dateString);
           free(outputPath);
           continue;
         }
@@ -270,7 +260,6 @@ cleanup:
           fprintf(stderr, "Error while waiting for product\n");
           fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", year, month);
           free(requestId);
-          free(dateString);
           free(outputPath);
           continue;
         }
@@ -281,7 +270,6 @@ cleanup:
         if (cdsDownloadProduct(handle, requestId, outputPath)) {
           fprintf(stderr, "Failed to download data %.4d-%.2d. Continuing.\n", year, month);
           free(requestId);
-          free(dateString);
           free(outputPath);
           continue;
         }
@@ -299,7 +287,6 @@ cleanup:
           perror("calloc");
           fprintf(stderr, "Failed to process data %.4d-%.2d. Deleting file and continuing.\n", year, month);
           free(requestId);
-          free(dateString);
           unlink(outputPath);
           free(outputPath);
           continue;
@@ -315,7 +302,6 @@ cleanup:
         }
 
         free(requestId);
-        free(dateString);
     }
   }
 
@@ -387,7 +373,7 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
     return NULL;
   }
 
-  char *url = constructFormattedPath("%s/%s/%s", BASEURL, "retrieve/v1/processes/reanalysis-era5-single-levels", "execution");
+  char *url = constructURL("%s/%s/%s", BASEURL, "retrieve/v1/processes/reanalysis-era5-single-levels", "execution");
   if (url == NULL) {
     fprintf(stderr, "Failed to assemble request URL\n");
     free(stringRequest);
@@ -457,7 +443,7 @@ productStatus cdsGetProductStatus(CURL *handle, const char *requestId)
     return ERROR;
   }
 
-  char *url = constructFormattedPath("%s/%s/%s", BASEURL, "retrieve/v1/jobs", requestId);
+  char *url = constructURL("%s/%s/%s", BASEURL, "retrieve/v1/jobs", requestId);
   if (url == NULL) {
     fprintf(stderr, "Failed to construct url for product status check\n");
     curl_easy_cleanup(statusHandle);
@@ -556,7 +542,7 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     return 1;
   }
 
-  char *url = constructFormattedPath("%s/%s/%s/%s", BASEURL, "retrieve/v1/jobs", requestId, "results");
+  char *url = constructURL("%s/%s/%s/%s", BASEURL, "retrieve/v1/jobs", requestId, "results");
   if (url == NULL) {
     fprintf(stderr, "Failed to construct jobURL\n");
     curl_easy_cleanup(downloadHandle);
@@ -638,7 +624,7 @@ int cdsDeleteProductRequest(CURL *handle, const char *requestId)
     return 1;
   }
 
-  char *url = constructFormattedPath("%s/%s/%s", BASEURL, "retrieve/v1/jobs", requestId);
+  char *url = constructURL("%s/%s/%s", BASEURL, "retrieve/v1/jobs", requestId);
   if (url == NULL) {
     fprintf(stderr, "Failed to construct url for deletion\n");
     curl_easy_cleanup(deleteHandle);

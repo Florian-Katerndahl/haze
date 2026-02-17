@@ -12,6 +12,9 @@ LOCALFLAGS=-L
 .PHONY: all
 all: main
 
+build/paths.o: src/paths.c src/paths.h
+	$(CC) $(DEFINES) $(CFLAGS) -c src/paths.c -o $@
+
 build/fscheck.o: src/fscheck.c src/fscheck.h
 	$(CC) $(DEFINES) $(CFLAGS) -c src/fscheck.c -o $@
 
@@ -42,7 +45,7 @@ build/strtree.o: src/strtree.c src/strtree.h
 build/main.o: main.c
 	$(CC) $(DEFINES) $(CFLAGS) -c main.c $(GDALFLAGS) $(GEOSFLAGS) $(CURLFLAGS) -o build/main.o
 
-main: build/main.o build/options.o build/types.o build/api.o build/aoi.o build/haze.o build/fscheck.o build/gdal-ops.o build/strtree.o build/math-utils.o
+main: build/main.o build/options.o build/types.o build/api.o build/aoi.o build/haze.o build/fscheck.o build/gdal-ops.o build/strtree.o build/math-utils.o build/paths.o
 	$(CC) $(DEFINES) $(CFLAGS) $^ $(GDALFLAGS) $(GEOSFLAGS) $(CURLFLAGS) $(CURLFLAGS) $(JANSONFLAGS) -o haze
 
 .PHONY: clean

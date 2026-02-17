@@ -2,7 +2,6 @@
 #include <gdal/gdal.h>
 #include <geos_c.h>
 #include <stdlib.h>
-#include <time.h>
 
 void freeVectorGeometry(struct vectorGeometry *node)
 {
