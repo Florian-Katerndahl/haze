@@ -1,4 +1,5 @@
 #include "haze.h"
+#include "fscheck.h"
 #include "types.h"
 #include "gdal-ops.h"
 #include "math-utils.h"
@@ -614,22 +615,17 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
         return 1;
       }
 
-      // todo: come up with a nicer way to construct file paths?
-      int outputFilePathLength = (int) strlen(options->outputDirectory) + 15; // yyyy-mm-dd.txt + \0 = 15
-
-      char *textOutputFilePath = calloc(outputFilePathLength, sizeof(char));
+      char *textOutputFilePath = constructFormattedPath("%s/%.4d-%.2d-%.2d.txt", options->outputDirectory, currentYear, currentMonth, day);
+      
       if (textOutputFilePath == NULL) {
-        perror("calloc");
-        // todo cleanup
-        return 1;
-      }
-
-      int charsWritten = snprintf(textOutputFilePath, outputFilePathLength, "%s%.4d-%.2d-%.2d.txt",
-                                  options->outputDirectory, currentYear, currentMonth, day);
-
-      if (charsWritten >= outputFilePathLength || charsWritten < 0) {
         fprintf(stderr, "Failed to construct file path for output text file\n");
-        // todo cleanup
+        freeVectorGeometryList(areasOfInterest);
+        freeRawData(data);
+        freeAverageData(average);
+        freeCellGeometryList(rasterCellsAsGEOS);
+        GEOSSTRtree_destroy(rasterTree);
+        freeIntersections(intersections);
+        CPLFree((void* ) rasterWkt);
         return 1;
       }
 
