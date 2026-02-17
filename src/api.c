@@ -526,8 +526,6 @@ int cdsWaitForProduct(CURL *handle, const char *requestId, unsigned int maxAttem
       case RUNNING:
         sleepSeconds = binaryExponentialBackoff(attempt);
         if (sleepSeconds == -1) return 1;
-        sleep(sleepSeconds);
-        attempt++;
         break;
       case FAILED:
         fprintf(stderr, "Order %s failed\n", requestId);
@@ -536,7 +534,7 @@ int cdsWaitForProduct(CURL *handle, const char *requestId, unsigned int maxAttem
         fprintf(stderr, "General error occurred while waiting for %s\n", requestId);
         return 1;
     }
-
+    sleep(sleepSeconds);
     attempt++;
   };
 
