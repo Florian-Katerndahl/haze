@@ -100,11 +100,11 @@ json_t *getKeyRecursively(json_t *root, const char *key);
  * @note After the function returns, the caller owns the returned object and musst free it.
  * 
  * @param arr Reference to array of integers.
- * @param stopVal Dedicated stop value up to which elements should be used.
+ * @param elemnts Number of entries in respective array.
  * @param formatString Format string to use when converting integers to their string representation, used for each element.
  * @return json_t* Reference to newly allocated JSON array or NULL on error.
  */
-json_t *jsonArrayFromIntegers(const int *arr, int stopVal, const char *formatString);
+json_t *jsonArrayFromIntegers(const int *arr, size_t elements, const char *formatString);
 
 /**
  * @brief Construct a JSON object for CDS API product request
@@ -122,10 +122,15 @@ json_t *jsonArrayFromIntegers(const int *arr, int stopVal, const char *formatStr
  * @param months Reference to array of integers giving months to include in query.
  * @param days Reference to array of integers giving days to include in query.
  * @param hours Reference to array of integers giving hours to include in query.
+ * @param yearsElements Number of entries in respective array.
+ * @param monthsElements Number of entries in respective array.
+ * @param daysElements Number of entries in respective array.
+ * @param hoursElements Number of entries in respective array.
  * @param aoi Reference to a north-up bounding box with EPSG:4326 coordinates to restrict AOI, possibly NULL. 
  * @return char* Reference to JSON-formatted product request or NULL on error.
  */
-char *constructStringRequest(const int *years, const int *months, const int *days, const int *hours, const OGREnvelope *aoi);
+char *constructStringRequest(const int *years, const int *months, const int *days, const int *hours, const size_t yearsElements, const size_t monthsElements, const size_t daysElements,
+                             const size_t hoursElements, const OGREnvelope *aoi);
 
 /**
  * @brief Perform product request and download of ERA-5 products
@@ -169,11 +174,16 @@ char *slurpAndGetString(const char *input, const char *key);
  * @param months Reference to array of integers giving months to post request for.
  * @param days Reference to array of integers giving days to post request for.
  * @param hours Reference to array of integers giving hours to post request for.
+ * @param yearsElements Number of entries in respective array.
+ * @param monthsElements Number of entries in respective array.
+ * @param daysElements Number of entries in respective array.
+ * @param hoursElements Number of entries in respective array.
  * @param aoi Reference to a north-up bounding box with EPSG:4326 coordinates to restrict AOI, possibly NULL.
  * @param options Reference to parsed options.
  * @return char* Job/Request ID, NULL on error.
  */
-char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days, const int *hours, const OGREnvelope *aoi, const option_t *options);
+char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days, const int *hours, const size_t yearsElements, const size_t monthsElements,
+                        const size_t daysElements, const size_t hoursElements, const OGREnvelope *aoi, const option_t *options);
 
 /**
  * @brief Query the CDS API for the status of a previously created product request

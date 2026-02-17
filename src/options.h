@@ -13,6 +13,7 @@
 
 #include "types.h"
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdlib.h>
 
 /**
@@ -41,10 +42,12 @@ void printHelp(void);
  * @details This functions performs a series of checks to determine if the string contains a
  *          range of integers (i.e. "min:max") or a comma-separated list of values (i.e. "v1,v2,v3").
  *          If neither format is found, a scalar value is assumed.
- *          After parsing, it is checked that all values are within [min, max].
+ *          After parsing, it is checked that all values are within [min, max], all values are unique.
+ *          and the array holds at least one element.
  * 
  * @param arr Array to store converted values in.
- * @param n Size of array.
+ * @param capacity Maximum capacity of array.
+ * @param elements Reference to number of elements in array.
  * @param argString String representation of integers in various forms.
  * @param min Minimum value, all stored values must be greater or equal than this value.
  * @param max Maximum value, all stored values must be smaller or equal than this value.
@@ -52,7 +55,7 @@ void printHelp(void);
  * 
  * @related parseRange, parseList, parseSingle
  */
-int parseIntegers(int *arr, size_t n, char *argString, const int min, const int max);
+int parseIntegers(int *arr, size_t capacity, size_t *elements, char *argString, const int min, const int max);
 
 /**
  * @brief Parse positive integer from string representation to numeric reprentation
@@ -72,11 +75,12 @@ int convertPositiveIntegerSafely(const char *string);
  * @note If max < min or the range exceeds the list's capacity, an error is returned.
  * 
  * @param arr Array to store converted values in.
- * @param n Size of array.
+ * @param capacity Maximum capacity of array.
+ * @param elements Reference to number of elements in array.
  * @param argString String representation of integer range.
  * @return int 0 on success, 1 on failure.
  */
-int parseRange(int *arr, size_t n, const char *argString);
+int parseRange(int *arr, size_t capacity, size_t *elements, const char *argString);
 
 /**
  * @brief Parse a comma-separated list of integers to an list of integers
@@ -86,35 +90,36 @@ int parseRange(int *arr, size_t n, const char *argString);
  * @note If no comma-separated list was passed, an error is returned.
  * 
  * @param arr Array to store converted values in.
- * @param n Size of array.
+ * @param capacity Maximum capacity of array.
+ * @param elements Reference to number of elements in array.
  * @param argString String representation of comma-separated intger values.
  * @return int 0 on success, 1 on failure.
  */
-int parseList(int *arr, size_t n, char *argString);
+int parseList(int *arr, size_t capacity, size_t *elements, char *argString);
 
 /**
  * @brief Convert the string representation of an integer to an integer
  * 
  * @param arr Array to store converted value in.
+ * @param elements Reference to number of elements in array.
  * @param argString String representation of integer.
  * @return int 0 on success, 1 on failure.
  */
-int parseSingle(int *arr, const char *argString);
+int parseSingle(int *arr, size_t *elements, const char *argString);
 
 /**
  * @brief Test if all elements in an array are within range and initialized
  * 
- * @details Test if all elements in `arr` (up to n) are in the closed interval [min, max]
- *          and different to the symbolic constant INITVAL.
+ * @details Test if all elements in `arr` are in the closed interval [min, max].
  * 
- * @param arr Array to check
- * @param n Length of array
+ * @param arr Array to check.
+ * @param elements Number of elements in array.
  * @param min Minimum value, all stored values must be greater or equal than this value.
  * @param max Maximum value, all stored values must be smaller or equal than this value.
- * @return true Return true, iff all values in `arr` are in (min, max) and different from `INITVAL` constant.
+ * @return true Return true, iff all values in `arr` are in [min, max], all values are unique and arr has at least one element.
  * @return false Return false, otherwise.
  */
-bool validateArray(const int *arr, const size_t n, const int min, const int max);
+bool validateArray(int *arr, const size_t elements, const int min, const int max);
 
 /**
  * @brief Get CDS API authentication token from various sources
@@ -182,5 +187,14 @@ void forceNoTrailingSlash(const option_t *options);
  * @param options Object whose fields to print.
  */
 void printOptions(const option_t *options);
+
+/**
+ * @brief Callback function for `qsort` to compare integers
+ * 
+ * @param a Void-casted reference to first value of comparison.
+ * @param b Void-casted reference to second value of comparison.
+ * @return int Negative value if a < b, 0 if a = b, positive value if a > b.
+ */
+int intcmp(const void *a, const void *b);
 
 #endif // OPTIONS_H

@@ -16,14 +16,10 @@
 #include <geos_c.h>
 #include <gdal/gdal.h>
 
-// allocate one entry more than possible maximum to break on INITVAL in case user specifies complete range
-// TODO see debate over what values to use here in the option parsing files
-#define MAXYEAR 101
-#define MAXMONTH 13
-#define MAXDAY 32
-#define MAXHOUR 25
-
-#define INITVAL -1
+#define MAXYEAR 100
+#define MAXMONTH 12
+#define MAXDAY 31
+#define MAXHOUR 24
 
 // from gdal-ops
 typedef enum {
@@ -158,9 +154,13 @@ typedef struct options
 {
   bool printHelp;
   int years[MAXYEAR];
+  size_t yearsElements;
   int months[MAXMONTH];
+  size_t monthsElements;
   int days[MAXDAY];
+  size_t daysElements;
   int hours[MAXHOUR];
+  size_t hoursElements;
   char *areaOfInterest;
   char *outputDirectory;
   char *authenticationToken;

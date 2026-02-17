@@ -12,6 +12,8 @@
 #include <time.h>
 #include <getopt.h>
 #include <stddef.h>
+#include <errno.h>
+#include <limits.h>
 
 void printHelp(void)
 {
@@ -38,10 +40,10 @@ void printHelp(void)
     return NULL;
   }
 
-  memset(userOptions->years, INITVAL, MAXYEAR * sizeof(int));
-  memset(userOptions->months, INITVAL, MAXMONTH * sizeof(int));
-  memset(userOptions->days, INITVAL, MAXDAY * sizeof(int));
-  memset(userOptions->hours, INITVAL, MAXHOUR * sizeof(int));
+  userOptions->yearsElements = 0;
+  userOptions->monthsElements = 0;
+  userOptions->daysElements = 0;
+  userOptions->hoursElements = 0;
 
   static struct option long_options[] = {
     {"help", no_argument, NULL, 'h'},
@@ -60,28 +62,28 @@ void printHelp(void)
         userOptions->printHelp = true;
         return userOptions;
       case 'y':
-        if (parseIntegers(userOptions->years, MAXYEAR, optarg, 1940, 2039)) {
+        if (parseIntegers(userOptions->years, MAXYEAR, &userOptions->yearsElements, optarg, 1940, 2039)) {
           fprintf(stderr, "Failed to parse years or argument not specified\n\n");
           freeOption(userOptions);
           return NULL;
         }
         break;
       case 'm':
-        if (parseIntegers(userOptions->months, MAXMONTH, optarg, 1, 12)) {
+        if (parseIntegers(userOptions->months, MAXMONTH, &userOptions->monthsElements, optarg, 1, 12)) {
           fprintf(stderr, "Failed to parse months or argument not specified\n\n");
           freeOption(userOptions);
           return NULL;
         }
         break;
       case 'd':
-        if (parseIntegers(userOptions->days, MAXDAY, optarg, 1, 31)) {
+        if (parseIntegers(userOptions->days, MAXDAY, &userOptions->daysElements, optarg, 1, 31)) {
           fprintf(stderr, "Failed to parse days or argument not specified\n\n");
           freeOption(userOptions);
           return NULL;
         }
         break;
       case 't':
-        if (parseIntegers(userOptions->hours, MAXHOUR, optarg, 0, 23)) {
+        if (parseIntegers(userOptions->hours, MAXHOUR, &userOptions->hoursElements, optarg, 0, 23)) {
           fprintf(stderr, "Failed to parse hours or argument not specified\n\n");
           freeOption(userOptions);
           return NULL;
@@ -114,7 +116,7 @@ void printHelp(void)
 
   if (!(fileExists(userOptions->outputDirectory) && fileWritable(userOptions->outputDirectory))) {
     fprintf(stderr, "Output directory not writable\n\n");
-    freeOptions(userOptions);
+    freeOption(userOptions);
     return NULL;
   }
 
@@ -130,20 +132,20 @@ void printHelp(void)
   return userOptions;
 }
 
-int parseIntegers(int *arr, size_t n, char *argString, const int min, const int max)
+int parseIntegers(int *arr, size_t capacity, size_t *elements, char *argString, const int min, const int max)
 {
   if (strchr(argString, ':') != NULL) {
-    if (parseRange(arr, n, argString))
+    if (parseRange(arr, capacity, elements, argString))
       return 1;
   } else if (strchr(argString, ',') != NULL) {
-    if (parseList(arr, n, argString))
+    if (parseList(arr, capacity, elements, argString))
       return 1;
   } else {
-    if (parseSingle(arr, argString))
+    if (parseSingle(arr, elements, argString))
       return 1;
   }
 
-  if (validateArray(arr, n, min, max) == false) {
+  if (validateArray(arr, *elements, min, max) == false) {
     return 1;
   }
 
@@ -160,17 +162,17 @@ int convertPositiveIntegerSafely(const char *string)
   char *endptr;
   long value = strtol(string, &endptr, 10);
 
-  if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN))
-      || (errno != 0 && val == 0)
+  if ((errno == ERANGE && (value == LONG_MAX || value == LONG_MIN))
+      || (errno != 0 && value == 0)
       || (endptr == string)
-      || (val < INT_MIN || val > INT_MAX)) {
+      || (value < INT_MIN || value > INT_MAX)) {
         return -1;
       }
 
-  return (int) val;
+  return (int) value;
 }
 
-int parseRange(int *arr, size_t n, const char *argString)
+int parseRange(int *arr, size_t capacity, size_t *elements, const char *argString)
 {
   if (argString == NULL) {
     return 1;
@@ -192,65 +194,85 @@ int parseRange(int *arr, size_t n, const char *argString)
 
   int val = min;
 
-  for (size_t i = 0; i < n && val <= max; i++, val++) {
+  for (size_t i = 0; i < capacity && val <= max; i++, val++) {
     arr[i] = val;
+    (*elements)++;
   }
 
   // range not exhausted, i.e. array cannot hold anymore values
-  if (val < max) {
+  if (val < max && capacity == *elements) {
     return 1;
   }
 
   return 0;
 }
 
-int parseList(int *arr, size_t n, char *argString)
+int parseList(int *arr, size_t capacity, size_t *elements, char *argString)
 {
   if (argString == NULL) {
     return 1;
   }
 
-  size_t count = 0;
+  int val;
   const char *token;
 
-  for (size_t i = 0; i < n ; i++, argString = NULL) {
+  for (size_t i = 0; i < capacity; i++, argString = NULL) {
     token = strtok(argString, ",");
     if (token == NULL) {
       break;
     }
-
-    count++;
     
-    arr[i] = convertPositiveIntegerSafely(token);
-    if (arr[i] == -1) {
+    if ((val = convertPositiveIntegerSafely(token)) == -1) {
       return 1;
     }
+    
+    arr[i] = val;
+    (*elements)++;
   }
 
   // no token found, immediately jumped to end of string
-  if (count == 0) {
+  if (*elements == 0) {
     return 1;
   }
 
   return 0;
 }
 
-int parseSingle(int *arr, const char *argString)
+int parseSingle(int *arr, size_t *elements, const char *argString)
 {
   arr[0] = convertPositiveIntegerSafely(argString);
-  return arr[0] == -1;
+  if (arr[0] == -1) {
+    return 1;
+  }
+
+  (*elements)++;
+
+  return 0;
 }
 
-/// TODO: the initval stuff seems like it can be handled better, e.g. by using additional variables to indicate the length and capacity!
-/// TODO: shouldn't this also check for uniqueness of the values as this is also a requirement for API queries?
-bool validateArray(const int *arr, const size_t n, const int min, const int max)
+bool validateArray(int *arr, const size_t elements, const int min, const int max)
 {
-  if (arr[0] == INITVAL)
+  if (elements == 0) {
     return false;
+  }
 
-  for (size_t i = 0; i < n; i++) {
-    if ((arr[i] < min || arr[i] > max) && (i > 0 && arr[i] != INITVAL))
+  // bounds check
+  for (size_t i = 0; i < elements; i++) {
+    if (min > arr[i] || arr[i] > max) {
       return false;
+    }
+  }
+
+  // as array stores numeric information, it can be sorted without loss of semantic information
+  qsort(arr, elements, sizeof(int), intcmp);
+
+  // check for uniqueness of values
+  for (ssize_t l = -1, c = 0, r = 1; c < elements; l++, c++, r++) {
+    if ((c == 0 && r < elements && arr[c] == arr[r]) ||
+        (c == elements - 1 && arr[l] == arr[c]) ||
+        (c > 0 && c < elements - 1 && (arr[l] == arr[c] || arr[c] == arr[r]))) {
+          return false;
+        }
   }
 
   return true;
@@ -371,22 +393,22 @@ void forceNoTrailingSlash(const option_t *options) {
 void printOptions(const option_t *options)
 {
   printf("YEAR: ");
-  for (int i = 0; i < MAXYEAR && options->years[i] != INITVAL; i++) {
+  for (int i = 0; i < options->yearsElements; i++) {
     printf("%d ", options->years[i]);
   }
 
   printf("\nMONTH: ");
-  for (int i = 0; i < MAXMONTH && options->months[i] != INITVAL; i++) {
+  for (int i = 0; i < options->monthsElements; i++) {
     printf("%d ", options->months[i]);
   }
 
   printf("\nDAY: ");
-  for (int i = 0; i < MAXDAY && options->days[i] != INITVAL; i++) {
+  for (int i = 0; i < options->daysElements; i++) {
     printf("%d ", options->days[i]);
   }
 
   printf("\nHOUR: ");
-  for (int i = 0; i < MAXHOUR && options->hours[i] != INITVAL; i++) {
+  for (int i = 0; i < options->hoursElements; i++) {
     printf("%d ", options->hours[i]);
   }
   printf("\n");
@@ -396,4 +418,12 @@ void printOptions(const option_t *options)
   printf("aoi file: %s\n", options->areaOfInterest);
 
   printf("out directory: %s\n", options->outputDirectory);
+}
+
+int intcmp(const void *a, const void *b)
+{
+  int aInt = *(int *) a;
+  int bInt = *(int *) b;
+
+  return aInt - bInt;
 }

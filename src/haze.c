@@ -3,7 +3,6 @@
 #include "gdal-ops.h"
 #include "math-utils.h"
 #include "strtree.h"
-#include <errno.h>
 #include <dirent.h>
 #include <bits/posix2_lim.h>
 #include <gdal/cpl_conv.h>
@@ -528,11 +527,12 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
 
     const int nLayers = GDALGetRasterCount(ds);
 
-    size_t hoursPerDay = countRequestedHours(options);
+    size_t hoursPerDay = options->hoursElements;
     size_t processedDays = 0;
 
-    for (const int *day = options->days; *day != INITVAL
-         && (int) (processedDays * hoursPerDay) < nLayers; day++) {
+    for (int i = 0; i < options->daysElements
+         && (int) (processedDays * hoursPerDay) < nLayers; i++, processedDays++) {
+      int day = options->days[i];
 #ifdef DEBUG
       printf("%ld/%d\n", processedDays * hoursPerDay, nLayers);
 #endif
@@ -554,12 +554,12 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
         continue;
       }
 
-      if (!isValidDate(currentYear, currentMonth, *day)) {
+      if (!isValidDate(currentYear, currentMonth, day)) {
 #ifdef DEBUG
-        printf("Skipping invalid date %.4d-%.2d-%.2d: %s\n", currentYear, currentMonth, *day,
+        printf("Skipping invalid date %.4d-%.2d-%.2d: %s\n", currentYear, currentMonth, day,
                successfulDownloads->string);
 #endif
-        // check if month has enough days to access current *day, if not we're done processing and can continue
+        // check if month has enough days to access current day, if not we're done processing and can continue
         // no logging because this can happen routinely
         // todo cleanup
         continue;
@@ -625,7 +625,7 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
       }
 
       int charsWritten = snprintf(textOutputFilePath, outputFilePathLength, "%s%.4d-%.2d-%.2d.txt",
-                                  options->outputDirectory, currentYear, currentMonth, *day);
+                                  options->outputDirectory, currentYear, currentMonth, day);
 
       if (charsWritten >= outputFilePathLength || charsWritten < 0) {
         fprintf(stderr, "Failed to construct file path for output text file\n");
@@ -644,8 +644,6 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
 
       freeAverageData(average);
       free(textOutputFilePath);
-
-      processedDays++;
     }
 
     CPLFree((void* ) rasterWkt);
@@ -656,22 +654,6 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
   }
 
   return 0;
-}
-
-/// FIXME: check pointer for NULL and return -1 in that case!
-/// TODO: wouldn't be necessary if storage of year, month, day and hour would be done differently.
-size_t countRequestedHours(const option_t *options)
-{
-  size_t count = 0;
-
-  int *hours = (int *) options->hours;
-
-  while (*hours != INITVAL) {
-    count++;
-    hours++;
-  }
-
-  return count;
 }
 
 bool isValidDate(int year, int month, int day)

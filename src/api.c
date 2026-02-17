@@ -118,7 +118,7 @@ json_t *getKeyRecursively(json_t *root, const char *key)
   return NULL;
 }
 
-json_t *jsonArrayFromIntegers(const int *arr, int stopVal, const char *formatString)
+json_t *jsonArrayFromIntegers(const int *arr, size_t elements, const char *formatString)
 {
   json_t *jsonArray = json_array();
   if (jsonArray == NULL) {
@@ -127,8 +127,9 @@ json_t *jsonArrayFromIntegers(const int *arr, int stopVal, const char *formatStr
   }
 
   json_t *elementString;
-  while (*arr != stopVal) {
-    if ((elementString = json_sprintf(formatString, *arr)) == NULL) {
+  
+  for (size_t i = 0; i < elements; i++) {
+    if ((elementString = json_sprintf(formatString, arr[i])) == NULL) {
       fprintf(stderr, "Failed to create JSON string representation of integer\n");
       json_decref(jsonArray);
       return NULL;
@@ -139,15 +140,14 @@ json_t *jsonArrayFromIntegers(const int *arr, int stopVal, const char *formatStr
       json_decref(jsonArray);
       return NULL;
     }
-
-    arr++;
   }
 
   return jsonArray;
 }
 
 char *constructStringRequest(const int *years, const int *months, const int *days, const int *hours,
-                             const OGREnvelope *aoi)
+                             const size_t yearsElements, const size_t monthsElements, const size_t daysElements,
+                             const size_t hoursElements, const OGREnvelope *aoi)
 {
   json_t *yearsArray = NULL;
   json_t *monthsArray = NULL;
@@ -156,22 +156,22 @@ char *constructStringRequest(const int *years, const int *months, const int *day
   json_t *aoiArray = NULL;
   json_t *jsonRequest = NULL;
 
-  if ((yearsArray = jsonArrayFromIntegers(years, INITVAL, "%.4d")) == NULL) {
+  if ((yearsArray = jsonArrayFromIntegers(years, yearsElements, "%.4d")) == NULL) {
     fprintf(stderr, "Failed to create JSON array for requested years\n");
     goto cleanup;
   }
 
-  if ((monthsArray = jsonArrayFromIntegers(months, INITVAL, "%.2d")) == NULL) {
+  if ((monthsArray = jsonArrayFromIntegers(months, monthsElements, "%.2d")) == NULL) {
     fprintf(stderr, "Failed to create JSON array for requested months\n");
     goto cleanup;
   }
 
-  if ((daysArray = jsonArrayFromIntegers(days, INITVAL, "%.2d")) == NULL) {
+  if ((daysArray = jsonArrayFromIntegers(days, daysElements, "%.2d")) == NULL) {
     fprintf(stderr, "Failed to create JSON array for requested days\n");
     goto cleanup;
   }
 
-  if ((hoursArray = jsonArrayFromIntegers(hours, INITVAL, "%.2d:00")) == NULL) {
+  if ((hoursArray = jsonArrayFromIntegers(hours, hoursElements, "%.2d:00")) == NULL) {
     fprintf(stderr, "Failed to create JSON array for requested hours\n");
     goto cleanup;
   }
@@ -227,13 +227,16 @@ cleanup:
 
   stringList *root = NULL;
 
-  for (int *year = (int *) options->years; *year != INITVAL; year++) {
-    for (int *month = (int *) options->months; *month != INITVAL; month++) {
-        char *dateString = constructFormattedPath("%.4d-%.2d.grib", *year, *month);
+  for (int yearIdx = 0; yearIdx < options->yearsElements; yearIdx++) {
+    for (int monthIdx = 0; monthIdx < options->monthsElements; monthIdx++) {
+        int year = options->years[yearIdx];
+        int month = options->months[monthIdx];
+
+        char *dateString = constructFormattedPath("%.4d-%.2d.grib", year, month);
 
         if (dateString == NULL) {
           fprintf(stderr, "Failed to convert date to string format\n");
-          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", *year, *month);
+          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", year, month);
           continue;          
         }
         
@@ -241,19 +244,20 @@ cleanup:
 
         if (outputPath == NULL) {
           fprintf(stderr, "Failed to construct local file path\n");
-          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", *year, *month);
+          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", year, month);
           free(dateString);
           continue;
         }
 
-        int requestYears[2] = {*year, INITVAL};
-        int requestMonths[2] = {*month, INITVAL};
+        int requestYears[1] = {year};
+        int requestMonths[1] = {month};
 
         char *requestId = cdsRequestProduct(handle, requestYears, requestMonths, options->days,
-                                            options->hours, aoi, options);
+                                            options->hours, 1, 1,
+                                            options->daysElements, options->hoursElements, aoi, options);
         if (requestId == NULL) {
           fprintf(stderr, "Failed to request product or extract job id\n");
-          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", *year, *month);
+          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", year, month);
           free(dateString);
           free(outputPath);
           continue;
@@ -264,7 +268,7 @@ cleanup:
 
         if (cdsWaitForProduct(handle, requestId)) {
           fprintf(stderr, "Error while waiting for product\n");
-          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", *year, *month);
+          fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", year, month);
           free(requestId);
           free(dateString);
           free(outputPath);
@@ -275,7 +279,7 @@ cleanup:
 #endif
 
         if (cdsDownloadProduct(handle, requestId, outputPath)) {
-          fprintf(stderr, "Failed to download data %.4d-%.2d. Continuing.\n", *year, *month);
+          fprintf(stderr, "Failed to download data %.4d-%.2d. Continuing.\n", year, month);
           free(requestId);
           free(dateString);
           free(outputPath);
@@ -293,7 +297,7 @@ cleanup:
         stringList *downloadedFile = calloc(1, sizeof(stringList));
         if (downloadedFile == NULL) {
           perror("calloc");
-          fprintf(stderr, "Failed to process data %.4d-%.2d. Deleting file and continuing.\n", *year, *month);
+          fprintf(stderr, "Failed to process data %.4d-%.2d. Deleting file and continuing.\n", year, month);
           free(requestId);
           free(dateString);
           unlink(outputPath);
@@ -360,12 +364,13 @@ char *slurpAndGetString(const char *input, const char *key)
   return ret;
 }
 
-// TODO: passing years, months, days and hours with number of elements instead of this "INITVAL" stuff seems neater from my current perspective
 //       ALSO: If I actually want to do daily requests, year month and day should be scalar values and only hours an array. Then, two 
 //             different implementations may make sense. One for scalar year, month day and one for vector years, months, days. Scalar version can
 //             simply call vector version with n = 1
 char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days,
-                        const int *hours, const OGREnvelope *aoi, const option_t *options)
+                        const int *hours, const size_t yearsElements, const size_t monthsElements,
+                        const size_t daysElements, const size_t hoursElements,
+                        const OGREnvelope *aoi, const option_t *options)
 {
   CURL *requestHandle = curl_easy_duphandle(handle);
   if (requestHandle == NULL) {
@@ -373,7 +378,9 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
     return NULL;
   }
 
-  char *stringRequest = constructStringRequest(years, months, days, hours, aoi);
+  char *stringRequest = constructStringRequest(years, months, days, 
+                                               yearsElements, monthsElements, daysElements, hoursElements,
+                                               aoi);
   if (stringRequest == NULL) {
     fprintf(stderr, "Failed to export JSON to string\n");
     curl_easy_cleanup(requestHandle);

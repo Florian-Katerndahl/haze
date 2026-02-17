@@ -189,14 +189,6 @@ double coordinateFromCell(double origin, double axisOfInterest, double pixelExte
 int processDaily(stringList *successfulDownloads, const option_t *options);
 
 /**
- * @brief Count number of hours user requested data for
- * 
- * @param options Reference to parsed options.
- * @return size_t Number of hours.
- */
-size_t countRequestedHours(const option_t *options);
-
-/**
  * @brief Test if given combination of year, month and day is a valid date.
  * 
  * @details This function tests whether a combination of year, month and date does represent
