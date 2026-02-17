@@ -43,7 +43,7 @@ int initializeHandle(CURL **handle, const struct curl_slist *headerList)
   if (curl_easy_setopt(*handle, CURLOPT_FAILONERROR, 1L) != CURLE_OK) return 1;
   if (curl_easy_setopt(*handle, CURLOPT_SSL_VERIFYHOST, 1L) != CURLE_OK) return 1;
   // default timeout value of cdsapi is 60 seconds
-  if (curl_easy_setopt(*handle, CURLOPT_TIMEOUT, 600) != CURLE_OK) return 1;
+  if (curl_easy_setopt(*handle, CURLOPT_TIMEOUT, 600L) != CURLE_OK) return 1;
   if (curl_easy_setopt(*handle, CURLOPT_USERAGENT, "haze") != CURLE_OK) return 1;
 
   return 0;
@@ -227,8 +227,8 @@ cleanup:
 
   stringList *root = NULL;
 
-  for (int yearIdx = 0; yearIdx < options->yearsElements; yearIdx++) {
-    for (int monthIdx = 0; monthIdx < options->monthsElements; monthIdx++) {
+  for (size_t yearIdx = 0; yearIdx < options->yearsElements; yearIdx++) {
+    for (size_t monthIdx = 0; monthIdx < options->monthsElements; monthIdx++) {
         int year = options->years[yearIdx];
         int month = options->months[monthIdx];
 
@@ -266,7 +266,7 @@ cleanup:
         printf("Posted product request with Id: %s\n", requestId);
 #endif
 
-        if (cdsWaitForProduct(handle, requestId)) {
+        if (cdsWaitForProduct(handle, requestId, maxAttempts)) {
           fprintf(stderr, "Error while waiting for product\n");
           fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", year, month);
           free(requestId);
@@ -378,7 +378,7 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
     return NULL;
   }
 
-  char *stringRequest = constructStringRequest(years, months, days, 
+  char *stringRequest = constructStringRequest(years, months, days, hours,
                                                yearsElements, monthsElements, daysElements, hoursElements,
                                                aoi);
   if (stringRequest == NULL) {
@@ -511,7 +511,7 @@ productStatus cdsGetProductStatus(CURL *handle, const char *requestId)
   return status;
 }
 
-inline int binaryExponentialBackoff(int attempt) {
+int binaryExponentialBackoff(int attempt) {
     if (attempt < 0) return -1;
 
     double backoff = pow(2.0, (double) attempt);
@@ -523,7 +523,7 @@ inline int binaryExponentialBackoff(int attempt) {
 
 int cdsWaitForProduct(CURL *handle, const char *requestId, unsigned int maxAttempts)
 {
-  unsigned int sleepSeconds;
+  int sleepSeconds;
   unsigned int attempt = 1;
   while (attempt <= maxAttempts) {
     switch (cdsGetProductStatus(handle, requestId)) {

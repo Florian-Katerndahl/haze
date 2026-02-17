@@ -252,6 +252,12 @@ int parseSingle(int *arr, size_t *elements, const char *argString)
 
 bool validateArray(int *arr, const size_t elements, const int min, const int max)
 {
+  // well, not actually an error regarding the array,
+  // but I can't compare otherwise further down below
+  if (elements >= LONG_MAX) {
+    return false;
+  }
+
   if (elements == 0) {
     return false;
   }
@@ -263,14 +269,15 @@ bool validateArray(int *arr, const size_t elements, const int min, const int max
     }
   }
 
-  // as array stores numeric information, it can be sorted without loss of semantic information
+  // as array stores numeric information, it can be sorted
+  // without loss of semantic information
   qsort(arr, elements, sizeof(int), intcmp);
 
   // check for uniqueness of values
-  for (ssize_t l = -1, c = 0, r = 1; c < elements; l++, c++, r++) {
-    if ((c == 0 && r < elements && arr[c] == arr[r]) ||
-        (c == elements - 1 && arr[l] == arr[c]) ||
-        (c > 0 && c < elements - 1 && (arr[l] == arr[c] || arr[c] == arr[r]))) {
+  for (ssize_t l = -1, c = 0, r = 1; c < (ssize_t) elements; l++, c++, r++) {
+    if ((c == 0 && r < (ssize_t) elements && arr[c] == arr[r]) ||
+        (c == (ssize_t) elements - 1 && arr[l] == arr[c]) ||
+        (c > 0 && c < (ssize_t) elements - 1 && (arr[l] == arr[c] || arr[c] == arr[r]))) {
           return false;
         }
   }
@@ -393,22 +400,22 @@ void forceNoTrailingSlash(const option_t *options) {
 void printOptions(const option_t *options)
 {
   printf("YEAR: ");
-  for (int i = 0; i < options->yearsElements; i++) {
+  for (size_t i = 0; i < options->yearsElements; i++) {
     printf("%d ", options->years[i]);
   }
 
   printf("\nMONTH: ");
-  for (int i = 0; i < options->monthsElements; i++) {
+  for (size_t i = 0; i < options->monthsElements; i++) {
     printf("%d ", options->months[i]);
   }
 
   printf("\nDAY: ");
-  for (int i = 0; i < options->daysElements; i++) {
+  for (size_t i = 0; i < options->daysElements; i++) {
     printf("%d ", options->days[i]);
   }
 
   printf("\nHOUR: ");
-  for (int i = 0; i < options->hoursElements; i++) {
+  for (size_t i = 0; i < options->hoursElements; i++) {
     printf("%d ", options->hours[i]);
   }
   printf("\n");

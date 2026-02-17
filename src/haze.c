@@ -9,6 +9,7 @@
 #include <gdal/cpl_conv.h>
 #include <geos_c.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -318,7 +319,7 @@ void reorderToBandInterleavedByPixel(struct rawData *data)
   
   if (CRSType == CRS_UNKNOWN) {
     OSRDestroySpatialReference(spatialRef);
-    return NULL
+    return NULL;
   }
 #endif
 
@@ -464,8 +465,8 @@ void reorderToBandInterleavedByPixel(struct rawData *data)
 /// TODO: this should return an error!
 void writeWeightedMeans(mean_t *values, const char *filePath)
 {
-  if (values == NULL | filePath == NULL) {
-    reutrn;
+  if (values == NULL || filePath == NULL) {
+    return;
   }
 
   FILE *outFile = fopen(filePath, "wt");
@@ -531,7 +532,7 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
     size_t hoursPerDay = options->hoursElements;
     size_t processedDays = 0;
 
-    for (int i = 0; i < options->daysElements
+    for (size_t i = 0; i < options->daysElements
          && (int) (processedDays * hoursPerDay) < nLayers; i++, processedDays++) {
       int day = options->days[i];
 #ifdef DEBUG

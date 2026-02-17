@@ -72,7 +72,7 @@
   switch (OGR_L_GetGeomType(layer)) {
     // allowed geometry types
     case wkbPolygon: [[fallthrough]];
-    case wkbMultipolygon: [[fallthrough]];
+    case wkbMultiPolygon: [[fallthrough]];
     case wkbCurvePolygon: [[fallthrough]];
     case wkbMultiSurface: [[fallthrough]];
     case wkbSurface: [[fallthrough]];
@@ -119,7 +119,7 @@
       return NULL;
     }
 
-    if ((transformerAddonOptions = CSLAddStringMayFail(transformerAddonOptions, "WRAPDATELINE=YES")) = NULL) {
+    if ((transformerAddonOptions = CSLAddStringMayFail(transformerAddonOptions, "WRAPDATELINE=YES")) == NULL) {
       fprintf(stderr, "Failed to create CRS transformer options\n");
       OCTDestroyCoordinateTransformation(transformation);
       CPLFree((void *) layerWKT);
@@ -369,9 +369,9 @@ void trackIntersectingGeometries(void *item, void *userdata)
 
   while (areasOfInterest != NULL) {
     userdata_t userdata = {
-      .queryGeometry = GEOSPrepare(areasOfInterest->entry->geometry);
-      .intersectingCells = NULL;
-      .intersectionCount = 0;
+      .queryGeometry = GEOSPrepare(areasOfInterest->entry->geometry),
+      .intersectingCells = NULL,
+      .intersectionCount = 0
     };
 
     if (userdata.queryGeometry == NULL) {
@@ -385,7 +385,7 @@ void trackIntersectingGeometries(void *item, void *userdata)
 
     GEOSPreparedGeom_destroy(userdata.queryGeometry);
 
-    if (node->intersectingCells == NULL) {
+    if (userdata.intersectingCells == NULL) {
       fprintf(stderr, "No intersections found for geometry with FID %lld.\n", areasOfInterest->entry->id);
       areasOfInterest = areasOfInterest->next;
       continue;
@@ -404,7 +404,7 @@ void trackIntersectingGeometries(void *item, void *userdata)
     ///       owner of `areaOfInterest` is responsible to free object!
     node->reference = areasOfInterest->entry->OGRGeometry;
     node->intersectionCount = userdata.intersectionCount;
-    node->intersectingCells = userdate.intersectingCells;
+    node->intersectingCells = userdata.intersectingCells;
 
     if (queryResults == NULL) {
       queryResults = node;
@@ -425,7 +425,7 @@ void trackIntersectingGeometries(void *item, void *userdata)
     return NULL;
   }
 
-  OGREnvelope envelope
+  OGREnvelope envelope;
 
   OGR_G_GetEnvelope(geom, &envelope);
 

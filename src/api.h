@@ -141,11 +141,12 @@ char *constructStringRequest(const int *years, const int *months, const int *day
  * 
  * @note Contrary to the function's name, data is downloaded for an entire month.
  * 
+ * @param handle Reference to allocated and initialized cURL handle
  * @param options Reference to parsed options.
  * @param aoi Reference to a north-up bounding box with EPSG:4326 coordinates to restrict AOI, possibly NULL.
  * @return stringList* Reference to linked list containing file paths of downloaded files.
  */
-[[nodiscard]] stringList *downloadDaily(const option_t *options, const OGREnvelope *aoi);
+[[nodiscard]] stringList *downloadDaily(CURL *handle, const option_t *options, const OGREnvelope *aoi);
 
 /**
  * @brief Construct a JSON object from a JSON string and search for a key in DFS
@@ -200,7 +201,7 @@ productStatus cdsGetProductStatus(CURL *handle, const char *requestId); // Resul
  * @param attempt Attempt for which binary exponential backoff should be computed.
  * @return int Seconds to wait until next attempt, -1 on overflow/underflow or when attempt is negative.
  */
-inline int binaryExponentialBackoff(int attempt);
+int binaryExponentialBackoff(int attempt);
 
 /**
  * @brief Wait for a product request to be downloadable with a binary exponential backoff
