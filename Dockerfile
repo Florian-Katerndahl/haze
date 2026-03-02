@@ -16,7 +16,7 @@ WORKDIR /home/haze
 # remove level of include structure
 RUN sed -i -e "s#gdal/##" src/*.c src/*.h main.c && \
     mkdir build/ && \
-    make -j main && \
+    make -j haze && \
     mv haze /usr/bin/
 
 USER ubuntu
