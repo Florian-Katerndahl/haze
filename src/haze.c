@@ -239,8 +239,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
   }
 
 #if GDAL_VERSION_NUM < 3090000
-  /// TODO: It's called planar geometries!
-  fprintf(stderr, "Calcluating cartesian area regardless of projection\n");
+  fprintf(stderr, "Calcluating planar area regardless of projection\n");
 #endif
 
   while (intersections != NULL) {
