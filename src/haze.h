@@ -143,13 +143,6 @@ int reorderToBandInterleavedByPixel(struct rawData *data);
 int writeWeightedMeans(mean_t *values, const char *filePath);
 
 /**
- * @brief Free list containing centroids of AOI geometries and associated water column value
- *
- * @param list List to free
- */
-void freeWeightedMeans(mean_t *list);
-
-/**
  * @brief Compute corner coordinates of raster cell based on geo transformation
  *
  * @details Computes the x/y coordinate given pixel/line index and a geo transformation.

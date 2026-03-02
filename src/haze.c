@@ -234,7 +234,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
   GEOSWKBWriter *wkbWriter = GEOSWKBWriter_create();
   if (wkbWriter == NULL) {
     fprintf(stderr, "Failed to create WKB writer\n");
-    free(root);
+    freeWeightedMeans(root);
     return NULL;
   }
 
@@ -246,13 +246,19 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     OGRGeometryH centroid = OGR_G_CreateGeometry(wkbPoint);
     if (centroid == NULL) {
       fprintf(stderr, "Failed to create empty centroid\n");
-      continue; // is continue really appropriate here?
+      GEOSWKBWriter_destroy(wkbWriter);
+      OSRDestroySpatialReference(spatialRef);
+      freeWeightedMeans(root);
+      return NULL;
     }
 
     if (OGR_G_Centroid(intersections->reference, centroid) == OGRERR_FAILURE) {
       fprintf(stderr, "Failed to calculate centroid\n");
+      GEOSWKBWriter_destroy(wkbWriter);
+      OSRDestroySpatialReference(spatialRef);
+      freeWeightedMeans(root);
       OGR_G_DestroyGeometry(centroid);
-      continue; // is continue really appropriate here?
+      return NULL;
     }
 
 #if GDAL_VERSION_NUM < 3090000
@@ -264,22 +270,32 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 #endif
     if (referenceArea == -1) {
       fprintf(stderr, "Failed to calculate reference area\n");
+      GEOSWKBWriter_destroy(wkbWriter);
+      OSRDestroySpatialReference(spatialRef);
+      freeWeightedMeans(root);
       OGR_G_DestroyGeometry(centroid);
-      continue; // is continue really appropriate here?
+      return NULL;
     }
 
     double *values = calloc(intersections->intersectionCount, sizeof(double));
     if (values == NULL) {
       perror("calloc");
+      GEOSWKBWriter_destroy(wkbWriter);
+      OSRDestroySpatialReference(spatialRef);
+      freeWeightedMeans(root);
       OGR_G_DestroyGeometry(centroid);
-      continue; // is continue really appropriate here?
+      return NULL;
     }
 
     double *weights = calloc(intersections->intersectionCount, sizeof(double));
     if (weights == NULL) {
       perror("calloc");
+      GEOSWKBWriter_destroy(wkbWriter);
+      OSRDestroySpatialReference(spatialRef);
+      freeWeightedMeans(root);
       OGR_G_DestroyGeometry(centroid);
-      continue; // is continue really appropriate here?
+      free(values);
+      return NULL;
     }
 
     cellGeometryList *temp = intersections->intersectingCells;
@@ -289,29 +305,49 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       values[i] = temp->entry->value; // shit, here I do copy data again...
 
       OGRGeometryH cellAsOGR = OGR_G_CreateGeometry(wkbPolygon);
-      OGR_G_AssignSpatialReference(cellAsOGR,
-                                   spatialRef); // todo: should spat ref be assigned AFTER import?
+      OGR_G_AssignSpatialReference(cellAsOGR, spatialRef);
 
       const unsigned char *geometryAsWkb = GEOSWKBWriter_write(wkbWriter, temp->entry->geometry,
                                            &wkbSize);
       if (geometryAsWkb == NULL) {
         fprintf(stderr, "Failed to export geometry as WKB\n");
-        // todo cleanup
-        continue; // is continue really appropriate here?
+        GEOSWKBWriter_destroy(wkbWriter);
+        OSRDestroySpatialReference(spatialRef);
+        freeWeightedMeans(root);
+        OGR_G_DestroyGeometry(centroid);
+        OGR_G_DestroyGeometry(cellAsOGR);
+        free(values);
+        free(weights);
+        return NULL;
       }
 
       if (OGR_G_ImportFromWkb(cellAsOGR, (void *) geometryAsWkb, (int) wkbSize) != OGRERR_NONE) {
         fprintf(stderr, "Failed to import WKB to OGR: %s\n", CPLGetLastErrorMsg());
-        // todo cleanup
-        continue; // is continue really appropriate here?
+        GEOSWKBWriter_destroy(wkbWriter);
+        OSRDestroySpatialReference(spatialRef);
+        freeWeightedMeans(root);
+        OGR_G_DestroyGeometry(centroid);
+        OGR_G_DestroyGeometry(cellAsOGR);
+        free(values);
+        free(weights);
+        GEOSFree((void *) geometryAsWkb);
+        return NULL;
       }
 
       OGRGeometryH intersection = OGR_G_Intersection(intersections->reference, cellAsOGR);
       if (intersection == NULL) {
         fprintf(stderr, "Failed to create intersection-polygon: %s\n", CPLGetLastErrorMsg());
-        // todo cleanup
-        continue; // is continue really appropriate here?
+        GEOSWKBWriter_destroy(wkbWriter);
+        OSRDestroySpatialReference(spatialRef);
+        freeWeightedMeans(root);
+        OGR_G_DestroyGeometry(centroid);
+        OGR_G_DestroyGeometry(cellAsOGR);
+        free(values);
+        free(weights);
+        GEOSFree((void *) geometryAsWkb);
+        return NULL;
       }
+
       OGR_G_AssignSpatialReference(intersection, spatialRef);
 
 // TODO: since FORCE now relies on GDAL 3.11.3, I can simply scip als this sutff and assume `OGR_G_GeodesicArea` is present
@@ -336,11 +372,12 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     mean_t *meanEntry = calloc(1, sizeof(mean_t));
     if (meanEntry == NULL) {
       perror("calloc");
-      // todo cleanup
+      GEOSWKBWriter_destroy(wkbWriter);
+      OSRDestroySpatialReference(spatialRef);
+      freeWeightedMeans(root);
       free(values);
       free(weights);
-      intersections = intersections->next;
-      continue; // is continue really appropriate here?
+      return NULL;
     }
 
     meanEntry->value = calculateWeightedAverage(values, weights, intersections->intersectionCount);
@@ -393,16 +430,6 @@ int writeWeightedMeans(mean_t *values, const char *filePath)
 
   fclose(outFile);
   return 0;
-}
-
-void freeWeightedMeans(mean_t *list)
-{
-  mean_t *next;
-  while (list != NULL) {
-    next = list->next;
-    free(list);
-    list = next;
-  }
 }
 
 double coordinateFromCell(double origin, double axisOfInterest, double pixelExtent,

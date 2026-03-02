@@ -54,6 +54,16 @@ void freeIntersections(intersection_t *list)
   }
 }
 
+void freeWeightedMeans(mean_t *list)
+{
+  mean_t *next;
+  while (list != NULL) {
+    next = list->next;
+    free(list);
+    list = next;
+  }
+}
+
 void freeOption(option_t *options)
 {
   if (!options)

@@ -150,6 +150,13 @@ void freeCellGeometryList(cellGeometryList *list);
  */
 void freeIntersections(intersection_t *list);
 
+/**
+ * @brief Free list containing centroids of AOI geometries and associated water column value
+ *
+ * @param list List to free
+ */
+void freeWeightedMeans(mean_t *list);
+
 // options
 typedef struct options
 {
