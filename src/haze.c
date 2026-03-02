@@ -22,6 +22,7 @@
 #include <gdal/ogr_srs_api.h>
 #include <gdal/ogr_api.h>
 #include <unistd.h>
+#include <libgen.h>
 
 void freeRawData(struct rawData *data)
 {
@@ -51,7 +52,7 @@ int readRasterDataset(GDALDatasetH raster, struct rawData *dataBuffer)
     return 1;
   }
 
-  dataBuffer->data = calloc(datasetRows * datasetColumns * dataSetBandCount, sizeof(double));
+  dataBuffer->data = calloc(dataBuffer->rows * dataBuffer->columns * dataBuffer->bands, sizeof(double));
   if (dataBuffer->data == NULL) {
     perror("calloc");
     return 1;
@@ -65,7 +66,7 @@ int readRasterDataset(GDALDatasetH raster, struct rawData *dataBuffer)
                      (int) dataBuffer->columns, (int) dataBuffer->rows,
                      (void *) dataBuffer->data, (int) dataBuffer->columns,
                      (int) dataBuffer->rows, dType,
-                     dataBuffer->band, NULL, 0, 0, 0, NULL);
+                     dataBuffer->bands, NULL, 0, 0, 0, NULL);
 
   if (readErr == CE_Failure) {
     fprintf(stderr, "%s\n", CPLGetLastErrorMsg());
@@ -96,7 +97,7 @@ int averageRawData(const struct rawData *data, struct averagedData *average)
         size_t bandOffset = band * data->columns * data->rows;
         sum += data->data[rowOffset + columnOffset + bandOffset];
       }
-      average->data[xOffset + yOffset] = sum / (double) data->bands;
+      average->data[columnOffset + rowOffset] = sum / (double) data->bands;
     }
   }
   return 0;
@@ -442,7 +443,7 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
     struct rawData data = {0};
     if (readRasterDataset(ds, &data)) {
       closeGDALDataset(ds);
-      free(rasterWkt);
+      CPLFree((void* ) rasterWkt);
       freeVectorGeometryList(areasOfInterest);
       return -1;
     }
@@ -451,7 +452,7 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
     if (getRasterMetadata(ds, &transform)) {
       fprintf(stderr, "Failed to get geo transformation from dataset %s\n", successfulDownloads->string);
       closeGDALDataset(ds);
-      free(rasterWkt);
+      CPLFree((void* ) rasterWkt);
       freeVectorGeometryList(areasOfInterest);
       freeRawData(&data);
       return -1;

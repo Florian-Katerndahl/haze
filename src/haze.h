@@ -57,7 +57,7 @@ int readRasterDataset(GDALDatasetH raster, struct rawData *dataBuffer);
  * @param average Averaged data struct to store data in.
  * @return int 0 on success, 1 on error.
  */
-int averageRawData(const struct rawData *data, struct averagedData **average);
+int averageRawData(const struct rawData *data, struct averagedData *average);
 
 /**
  * @brief Compute arithmetic mean pixel values across raster band dimension for a subset of bands
@@ -75,7 +75,7 @@ int averageRawData(const struct rawData *data, struct averagedData **average);
  * @param offset Starting band.
  * @return int 0 on success, 1 on error.
  */
-int averageRawDataWithSizeOffset(const struct rawData *data, struct averagedData **average,
+int averageRawDataWithSizeOffset(const struct rawData *data, struct averagedData *average,
                                  const size_t size, const size_t offset);
 
 /**
@@ -94,7 +94,7 @@ int averageRawDataWithSizeOffset(const struct rawData *data, struct averagedData
  * @param offset Starting band.
  * @return int 0 on success, 1 on error.
  */
-int averagePILRawDataWithSizeOffset(const struct rawData *data, struct averagedData **average,
+int averagePILRawDataWithSizeOffset(const struct rawData *data, struct averagedData *average,
                                     const size_t size, const size_t offset);
 
 /**
