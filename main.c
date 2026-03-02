@@ -33,6 +33,17 @@ int main(int argc, char *argv[])
   /* START OF PROGRAM */
   option_t *opts = parseOptions(argc, argv);
 
+  if (opts == NULL || opts->printHelp) {
+    printHelp();
+
+    freeOption(opts);
+    
+    /* TEARDOWN EXTERNAL LIBRARIES */
+    finishGEOS();
+    curl_global_cleanup();
+    return opts != NULL;
+  }
+
 #ifdef DEBUG
   printOptions(opts);
 #endif
@@ -44,7 +55,7 @@ int main(int argc, char *argv[])
   }
 
   stringList *downloadedFiles = NULL;
-  if ((downloadedFiles = downloadDaily(opts, aoi)) == NULL) {
+  if ((downloadedFiles = downloadDaily(opts, opts, aoi)) == NULL) {
     fprintf(stderr, "Error while downloading files\n");
     exit = EXIT_FAILURE;
     goto teardown;
