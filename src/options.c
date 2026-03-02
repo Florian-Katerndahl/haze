@@ -28,7 +28,7 @@ void printHelp(void)
   printf("\t--month:   Months for which data should be downloaded.\n");
   printf("\t--day:     Days for which data should be downloaded.\n");
   printf("\t--hour:    Hours for which data should be downloaded (zero-based).\n");
-  printf("\t--logfile: Path to logfile storing successful downloads\n")
+  printf("\t--logfile: Path to logfile storing successful downloads\n");
   printf("Mandatory positional arguments:\n");
   printf("\taoi:     File path to OGR-readble file containing one or more polygons for which to extract data. First layer is read.\n");
   printf("\toutdir:  Directory into which output CSVs are written.\n");
