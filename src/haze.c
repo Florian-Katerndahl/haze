@@ -238,10 +238,6 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     return NULL;
   }
 
-#if GDAL_VERSION_NUM < 3090000
-  fprintf(stderr, "Calcluating planar area regardless of projection\n");
-#endif
-
   while (intersections != NULL) {
     OGRGeometryH centroid = OGR_G_CreateGeometry(wkbPoint);
     if (centroid == NULL) {
@@ -261,13 +257,9 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       return NULL;
     }
 
-#if GDAL_VERSION_NUM < 3090000
-    double referenceArea = OGR_G_Area(intersections->reference);
-#else
     double referenceArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(
                              intersections->reference) : OGR_G_Area(
                              intersections->reference);
-#endif
     if (referenceArea == -1) {
       fprintf(stderr, "Failed to calculate reference area\n");
       GEOSWKBWriter_destroy(wkbWriter);
@@ -350,14 +342,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 
       OGR_G_AssignSpatialReference(intersection, spatialRef);
 
-// TODO: since FORCE now relies on GDAL 3.11.3, I can simply scip als this sutff and assume `OGR_G_GeodesicArea` is present
-// NOTE: for documentation or just myself: OGR_G_GeodesicArea is also a method for multipolygons in C++, thus, it can calculate the area of a multipolygon
-#if GDAL_VERSION_NUM < 3090000
-      double intersectingArea = OGR_G_Area(intersection);
-#else
-      double intersectingArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(
-                                  intersection);
-#endif
+      double intersectingArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(intersection);
 
       weights[i] = intersectingArea / referenceArea;
 
