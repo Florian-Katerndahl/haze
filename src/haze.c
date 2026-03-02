@@ -523,8 +523,6 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
 
       cellGeometryList *rasterCellsAsGEOS = NULL;
 
-      // todo: optionally implement function to crop raster beforehand?
-
       GEOSSTRtree *rasterTree = buildSTRTreefromRaster(&average, &transform, &rasterCellsAsGEOS);
 
       // a function to query the tree constructed by buildSTRTreefromRaster which somehow gets me for each polygon in areasOfInterest
