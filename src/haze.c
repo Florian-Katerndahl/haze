@@ -355,7 +355,6 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 #if GDAL_VERSION_NUM < 3090000
       double intersectingArea = OGR_G_Area(intersection);
 #else
-      // TODO: rename 'CRSType' variable to 'geodesic'
       double intersectingArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(
                                   intersection);
 #endif
