@@ -307,9 +307,6 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         continue; // is continue really appropriate here?
       }
 
-      // TODO: add to documentation, that STRTree only computes intersection logically but not intersecting geometries?
-      // TODO: wouldn't it make more sense to check for actual intersection in callback **and** compute the intersection there?
-      // Especially since the docs state this is built upon the GEOS library
       OGRGeometryH intersection = OGR_G_Intersection(intersections->reference, cellAsOGR);
       if (intersection == NULL) {
         fprintf(stderr, "Failed to create intersection-polygon: %s\n", CPLGetLastErrorMsg());
