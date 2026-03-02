@@ -12,15 +12,15 @@ OBJECTS := paths.o fscheck.o aoi.o haze.o types.o gdal-ops.o math-utils.o option
 OBJECT_PATHS := $(foreach obj,$(OBJECTS),build/$(obj))
 
 .PHONY: all
-all: main
+all: haze
 
 $(OBJECT_PATHS): build/%.o: src/%.c
 	$(CC) $(DEFINES) $(CFLAGS) $^ -c -o $@
 
-main: main.c $(OBJECT_PATHS)
-	$(CC) $(DEFINES) $(CFLAGS) $^ $(LINKFLAGS) -o haze
+haze: main.c $(OBJECT_PATHS)
+	$(CC) $(DEFINES) $(CFLAGS) $^ $(LINKFLAGS) -o $@
 
 .PHONY: clean
 clean:
-	rm -f main
+	rm -f haze
 	rm -f build/*
