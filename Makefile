@@ -1,7 +1,7 @@
 CC=gcc
 DEFINES=-D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -DDEBUG
 SANITIZERS+=-fsanitize=address,undefined,leak -fno-omit-frame-pointer -fsanitize-address-use-after-scope -fstack-protector-strong -fstack-clash-protection
-CFLAGS=-Wall -Wextra -pedantic -std=c23 -flto -ggdb -O0 $(SANITIZERS)
+CFLAGS=-Wall -Wextra -pedantic -std=c2x -flto -ggdb -O0 $(SANITIZERS)
 JANSONFLAGS=$(shell pkg-config --cflags --libs jansson)
 CURLFLAGS=$(shell pkg-config --cflags --libs libcurl)
 GDALFLAGS=$(shell pkg-config --cflags --libs gdal)
