@@ -440,6 +440,8 @@ void printOptions(const option_t *options)
   }
   printf("\n");
 
+  printf("Log file: '%s'\n", options->logFile);
+
   printf("Auth token: '%s'\n", options->authenticationToken);
 
   printf("aoi file: %s\n", options->areaOfInterest);
