@@ -102,7 +102,6 @@ int averageRawData(const struct rawData *data, struct averagedData *average)
   return 0;
 }
 
-// FIXME: What was the offset?
 int averageRawDataWithSizeOffset(const struct rawData *data, struct averagedData *average,
                                  const size_t size, const size_t offset)
 {
