@@ -222,14 +222,12 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     return NULL;
   }
 
-#if GDAL_VERSION_NUM >= 3090000
   CRS_TYPE CRSType = getCRSType(rasterWkt);
 
   if (CRSType == CRS_UNKNOWN) {
     OSRDestroySpatialReference(spatialRef);
     return NULL;
   }
-#endif
 
   size_t wkbSize;
   GEOSWKBWriter *wkbWriter = GEOSWKBWriter_create();
