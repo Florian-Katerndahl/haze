@@ -122,7 +122,6 @@ void printHelp(void)
     return NULL;
   }
 
-  // TODO propagate changes through code base that output directory is now guaruanteed to end without slash
   forceNoTrailingSlash(userOptions);
 
   if (getAuthentication(&userOptions->authenticationToken, NULL) == 1) {
