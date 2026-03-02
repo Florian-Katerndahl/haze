@@ -35,14 +35,14 @@ struct rawData
   size_t bands;
   size_t rows;
   size_t columns;
-  double **data;
+  double *data;
 };
 
 struct averagedData
 {
   size_t rows;
   size_t columns;
-  double **data;
+  double *data;
 };
 
 /**

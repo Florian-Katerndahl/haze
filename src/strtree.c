@@ -287,7 +287,7 @@
       }
 
       cell->geometry = geom;
-      cell->value = *data->data[x + y * data->columns];
+      cell->value = data->data[x + y * data->columns];
 
       cellGeometryList *node = calloc(1, sizeof(cellGeometryList));
       if (node == NULL) {

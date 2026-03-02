@@ -23,93 +23,38 @@
 #include <gdal/ogr_api.h>
 #include <unistd.h>
 
-/// TODO: Why allocate this struct at all and not leave it on stack if it only contains references?!
-[[nodiscard]] struct rawData *allocateRawData(void)
-{
-  struct rawData *dataBuffer = calloc(1, sizeof(struct rawData));
-  if (dataBuffer == NULL) {
-    perror("calloc");
-    return NULL;
-  }
-  /// TODO: Why allocate the double pointer?
-  dataBuffer->data = calloc(1, sizeof(double **));
-  if (dataBuffer->data == NULL) {
-    perror("calloc");
-    free(dataBuffer);
-    return NULL;
-  }
-
-  return dataBuffer;
-}
-
 void freeRawData(struct rawData *data)
 {
-  free(*data->data);
   free(data->data);
-  free(data);
-}
-
-/// TODO: Why allocate this struct at all and not leave it on stack if it only contains references?!
-/// TODO: If the "constructors" and "destructors" for this and the raw data are identical, why note use the same struct definition? Difference should only be the number of bands...
-[[nodiscard]] struct averagedData *allocateAverageData(void)
-{
-  struct averagedData *averageBuffer = calloc(1, sizeof(struct averagedData));
-  if (averageBuffer == NULL) {
-    perror("calloc");
-    return NULL;
-  }
-
-  /// TODO: Why allocate the double pointer?
-  averageBuffer->data = calloc(1, sizeof(double **));
-  if (averageBuffer->data == NULL) {
-    perror("calloc");
-    free(averageBuffer);
-    return NULL;
-  }
-
-  return averageBuffer;
 }
 
 void freeAverageData(struct averagedData *data)
 {
-  free(*data->data);
   free(data->data);
-  free(data);
 }
 
-void readRasterDataset(GDALDatasetH raster, struct rawData **dataBuffer)
+int readRasterDataset(GDALDatasetH raster, struct rawData *dataBuffer)
 {
-  *dataBuffer = allocateRawData();
-  if (dataBuffer == NULL) {
-    return;
+  dataBuffer->bands = GDALGetRasterCount(raster);
+  GDALRasterBandH layer = openRasterBand(raster, 1);
+
+  if (layer == NULL) {
+    return 1;
   }
 
-  int dataSetBandCount = GDALGetRasterCount(raster);
-  GDALRasterBandH layer = openRasterBand(raster, 1);
-  if (layer == NULL) {
-    *dataBuffer = NULL;
-    return;
-  }
   GDALDataType dType = GDALGetRasterDataType(layer);
+  dataBuffer->columns = (size_t) GDALGetRasterBandXSize(layer);
+  dataBuffer->rows = (size_t) GDALGetRasterBandYSize(layer);
   size_t byteSize = (size_t) GDALGetDataTypeSizeBytes(dType);
-  size_t datasetColumns = (size_t) GDALGetRasterBandXSize(layer);
-  size_t datasetRows = (size_t) GDALGetRasterBandYSize(layer);
 
   if (dType != GDT_Float64 || byteSize != sizeof(double)) {
-    freeRawData(*dataBuffer);
-    *dataBuffer = NULL;
-    return;
+    return 1;
   }
 
-  (*dataBuffer)->bands = dataSetBandCount;
-  (*dataBuffer)->columns = datasetColumns;
-  (*dataBuffer)->rows = datasetRows;
-
-  *(*dataBuffer)->data = calloc(datasetRows * datasetColumns * dataSetBandCount, sizeof(double));
-  /// FIXME: checking wrong buffer, should check *(*dataBuffer)->data and set *dataBuffer = NULL on error/free it.
-  if (*dataBuffer == NULL) {
+  dataBuffer->data = calloc(datasetRows * datasetColumns * dataSetBandCount, sizeof(double));
+  if (dataBuffer->data == NULL) {
     perror("calloc");
-    return;
+    return 1;
   }
 
   // data seems to be BSQ? Or at least it saved into the buffer one scanline at a time
@@ -117,63 +62,48 @@ void readRasterDataset(GDALDatasetH raster, struct rawData **dataBuffer)
   // Doesn't GDAL hide this from me? When requesting bands, I get a band no matter how the underlying data is interleaved! I.e., data returned is always BSQ
   CPLErr readErr = GDALDatasetRasterIOEx(
                      raster, GF_Read, 0, 0,
-                     (int) datasetColumns, (int) datasetRows,
-                     (void *) * (*dataBuffer)->data, (int) datasetColumns,
-                     (int) datasetRows, dType,
-                     dataSetBandCount, NULL, 0, 0, 0, NULL);
+                     (int) dataBuffer->columns, (int) dataBuffer->rows,
+                     (void *) dataBuffer->data, (int) dataBuffer->columns,
+                     (int) dataBuffer->rows, dType,
+                     dataBuffer->band, NULL, 0, 0, 0, NULL);
 
   if (readErr == CE_Failure) {
     fprintf(stderr, "%s\n", CPLGetLastErrorMsg());
-    free(*dataBuffer);
-    *dataBuffer = NULL;
-    return;
-  }
-
-  return;
-}
-
-/// TODO: why not incoprate the freeing and NULLing of output struct as above?
-// This is so inconsistent! could be void function as well.
-int averageRawData(const struct rawData *data, struct averagedData **average)
-{
-  *average = allocateAverageData();
-  if (*average == NULL) {
+    free(dataBuffer->data);
     return 1;
   }
 
-  (*average)->columns = data->columns;
-  (*average)->rows = data-> rows;
+  return 0;
+}
 
-  *(*average)->data = calloc(data->rows * data->columns, sizeof(double));
-  /// FIXME: wrong NULL check again!
-  if ((*average)->data == NULL) {
+int averageRawData(const struct rawData *data, struct averagedData *average)
+{
+  average->columns = data->columns;
+  average->rows = data-> rows;
+
+  average->data = calloc(data->rows * data->columns, sizeof(double));
+  if (average->data == NULL) {
     perror("calloc");
     return 1;
   }
 
-  double sum;
-  size_t xOffset;
-  size_t yOffset;
-  size_t bandOffset;
-  /// TODO: rename variable below to something more useful that communicates clearly that this is the number of bands
-  double bandAsDouble = (double) data->bands;
-  for (size_t row = 0; row < data->rows; row++) { // y
-    yOffset = row * data->columns;
-    for (size_t column = 0; column < data->columns; column++) { // x
-      xOffset = column;
-      sum = 0.0;
-      for (size_t band = 0; band < data->bands; band++) { // band
-        bandOffset = band * data->columns * data->rows;
-        sum += *(*data->data + yOffset + xOffset + bandOffset);
+  for (size_t row = 0; row < data->rows; row++) {
+    size_t rowOffset = row * data->columns;
+    for (size_t column = 0; column < data->columns; column++) {
+      size_t columnOffset = column;
+      double sum = 0.0;
+      for (size_t band = 0; band < data->bands; band++) {
+        size_t bandOffset = band * data->columns * data->rows;
+        sum += data->data[rowOffset + columnOffset + bandOffset];
       }
-      *(*(*average)->data + xOffset + yOffset) = sum / bandAsDouble;
+      average->data[xOffset + yOffset] = sum / (double) data->bands;
     }
   }
   return 0;
 }
 
 // FIXME: What was the offset?
-int averageRawDataWithSizeOffset(const struct rawData *data, struct averagedData **average,
+int averageRawDataWithSizeOffset(const struct rawData *data, struct averagedData *average,
                                  const size_t size, const size_t offset)
 {
   // now, daily averages can be calculated by setting the size to number of observations per day (see query) and offset to nObservations * `day of interest (0-based)`
@@ -184,41 +114,31 @@ int averageRawDataWithSizeOffset(const struct rawData *data, struct averagedData
     return 1;
   }
 
-  *average = allocateAverageData();
-  if (*average == NULL) {
-    return 1;
-  }
+  average->columns = data->columns;
+  average->rows = data-> rows;
 
-  (*average)->columns = data->columns;
-  (*average)->rows = data-> rows;
-
-  *(*average)->data = calloc(data->rows * data->columns, sizeof(double));
-  if ((*average)->data == NULL) {
+  average->data = calloc(data->rows * data->columns, sizeof(double));
+  if (average->data == NULL) {
     perror("calloc");
     return 1;
   }
 
-  double sum;
-  size_t xOffset;
-  size_t yOffset;
-  size_t bandOffset;
-  double bandAsDouble = (double) data->bands;
-  for (size_t y = 0; y < data->rows; y++) {
-    yOffset = y * data->columns;
-    for (size_t x = 0; x < data->columns; x++) {
-      xOffset = x;
-      sum = 0.0;
-      for (size_t band = startBand; band < boundary; band++) { // band
-        bandOffset = band * data->columns * data->rows;
-        sum += *(*data->data + yOffset + xOffset + bandOffset);
+  for (size_t row = 0; row < data->rows; row++) {
+    size_t rowOffset = row * data->columns;
+    for (size_t column = 0; column < data->columns; column++) {
+      size_t columnOffset = column;
+      double sum = 0.0;
+      for (size_t band = startBand; band < boundary; band++) {
+        size_t bandOffset = band * data->columns * data->rows;
+        sum += data->data[columnOffset + rowOffset + bandOffset];
       }
-      *(*(*average)->data + xOffset + yOffset) = sum / bandAsDouble;
+      average->data[rowOffset + columnOffset] = sum / (double) data->bands;
     }
   }
   return 0;
 }
 
-int averagePILRawDataWithSizeOffset(const struct rawData *data, struct averagedData **average,
+int averagePILRawDataWithSizeOffset(const struct rawData *data, struct averagedData *average,
                                     const size_t size, const size_t offset)
 {
   // now, daily averages can be calculated by setting the size to number of observations per day (see query) and offset to nObservations * `day of interest (0-based)`
@@ -229,41 +149,30 @@ int averagePILRawDataWithSizeOffset(const struct rawData *data, struct averagedD
     return 1;
   }
 
-  *average = allocateAverageData();
-  if (*average == NULL) {
-    return 1;
-  }
+  average->columns = data->columns;
+  average->rows = data-> rows;
 
-  (*average)->columns = data->columns;
-  (*average)->rows = data-> rows;
-
-  *(*average)->data = calloc(data->rows * data->columns, sizeof(double));
-  if ((*average)->data == NULL) {
+  average->data = calloc(data->rows * data->columns, sizeof(double));
+  if (average->data == NULL) {
     perror("calloc");
     return 1;
   }
 
-  double sum;
-  size_t xOffset;
-  size_t yOffset;
-  size_t bandOffset;
-  double bandAsDouble = (double) data->bands;
-  for (size_t y = 0; y < data->rows; y++) {
-    yOffset = y * data->columns * data->bands;
-    for (size_t x = 0; x < data->columns; x++) {
-      xOffset = x * data->bands;
-      sum = 0.0;
-      for (size_t band = startBand; band < boundary; band++) { // band
-        bandOffset = band;
-        sum += *(*data->data + yOffset + xOffset + bandOffset);
+  for (size_t row = 0; row < data->rows; row++) {
+    size_t rowOffset = row * data->columns * data->bands;
+    for (size_t column = 0; column < data->columns; column++) {
+      size_t columnOffset = column * data->bands;
+      double sum = 0.0;
+      for (size_t band = startBand; band < boundary; band++) {
+        sum += data->data[rowOffset + columnOffset + band];
       }
-      *(*(*average)->data + x + y * data->columns) = sum / bandAsDouble;
+      average->data[column + row * data->columns] = sum / (double) data->bands;
     }
   }
   return 0;
 }
 
-void reorderToBandInterleavedByPixel(struct rawData *data)
+int reorderToBandInterleavedByPixel(struct rawData *data)
 {
   // hmm, actually unsure if this is beneficial; page faults are not lower with two passes; probably needs testing with longer inputs to fully conclude if this is worth it
   // it becomes apparent however, that IO is THE bottleneck as execution differs only slightly with re-ordered data being 2 seconds faster (probably hot cache paths..)
@@ -272,7 +181,7 @@ void reorderToBandInterleavedByPixel(struct rawData *data)
   double *temporaryArray = calloc(data->columns * data->rows * data->bands, sizeof(double));
   if (temporaryArray == NULL) {
     perror("calloc");
-    return;
+    return 1;
   }
 
   size_t originXOffset;
@@ -290,17 +199,16 @@ void reorderToBandInterleavedByPixel(struct rawData *data)
       for (size_t band = 0; band < data->bands; band++) {
         originBandOffset = band * data->columns * data->rows;
         targetBandOffset = band;
-        *(temporaryArray + targetBandOffset + targetXOffset + targetYOffset) = *
-          (*data->data + originYOffset + originXOffset + originBandOffset);
+        temporaryArray[targetBandOffset + targetXOffset + targetYOffset] = data->data[originYOffset + originXOffset + originBandOffset];
       }
     }
   }
 
-  double *temp = *data->data;
-  *data->data = temporaryArray;
+  double *temp = data->data;
+  data->data = temporaryArray;
   free(temp);
 
-  return;
+  return 0;
 }
 
 [[nodiscard]] mean_t *calculateAreaWeightedMean(intersection_t *intersections,
@@ -464,30 +372,32 @@ void reorderToBandInterleavedByPixel(struct rawData *data)
   return root;
 }
 
-/// TODO: this should return an error!
-void writeWeightedMeans(mean_t *values, const char *filePath)
+int writeWeightedMeans(mean_t *values, const char *filePath)
 {
   if (values == NULL || filePath == NULL) {
-    return;
+    return 1;
   }
 
   FILE *outFile = fopen(filePath, "wt");
   if (outFile == NULL) {
     perror("fopen");
-    return;
+    return 1;
   }
 
   while (values != NULL) {
-    fprintf(
-      outFile,
-      "%.4lf %.4lf %f ERA\n",
-      values->x, values->y, (float) kgsqmTocow(values->value));
+    // unfeasable to compute number of characters beforehand, but we can check for errors
+    if (fprintf(outFile, "%.4lf %.4lf %f ERA\n",values->x, values->y, (float) kgsqmTocow(values->value)) < 0) {
+      fprintf(stderr, "Failed to write weighted meann\n");
+      fclose(outFile);
+      unlink(filePath);
+      return 1;
+    }    
 
     values = values->next;
   }
 
   fclose(outFile);
-  return;
+  return 0;
 }
 
 void freeWeightedMeans(mean_t *list)
@@ -523,13 +433,27 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
     vectorGeometryList *areasOfInterest = buildGEOSGeometriesFromFile(options->areaOfInterest, NULL,
                                           rasterWkt);
 
-    struct rawData *data = NULL;
-    readRasterDataset(ds, &data);
+    struct rawData data = {0};
+    if (readRasterDataset(ds, &data)) {
+      closeGDALDataset(ds);
+      free(rasterWkt);
+      freeVectorGeometryList(areasOfInterest);
+      return -1;
+    }
+
     struct geoTransform transform = {0};
-    getRasterMetadata(ds, &transform);
-    closeGDALDataset(ds);
+    if (getRasterMetadata(ds, &transform)) {
+      fprintf(stderr, "Failed to get geo transformation from dataset %s\n", successfulDownloads->string);
+      closeGDALDataset(ds);
+      free(rasterWkt);
+      freeVectorGeometryList(areasOfInterest);
+      freeRawData(&data);
+      return -1;
+    }
 
     const int nLayers = GDALGetRasterCount(ds);
+
+    closeGDALDataset(ds);
 
     size_t hoursPerDay = options->hoursElements;
     size_t processedDays = 0;
@@ -544,17 +468,14 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
       int currentYear;
       int currentMonth;
 
-      // TODO: use basename function from stdlib
-      const char *inputFileName = strrchr(successfulDownloads->string, '/');
+      const char *inputFileName = basename(successfulDownloads->string);
       if (inputFileName == NULL) {
         fprintf(stderr, "Malformed file path. Could not get final path delimiter\n");
-        // todo cleanup
         continue;
       }
 
-      if (sscanf(inputFileName, "/%d-%d.grib", &currentYear, &currentMonth) != 2) {
+      if (sscanf(inputFileName, "%d-%d.grib", &currentYear, &currentMonth) != 2) {
         fprintf(stderr, "Failed to extract year and month from file name\n");
-        // todo cleanup
         continue;
       }
 
@@ -563,28 +484,27 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
         printf("Skipping invalid date %.4d-%.2d-%.2d: %s\n", currentYear, currentMonth, day,
                successfulDownloads->string);
 #endif
-        // check if month has enough days to access current day, if not we're done processing and can continue
-        // no logging because this can happen routinely
-        // todo cleanup
         continue;
       }
 
-      struct averagedData *average = NULL;
+      struct averagedData average = {0};
 
-      // reorderToBandInterleavedByPixel(data);
-      // averagePILRawDataWithSizeOffset(data, &average, hoursPerDay, processedDays * hoursPerDay);
 #ifdef DEBUG
       printf("Averaging bands %ld to %ld\n", processedDays * hoursPerDay,
              processedDays * hoursPerDay + hoursPerDay);
 #endif
 
-      averageRawDataWithSizeOffset(data, &average, hoursPerDay, processedDays * hoursPerDay);
+      if (averageRawDataWithSizeOffset(&data, &average, hoursPerDay, processedDays * hoursPerDay)) {
+        fprintf(stderr, "Failed to compute averages\n");
+        freeAverageData(&average);
+        continue;
+      }
 
-      cellGeometryList *rasterCellsAsGEOS = NULL; // todo: document that this should be freed!
+      cellGeometryList *rasterCellsAsGEOS = NULL;
 
       // todo: optionally implement function to crop raster beforehand?
 
-      GEOSSTRtree *rasterTree = buildSTRTreefromRaster(average, &transform, &rasterCellsAsGEOS);
+      GEOSSTRtree *rasterTree = buildSTRTreefromRaster(&average, &transform, &rasterCellsAsGEOS);
 
       // a function to query the tree constructed by buildSTRTreefromRaster which somehow gets me for each polygon in areasOfInterest
       // the intersecting polygons of the tree so I can calculate the area-weighted average
@@ -592,7 +512,7 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
       if (intersections == NULL) {
         fprintf(stderr, "No intersections found\n"); // this is not treated as an error
         // not pretty, but: areasOfInterest, data and rasterWKT are not freed here but after for-loop
-        freeAverageData(average);
+        freeAverageData(&average);
         freeCellGeometryList(rasterCellsAsGEOS);
         GEOSSTRtree_destroy(rasterTree);
         break; // break out of foor loop and continue with next raster dataset
@@ -609,8 +529,8 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
       if (weightedMeans == NULL) {
         fprintf(stderr, "Failed to calculate weighted means\n");
         freeVectorGeometryList(areasOfInterest);
-        freeRawData(data);
-        freeAverageData(average);
+        freeRawData(&data);
+        freeAverageData(&average);
         freeCellGeometryList(rasterCellsAsGEOS);
         GEOSSTRtree_destroy(rasterTree);
         freeIntersections(intersections);
@@ -624,8 +544,8 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
       if (textOutputFilePath == NULL) {
         fprintf(stderr, "Failed to construct file path for output text file\n");
         freeVectorGeometryList(areasOfInterest);
-        freeRawData(data);
-        freeAverageData(average);
+        freeRawData(&data);
+        freeAverageData(&average);
         freeCellGeometryList(rasterCellsAsGEOS);
         GEOSSTRtree_destroy(rasterTree);
         freeIntersections(intersections);
@@ -642,13 +562,13 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
 
       GEOSSTRtree_destroy(rasterTree);
 
-      freeAverageData(average);
+      freeAverageData(&average);
       free(textOutputFilePath);
     }
 
     CPLFree((void* ) rasterWkt);
     freeVectorGeometryList(areasOfInterest);
-    freeRawData(data);
+    freeRawData(&data);
 
     successfulDownloads = successfulDownloads->next;
   }

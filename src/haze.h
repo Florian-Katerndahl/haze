@@ -19,32 +19,14 @@
 #include <gdal/gdal.h>
 
 /**
- * @brief Allocate a raw data object and encapsulated fields on the heap
- *
- * @note After the function returns, the caller owns the returned object and musst free it after use.
- *
- * @return struct rawData* Raw data object, NULL on error.
- */
-[[nodiscard]] struct rawData *allocateRawData(void);
-
-/**
- * @brief Free a raw data object and encapsulated fields
+ * @brief Free encapsulated fields of raw data struct
  *
  * @param data Object to free.
  */
 void freeRawData(struct rawData *data);
 
 /**
- * @brief Allocate an averaged data object and encapsulated fields on the heap
- *
- * @note After the function returns, the caller owns the returned object and musst free it after use.
- *
- * @return struct averagedData* Averaged data object, NULL on error.
- */
-[[nodiscard]] struct averagedData *allocateAverageData(void);
-
-/**
- * @brief Free an averaged data object and encapsulated fields
+ * @brief Free encapsulated fields of averaged data struct
  *
  * @param data Object to free.
  */
@@ -55,12 +37,14 @@ void freeAverageData(struct averagedData *data);
  *
  * @note This function returns an error if inputs are not of type double/GDT_FLOAT64.
  *
- * @note After the function returns, the caller owns the dataBuffer object and musst free it after use.
+ * @note After the function returns, the dataBuffer object contains a heap-allocated buffer
+ *       and the caller musst free it after use.
  *
  * @param raster Opened raster dataset.
- * @param dataBuffer Indirect reference to raw data buffer, *dataBuffer is NULL on error.
+ * @param dataBuffer Reference to raw data buffer.
+ * @return 0 on success, 1 on error.
  */
-void readRasterDataset(GDALDatasetH raster, struct rawData **dataBuffer);
+int readRasterDataset(GDALDatasetH raster, struct rawData *dataBuffer);
 
 /**
  * @brief Compute arithmetic mean pixel values across raster band dimension for all bands
@@ -117,8 +101,9 @@ int averagePILRawDataWithSizeOffset(const struct rawData *data, struct averagedD
  * @brief Transpose data tensor from band sequential to band interleaved by pixel
  *
  * @param data Reference to structure holding data.
+ * @return int 0 on success, 1 on error.
  */
-void reorderToBandInterleavedByPixel(struct rawData *data);
+int reorderToBandInterleavedByPixel(struct rawData *data);
 
 /**
  * @brief Compute area weighted mean for features of AOI dataset
@@ -153,8 +138,9 @@ void reorderToBandInterleavedByPixel(struct rawData *data);
  *
  * @param values List containing centroids of AOI geometries and associated water column value.
  * @param filePath Path to output file.
+ * @return in 0 on success, 1 on error.
  */
-void writeWeightedMeans(mean_t *values, const char *filePath);
+int writeWeightedMeans(mean_t *values, const char *filePath);
 
 /**
  * @brief Free list containing centroids of AOI geometries and associated water column value
