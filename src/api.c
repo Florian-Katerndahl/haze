@@ -236,6 +236,13 @@ cleanup:
 
   stringList *root = NULL;
 
+  FILE *logFile = fopen(options->logFile, "a");
+
+  if (logFile == NULL) {
+    fprintf(stderr, "Failed to open logfile\n");
+    return NULL;
+  }
+
   for (size_t yearIdx = 0; yearIdx < options->yearsElements; yearIdx++) {
     for (size_t monthIdx = 0; monthIdx < options->monthsElements; monthIdx++) {
       int year = options->years[yearIdx];
@@ -290,6 +297,14 @@ cleanup:
 #ifdef DEBUG
       printf("Deleted product request with Id: %s\n", requestId);
 #endif
+
+      if (fprintf(logFile, "%s\tDOWNLOADED", outputPath) < 0) {
+        fprintf(stderr, "Failed to add downloaded file to log file. Deleting file and continuing.\n");
+        free(requestId);
+        unlink(outputPath);
+        free(outputPath);
+        continue;
+      }
 
       stringList *downloadedFile = calloc(1, sizeof(stringList));
       if (downloadedFile == NULL) {

@@ -15,6 +15,7 @@
 #include <stddef.h>
 #include <errno.h>
 #include <limits.h>
+#include <libgen.h>
 
 void printHelp(void)
 {
@@ -23,10 +24,11 @@ void printHelp(void)
   printf("Optional arguments:\n");
   printf("\t-h|--help: Print help and exit.\n");
   printf("Mandatory keyword arguments (either as start:stop or comma seperated list. In the first case, endpoints are inclusive.):\n");
-  printf("\t--year:  Years for which data should be downloaded.\n");
-  printf("\t--month: Months for which data should be downloaded.\n");
-  printf("\t--day:   Days for which data should be downloaded.\n");
-  printf("\t--hour:  Hours for which data should be downloaded (zero-based).\n");
+  printf("\t--year:    Years for which data should be downloaded.\n");
+  printf("\t--month:   Months for which data should be downloaded.\n");
+  printf("\t--day:     Days for which data should be downloaded.\n");
+  printf("\t--hour:    Hours for which data should be downloaded (zero-based).\n");
+  printf("\t--logfile: Path to logfile storing successful downloads\n")
   printf("Mandatory positional arguments:\n");
   printf("\taoi:     File path to OGR-readble file containing one or more polygons for which to extract data. First layer is read.\n");
   printf("\toutdir:  Directory into which output CSVs are written.\n");
@@ -48,10 +50,11 @@ void printHelp(void)
 
   static struct option long_options[] = {
     {"help", no_argument, NULL, 'h'},
-    {"year", required_argument, 0, 'y'},
-    {"month", required_argument, 0, 'm'},
-    {"day", required_argument, 0, 'd'},
-    {"hour", required_argument, 0, 't'},
+    {"year", required_argument, NULL, 'y'},
+    {"month", required_argument, NULL, 'm'},
+    {"day", required_argument, NULL, 'd'},
+    {"hour", required_argument, NULL, 't'},
+    {"logfile", required_argument, NULL, 'l'},
     {0, 0, 0, 0}
   };
 
@@ -90,6 +93,9 @@ void printHelp(void)
           return NULL;
         }
         break;
+      case 'l':
+        userOptions->logFile = optarg;
+        break;
       case '?':
         [[fallthrough]];
       default:
@@ -118,6 +124,12 @@ void printHelp(void)
 
   if (!(fileExists(userOptions->outputDirectory) && fileWritable(userOptions->outputDirectory))) {
     fprintf(stderr, "Output directory not writable\n\n");
+    freeOption(userOptions);
+    return NULL;
+  }
+
+  if ((!(fileExists(userOptions->logFile) && fileWritable(userOptions->logFile))) || !fileWritable(dirname(userOptions->logFile))) {
+    fprintf(stderr, "Logile is not writable\n\n");
     freeOption(userOptions);
     return NULL;
   }
