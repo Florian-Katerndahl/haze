@@ -47,6 +47,10 @@ void printHelp(void)
   userOptions->monthsElements = 0;
   userOptions->daysElements = 0;
   userOptions->hoursElements = 0;
+  userOptions->logFile = NULL;
+  userOptions->areaOfInterest = NULL;
+  userOptions->outputDirectory = NULL;
+  userOptions->authenticationToken = NULL;
 
   static struct option long_options[] = {
     {"help", no_argument, NULL, 'h'},
