@@ -336,11 +336,11 @@ void trackIntersectingGeometries(void *item, void *userdata)
   struct cellGeometry *geom = (struct cellGeometry *) item;
 
   switch (GEOSPreparedIntersects(ud->queryGeometry, geom->geometry)) {
-    case '0':
+    case 0:
       return; // actual geometries do not intersect, nothing to do
-    case '1':
+    case 1:
       break; // actual geometries do intersect
-    case '2':
+    case 2:
       fprintf(stderr, "Failed to test for intersection of geometries.\n");
       return;
     default:
@@ -413,6 +413,7 @@ void trackIntersectingGeometries(void *item, void *userdata)
     node->reference = areasOfInterest->entry->OGRGeometry;
     node->intersectionCount = userdata.intersectionCount;
     node->intersectingCells = userdata.intersectingCells;
+    node->next = NULL;
 
     if (queryResults == NULL) {
       queryResults = node;

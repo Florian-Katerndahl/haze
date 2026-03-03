@@ -48,6 +48,13 @@ int main(int argc, char *argv[])
   printOptions(opts);
 #endif
 
+  CURL *handle = curl_easy_init();
+
+  if (handle == NULL) {
+    fprintf(stderr, "Failed to setup cURL\n");
+    goto teardown;
+  }
+
   const OGREnvelope *aoi = boxFromPath(opts->areaOfInterest, NULL);
   if (aoi == NULL) {
     exit = EXIT_FAILURE;
@@ -55,7 +62,7 @@ int main(int argc, char *argv[])
   }
 
   stringList *downloadedFiles = NULL;
-  if ((downloadedFiles = downloadDaily(opts, opts, aoi)) == NULL) {
+  if ((downloadedFiles = downloadDaily(handle, opts, aoi)) == NULL) {
     fprintf(stderr, "Error while downloading files\n");
     exit = EXIT_FAILURE;
     goto teardown;
@@ -74,7 +81,9 @@ teardown:
   freeStringList(downloadedFiles);
 
   /* TEARDOWN EXTERNAL LIBRARIES */
+  GDALDestroy();
   finishGEOS();
+  curl_easy_cleanup(handle);
   curl_global_cleanup();
 
   return exit;

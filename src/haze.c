@@ -22,7 +22,6 @@
 #include <gdal/ogr_srs_api.h>
 #include <gdal/ogr_api.h>
 #include <unistd.h>
-#include <libgen.h>
 
 void freeRawData(struct rawData *data)
 {
@@ -108,9 +107,9 @@ int averageRawDataWithSizeOffset(const struct rawData *data, struct averagedData
 {
   // now, daily averages can be calculated by setting the size to number of observations per day (see query) and offset to nObservations * `day of interest (0-based)`
   size_t startBand = offset;
-  size_t boundary = size == 0 && startBand == 0 ? data->bands : size + offset;
+  size_t boundary = size == 0 && startBand == 0 ? data->bands : size + startBand;
 
-  if (startBand >= data->bands || boundary >= data->bands) {
+  if (startBand >= data->bands || boundary > data->bands) {
     return 1;
   }
 
@@ -143,9 +142,9 @@ int averagePILRawDataWithSizeOffset(const struct rawData *data, struct averagedD
 {
   // now, daily averages can be calculated by setting the size to number of observations per day (see query) and offset to nObservations * `day of interest (0-based)`
   size_t startBand = offset;
-  size_t boundary = size == 0 && startBand == 0 ? data->bands : size + offset;
+  size_t boundary = size == 0 && startBand == 0 ? data->bands : size + startBand;
 
-  if (startBand >= data->bands || boundary >= data->bands) {
+  if (startBand >= data->bands || boundary > data->bands) {
     return 1;
   }
 
@@ -473,11 +472,13 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
       int currentYear;
       int currentMonth;
 
-      const char *inputFileName = basename(successfulDownloads->string);
+      const char *inputFileName = strrchr(successfulDownloads->string, '/');
       if (inputFileName == NULL) {
         fprintf(stderr, "Malformed file path. Could not get final path delimiter\n");
         continue;
       }
+
+      inputFileName++;
 
       if (sscanf(inputFileName, "%d-%d.grib", &currentYear, &currentMonth) != 2) {
         fprintf(stderr, "Failed to extract year and month from file name\n");

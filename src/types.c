@@ -43,11 +43,18 @@ void freeCellGeometryList(cellGeometryList *list)
 void freeIntersections(intersection_t *list)
 {
   intersection_t *currentNode;
+  cellGeometryList *cellNode;
 
   while (list != NULL) {
     // NOTE: The elements within the nodes are owned by
     // the list created when constructing the tree!
-    freeCellGeometryList(list->intersectingCells);
+    // Thus, I need to free the nodes but not their content!
+    cellNode = list->intersectingCells;
+    while (cellNode != NULL) {
+      cellGeometryList *nextCellNode = cellNode->next;
+      free(cellNode);
+      cellNode = nextCellNode;
+    }
     currentNode = list;
     list = list->next;
     free(currentNode);

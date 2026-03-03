@@ -195,9 +195,10 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
  *
  * @param handle Reference to existing cURL handle used for request after duplication.
  * @param requestId Request ID to query.
+ * @param options Reference to parsed options.
  * @return productStatus Product status.
  */
-productStatus cdsGetProductStatus(CURL *handle, const char *requestId); // Result.update
+productStatus cdsGetProductStatus(CURL *handle, const char *requestId, const option_t *options); // Result.update
 
 /**
  * @brief Compute binary exponential backoff
@@ -215,12 +216,13 @@ int binaryExponentialBackoff(int attempt);
  *
  * @param handle Reference to existing cURL handle used for request after duplication.
  * @param requestId Request ID to wait on.
+ * @param options Reference to parsed options.
  * @param maxAttempts Maximum number of connections attempts to perform. This should be a rather
  *                    high value as binary exponential backoff is used to increase time between
  *                    connection requests.
  * @return int 0 on success, 1 on error.
  */
-int cdsWaitForProduct(CURL *handle, const char *requestId, unsigned int maxAttempts);
+int cdsWaitForProduct(CURL *handle, const char *requestId, const option_t *options, unsigned int maxAttempts);
 
 /**
  * @brief Download data related to previously made request to local file
@@ -230,18 +232,20 @@ int cdsWaitForProduct(CURL *handle, const char *requestId, unsigned int maxAttem
  * @param handle Reference to existing cURL handle used for request after duplication.
  * @param requestId Request ID to download.
  * @param outputPath File path to download file to.
+ * @param options Reference to parsed options.
  * @return int 0 on success, 1 on failure.
  */
 int cdsDownloadProduct(CURL *handle, const char *requestId,
-                       const char *outputPath); // same URL as product status but with /results appended which then returns the actual download URL
+                       const char *outputPath, const option_t *options); // same URL as product status but with /results appended which then returns the actual download URL
 
 /**
  * @brief Delete a prodcut request from personal CDS space
  *
  * @param handle Reference to existing cURL handle used for request after duplication.
  * @param requestId Request ID to delete.
+ * @param options Reference to parsed options.
  * @return int 0 on success, 1 on failure.
  */
-int cdsDeleteProductRequest(CURL *handle, const char *requestId); // Result.delete
+int cdsDeleteProductRequest(CURL *handle, const char *requestId, const option_t *options); // Result.delete
 
 #endif // API_H

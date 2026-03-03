@@ -15,7 +15,6 @@
 #include <stddef.h>
 #include <errno.h>
 #include <limits.h>
-#include <libgen.h>
 
 void printHelp(void)
 {
@@ -128,11 +127,21 @@ void printHelp(void)
     return NULL;
   }
 
-  if ((!(fileExists(userOptions->logFile) && fileWritable(userOptions->logFile))) || !fileWritable(dirname(userOptions->logFile))) {
-    fprintf(stderr, "Logile is not writable\n\n");
+  char *dupedLogFile = strdup(userOptions->logFile);
+  if (dupedLogFile == NULL) {
+    fprintf(stderr, "Failed to duplicate log file path\n");
     freeOption(userOptions);
     return NULL;
   }
+
+  if ((!(fileExists(userOptions->logFile) && fileWritable(userOptions->logFile))) && !fileWritable(dirname(dupedLogFile))) {
+    fprintf(stderr, "Logile is not writable\n\n");
+    free(dupedLogFile);
+    freeOption(userOptions);
+    return NULL;
+  }
+
+  free(dupedLogFile);
 
   forceNoTrailingSlash(userOptions);
 
@@ -314,9 +323,13 @@ int getAuthentication(char **authenticationToken, const char *filePath)
 
 int getAuthenticationFromEnvironment(char **authenticationToken)
 {
-  *authenticationToken = strdup(getenv("ADSAUTH"));
+  char *environmentToken = getenv("ADSAUTH");
 
-  return (*authenticationToken != NULL) ? 0 : 1;;
+  if (environmentToken == NULL) return 1;
+
+  *authenticationToken = strdup(environmentToken);
+
+  return 0;
 }
 
 int getAuthenticationFromFile(char **authenticationToken, const char *filePath)
@@ -410,8 +423,8 @@ void forceNoTrailingSlash(const option_t *options)
 {
   size_t ouputDirectoryLength = strlen(options->outputDirectory);
 
-  if (options->outputDirectory[ouputDirectoryLength] == '/') {
-    options->outputDirectory[ouputDirectoryLength] = '\0';
+  if (options->outputDirectory[ouputDirectoryLength - 1] == '/') {
+    options->outputDirectory[ouputDirectoryLength - 1] = '\0';
   }
 
   return;

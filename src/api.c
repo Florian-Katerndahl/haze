@@ -272,7 +272,7 @@ cleanup:
       printf("Posted product request with Id: %s\n", requestId);
 #endif
 
-      if (cdsWaitForProduct(handle, requestId, maxAttempts)) {
+      if (cdsWaitForProduct(handle, requestId, options, maxAttempts)) {
         fprintf(stderr, "Error while waiting for product\n");
         fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", year, month);
         free(requestId);
@@ -283,7 +283,7 @@ cleanup:
       printf("Waited for product request with Id: %s\n", requestId);
 #endif
 
-      if (cdsDownloadProduct(handle, requestId, outputPath)) {
+      if (cdsDownloadProduct(handle, requestId, outputPath, options)) {
         fprintf(stderr, "Failed to download data %.4d-%.2d. Continuing.\n", year, month);
         free(requestId);
         free(outputPath);
@@ -293,12 +293,12 @@ cleanup:
       printf("Downloaded file for product request %s\n", requestId);
 #endif
 
-      cdsDeleteProductRequest(handle, requestId);
+      cdsDeleteProductRequest(handle, requestId, options);
 #ifdef DEBUG
       printf("Deleted product request with Id: %s\n", requestId);
 #endif
 
-      if (fprintf(logFile, "%s\tDOWNLOADED", outputPath) < 0) {
+      if (fprintf(logFile, "%s\tDOWNLOADED\n", outputPath) < 0) {
         fprintf(stderr, "Failed to add downloaded file to log file. Deleting file and continuing.\n");
         free(requestId);
         unlink(outputPath);
@@ -328,6 +328,8 @@ cleanup:
       free(requestId);
     }
   }
+
+  fclose(logFile);
 
   return root;
 }
@@ -460,7 +462,7 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
   return jobId;
 }
 
-productStatus cdsGetProductStatus(CURL *handle, const char *requestId)
+productStatus cdsGetProductStatus(CURL *handle, const char *requestId, const option_t *options)
 {
   CURL *statusHandle = curl_easy_duphandle(handle);
   if (statusHandle == NULL) {
@@ -481,6 +483,23 @@ productStatus cdsGetProductStatus(CURL *handle, const char *requestId)
   curl_easy_setopt(statusHandle, CURLOPT_WRITEFUNCTION, writeString);
   curl_easy_setopt(statusHandle, CURLOPT_WRITEDATA, (void *) &response);
 
+  struct curl_slist *requestHeader = customHeader(NULL, options);
+  if (requestHeader == NULL) {
+    fprintf(stderr, "Failed to create custom HTTP header for product status retrieval\n");
+    free(url);
+    curl_easy_cleanup(statusHandle);
+    return ERROR;
+  }
+
+  if ((requestHeader = curl_slist_append(requestHeader, "Content-Type: application/json")) == NULL) {
+    free(url);
+    curl_slist_free_all(requestHeader);
+    curl_easy_cleanup(statusHandle);
+    return ERROR;
+  }
+
+  curl_easy_setopt(statusHandle, CURLOPT_HTTPHEADER, requestHeader);
+
   CURLcode statusResponse = curl_easy_perform(statusHandle);
   if (statusResponse != CURLE_OK) {
     long httpResponse = 0;
@@ -490,6 +509,7 @@ productStatus cdsGetProductStatus(CURL *handle, const char *requestId)
             httpResponse);
     free(response.string);
     free(url);
+    curl_slist_free_all(requestHeader);
     curl_easy_cleanup(statusHandle);
     return ERROR;
   }
@@ -498,6 +518,7 @@ productStatus cdsGetProductStatus(CURL *handle, const char *requestId)
   if (statusWord == NULL) {
     free(response.string);
     free(url);
+    curl_slist_free_all(requestHeader);
     curl_easy_cleanup(statusHandle);
     return ERROR;
   }
@@ -517,6 +538,7 @@ productStatus cdsGetProductStatus(CURL *handle, const char *requestId)
   free(statusWord);
   free(response.string);
   free(url);
+  curl_slist_free_all(requestHeader);
   curl_easy_cleanup(statusHandle);
 
   return status;
@@ -535,12 +557,12 @@ int binaryExponentialBackoff(int attempt)
   return (int) backoff;
 }
 
-int cdsWaitForProduct(CURL *handle, const char *requestId, unsigned int maxAttempts)
+int cdsWaitForProduct(CURL *handle, const char *requestId, const option_t *options, unsigned int maxAttempts)
 {
   int sleepSeconds;
   unsigned int attempt = 1;
   while (attempt <= maxAttempts) {
-    switch (cdsGetProductStatus(handle, requestId)) {
+    switch (cdsGetProductStatus(handle, requestId, options)) {
       case SUCCESSFUL:
         return 0;
       case ACCEPTED:
@@ -564,7 +586,7 @@ int cdsWaitForProduct(CURL *handle, const char *requestId, unsigned int maxAttem
   return 1;
 }
 
-int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPath)
+int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPath, const option_t *options)
 {
   CURL *downloadHandle = curl_easy_duphandle(handle);
   if (downloadHandle == NULL) {
@@ -585,6 +607,23 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
   curl_easy_setopt(downloadHandle, CURLOPT_WRITEDATA, (void *) &response);
   curl_easy_setopt(downloadHandle, CURLOPT_WRITEFUNCTION, writeString);
 
+  struct curl_slist *requestHeader = customHeader(NULL, options);
+  if (requestHeader == NULL) {
+    fprintf(stderr, "Failed to create custom HTTP header for product download\n");
+    free(url);
+    curl_easy_cleanup(downloadHandle);
+    return 1;
+  }
+
+  if ((requestHeader = curl_slist_append(requestHeader, "Content-Type: application/json")) == NULL) {
+    free(url);
+    curl_slist_free_all(requestHeader);
+    curl_easy_cleanup(downloadHandle);
+    return 1;
+  }
+
+  curl_easy_setopt(downloadHandle, CURLOPT_HTTPHEADER, requestHeader);
+
   CURLcode downloadResponse = curl_easy_perform(downloadHandle);
   if (downloadResponse != CURLE_OK) {
     long httpResponse = 0;
@@ -595,6 +634,7 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     fprintf(stderr, "Server message:\n%s\n", response.string);
     free(response.string);
     free(url);
+    curl_slist_free_all(requestHeader);
     curl_easy_cleanup(downloadHandle);
     return 1;
   }
@@ -604,6 +644,7 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     fprintf(stderr, "Failed to get download URL\n");
     free(url);
     free(response.string);
+    curl_slist_free_all(requestHeader);
     curl_easy_cleanup(downloadHandle);
     return 1;
   }
@@ -613,6 +654,7 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     fprintf(stderr, "Could not open file %s for writing\n", outputPath);
     free(url);
     free(response.string);
+    curl_slist_free_all(requestHeader);
     curl_easy_cleanup(downloadHandle);
     return 1;
   }
@@ -633,6 +675,7 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     unlink(outputPath);
     free(response.string);
     free(url);
+    curl_slist_free_all(requestHeader);
     curl_easy_cleanup(downloadHandle);
     return 1;
   }
@@ -641,12 +684,13 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
   free(downloadURL);
   free(response.string);
   free(url);
+  curl_slist_free_all(requestHeader);
   curl_easy_cleanup(downloadHandle);
 
   return 0;
 }
 
-int cdsDeleteProductRequest(CURL *handle, const char *requestId)
+int cdsDeleteProductRequest(CURL *handle, const char *requestId, const option_t *options)
 {
   CURL *deleteHandle = curl_easy_duphandle(handle);
   if (deleteHandle == NULL) {
@@ -665,6 +709,23 @@ int cdsDeleteProductRequest(CURL *handle, const char *requestId)
   curl_easy_setopt(deleteHandle, CURLOPT_CUSTOMREQUEST, "DELETE");
   curl_easy_setopt(deleteHandle, CURLOPT_WRITEFUNCTION, discardWrite);
 
+  struct curl_slist *requestHeader = customHeader(NULL, options);
+  if (requestHeader == NULL) {
+    fprintf(stderr, "Failed to create custom HTTP header for product deletion\n");
+    free(url);
+    curl_easy_cleanup(deleteHandle);
+    return 1;
+  }
+
+  if ((requestHeader = curl_slist_append(requestHeader, "Content-Type: application/json")) == NULL) {
+    free(url);
+    curl_slist_free_all(requestHeader);
+    curl_easy_cleanup(deleteHandle);
+    return 1;
+  }
+
+  curl_easy_setopt(deleteHandle, CURLOPT_HTTPHEADER, requestHeader);
+
   CURLcode deleteResponse = curl_easy_perform(deleteHandle);
   if (deleteResponse != CURLE_OK) {
     long httpResponse = 0;
@@ -672,11 +733,13 @@ int cdsDeleteProductRequest(CURL *handle, const char *requestId)
     curl_easy_getinfo(deleteHandle, CURLINFO_RESPONSE_CODE, &httpResponse);
     fprintf(stderr, "Failed to delete product request: %s (%ld)\n", curl_easy_strerror(deleteResponse),
             httpResponse);
+    curl_slist_free_all(requestHeader);
     curl_easy_cleanup(deleteHandle);
     free(url);
     return 1;
   }
 
+  curl_slist_free_all(requestHeader);
   curl_easy_cleanup(deleteHandle);
   free(url);
 
