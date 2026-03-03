@@ -15,6 +15,7 @@
 #include <stddef.h>
 #include <errno.h>
 #include <limits.h>
+#include <libgen.h>
 
 void printHelp(void)
 {
