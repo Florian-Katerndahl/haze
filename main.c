@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
     goto teardown;
   }
 
-  if (!opts->global) {
+  if (!opts->global && opts->download) {
     aoi = boxFromPath(opts->areaOfInterest, opts->aoiName);
     if (aoi == NULL) {
       exitCode = EXIT_FAILURE;
