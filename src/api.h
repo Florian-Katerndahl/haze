@@ -143,7 +143,7 @@ char *constructStringRequest(const int *years, const int *months, const int *day
  * @param handle Reference to allocated and initialized cURL handle
  * @param options Reference to parsed options.
  * @param aoi Reference to a north-up bounding box with EPSG:4326 coordinates to restrict AOI, possibly NULL.
- * @return stringList* 0 on success, 1 on failure.
+ * @return int 0 on success, 1 on failure.
  */
 [[nodiscard]] int download(CURL *handle, const option_t *options, const OGREnvelope *aoi);
 
