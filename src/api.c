@@ -230,9 +230,9 @@ cleanup:
 }
 
 [[nodiscard]] int handleDownloadChain(CURL *handle, const option_t *options, const OGREnvelope *aoi, const char *outputPath, const int *subsetYears, const int *subsetMonths, const int *subsetDays, const int *subsetHours, const size_t yearsElements, const size_t monthsElements, const size_t daysElements, const size_t hoursElements) {
-  char *requestId = cdsRequestProduct(handle, requestYears, requestMonths, options->days,
-                                          options->hours, 1, 1,
-                                          options->daysElements, options->hoursElements, aoi, options);
+  char *requestId = cdsRequestProduct(handle, subsetYears, subsetMonths, subsetDays,
+                                          subsetHours, yearsElements, monthsElements,
+                                          daysElements, hoursElements, aoi, options);
 
   if (requestId == NULL) {
     fprintf(stderr, "Failed to request product or extract job id\n");
