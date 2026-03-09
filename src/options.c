@@ -1,5 +1,3 @@
-#include <bits/getopt_core.h>
-#include <bits/getopt_ext.h>
 #define _POSIX_C_SOURCE 200809L
 #define _DEFAULT_SOURCE
 
@@ -132,12 +130,12 @@ void printHelp(void)
     optind++;
     userOptions->outputDirectory = argv[optind];
   } else {
-    fprintf(stderr, "Missing positional arguments\n\n");
+    fprintf(stderr, "Encountered wrong number of positional arguments\n\n");
     freeOption(userOptions);
     return NULL;
   }
 
-  if (!(fileExists(userOptions->areaOfInterest) && fileReadable(userOptions->areaOfInterest))) {
+  if (!userOptions->global && !(fileExists(userOptions->areaOfInterest) && fileReadable(userOptions->areaOfInterest))) {
     fprintf(stderr, "AOI file not readable\n\n");
     freeOption(userOptions);
     return NULL;
