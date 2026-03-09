@@ -1,3 +1,5 @@
+#include <bits/getopt_core.h>
+#include <bits/getopt_ext.h>
 #define _POSIX_C_SOURCE 200809L
 #define _DEFAULT_SOURCE
 
@@ -20,17 +22,20 @@
 void printHelp(void)
 {
   printf("haze - Integrate reprocessed ERA5 single level data into FORCE for atmospheric correction\n");
-  printf("usage: haze [-h|--help] --year --month --day --hour aoi outdir\n\n");
+  printf("usage: haze [-h|--help] [-g|--global] [-l|--layer] --year --month --day --hour --logfile aoi outdir\n\n");
   printf("Optional arguments:\n");
-  printf("\t-h|--help: Print help and exit.\n");
-  printf("Mandatory keyword arguments (either as start:stop or comma seperated list. In the first case, endpoints are inclusive.):\n");
+  printf("\t-h|--help:   Print help and exit.\n");
+  printf("\t-g|--global: Request product worldwide instead of using an AOI dataset.\n");
+  printf("\t-l|--layer:  Layer to open from AOI dataset.\n");
+  printf("Mandatory keyword arguments (either scalar vlaue, start:stop or comma seperated list. In the first case, endpoints are inclusive.):\n");
   printf("\t--year:    Years for which data should be downloaded.\n");
   printf("\t--month:   Months for which data should be downloaded.\n");
   printf("\t--day:     Days for which data should be downloaded.\n");
   printf("\t--hour:    Hours for which data should be downloaded (zero-based).\n");
   printf("\t--logfile: Path to logfile storing successful downloads\n");
+  printf("Optional positional arguments:\n");
+  printf("\taoi:     File path to OGR-readble file containing one or more polygons for which to extract data. Either `layer` or the first layer is read.\n");
   printf("Mandatory positional arguments:\n");
-  printf("\taoi:     File path to OGR-readble file containing one or more polygons for which to extract data. First layer is read.\n");
   printf("\toutdir:  Directory into which output CSVs are written.\n");
 }
 
@@ -47,8 +52,10 @@ void printHelp(void)
   userOptions->monthsElements = 0;
   userOptions->daysElements = 0;
   userOptions->hoursElements = 0;
+  userOptions->global = false;
   userOptions->logFile = NULL;
   userOptions->areaOfInterest = NULL;
+  userOptions->aoiName = NULL;
   userOptions->outputDirectory = NULL;
   userOptions->authenticationToken = NULL;
 
@@ -58,13 +65,15 @@ void printHelp(void)
     {"month", required_argument, NULL, 'm'},
     {"day", required_argument, NULL, 'd'},
     {"hour", required_argument, NULL, 't'},
-    {"logfile", required_argument, NULL, 'l'},
+    {"logfile", required_argument, NULL, 67},
+    {"global", no_argument, NULL, 'g'},
+    {"layer", required_argument, NULL, 'l'},
     {0, 0, 0, 0}
   };
 
   int opt;
 
-  while ((opt = getopt_long(argc, argv, "h", long_options, NULL)) != -1) {
+  while ((opt = getopt_long(argc, argv, "hlg", long_options, NULL)) != -1) {
     switch (opt) {
       case 'h':
         userOptions->printHelp = true;
@@ -97,8 +106,14 @@ void printHelp(void)
           return NULL;
         }
         break;
-      case 'l':
+      case 67:
         userOptions->logFile = optarg;
+        break;
+      case 'g':
+        userOptions->global = true;
+        break;
+      case 'l':
+        userOptions->aoiName = optarg;
         break;
       case '?':
         [[fallthrough]];
@@ -110,7 +125,9 @@ void printHelp(void)
 
   int positionalArguments = argc - optind;
 
-  if (positionalArguments == 2) {
+  if (positionalArguments == 1 && userOptions->global) {
+    userOptions->outputDirectory = argv[optind];
+  } else if (positionalArguments == 2 && !userOptions->global) {
     userOptions->areaOfInterest = argv[optind];
     optind++;
     userOptions->outputDirectory = argv[optind];

@@ -170,7 +170,9 @@ typedef struct options
   int hours[MAXHOUR];
   size_t hoursElements;
   char *logFile;
+  bool global;
   char *areaOfInterest;
+  char *aoiName;
   char *outputDirectory;
   char *authenticationToken;
 } option_t;

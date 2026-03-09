@@ -10,6 +10,7 @@
 #include <gdal/cpl_conv.h>
 #include <gdal/ogr_core.h>
 #include <curl/curl.h>
+#include <unistd.h>
 
 /* fucntion from GEOS documentation */
 // TODO: gibt es einen Grund, warum die Funktion `static` ist? Sonst kann ich die ja auch einfach in eine eigene translation Uni packen.
@@ -31,6 +32,7 @@ int main(int argc, char *argv[])
   curl_global_init(CURL_GLOBAL_ALL);
 
   /* START OF PROGRAM */
+  const OGREnvelope *aoi = NULL;
   option_t *opts = parseOptions(argc, argv);
 
   if (opts == NULL || opts->printHelp) {
@@ -55,10 +57,12 @@ int main(int argc, char *argv[])
     goto teardown;
   }
 
-  const OGREnvelope *aoi = boxFromPath(opts->areaOfInterest, NULL);
-  if (aoi == NULL) {
-    exit = EXIT_FAILURE;
-    goto teardown;
+  if (!opts->global) {
+    aoi = boxFromPath(opts->areaOfInterest, opts->aoiName);
+    if (aoi == NULL) {
+      exit = EXIT_FAILURE;
+      goto teardown;
+    }
   }
 
   stringList *downloadedFiles = NULL;

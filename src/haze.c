@@ -434,7 +434,7 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
 
     const char *rasterWkt = extractCRSAsWKT(ds, NULL);
 
-    vectorGeometryList *areasOfInterest = buildGEOSGeometriesFromFile(options->areaOfInterest, NULL,
+    vectorGeometryList *areasOfInterest = buildGEOSGeometriesFromFile(options->areaOfInterest, options->aoiName,
                                           rasterWkt);
 
     struct rawData data = {0};
