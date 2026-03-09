@@ -229,12 +229,9 @@ cleanup:
 
 }
 
-[[nodiscard]] stringList *download(CURL *handle, const option_t *options,
-                                        const OGREnvelope *aoi)
+[[nodiscard]] int download(CURL *handle, const option_t *options, const OGREnvelope *aoi)
 {
   const unsigned int maxAttempts = 12;
-
-  stringList *root = NULL;
 
   FILE *logFile = fopen(options->logFile, "a");
 
@@ -275,24 +272,6 @@ cleanup:
             free(outputPath);
             continue;
           }
-
-          stringList *downloadedFile = calloc(1, sizeof(stringList));
-          if (downloadedFile == NULL) {
-            perror("calloc");
-            fprintf(stderr, "Failed to alloc node in linked list for %s. Deleting file and continuing.\n", outputPath);
-            unlink(outputPath);
-            free(outputPath);
-            continue;
-          }
-
-          downloadedFile->string = outputPath;
-
-          if (root == NULL) {
-            root = downloadedFile;
-          } else {
-            downloadedFile->next = root;
-            root = downloadedFile;
-          }
         }
       }
     }
@@ -325,31 +304,13 @@ cleanup:
           free(outputPath);
           continue;
         }
-
-        stringList *downloadedFile = calloc(1, sizeof(stringList));
-        if (downloadedFile == NULL) {
-          perror("calloc");
-          fprintf(stderr, "Failed to alloc node in linked list for %s. Deleting file and continuing.\n", outputPath);
-          unlink(outputPath);
-          free(outputPath);
-          continue;
-        }
-
-        downloadedFile->string = outputPath;
-
-        if (root == NULL) {
-          root = downloadedFile;
-        } else {
-          downloadedFile->next = root;
-          root = downloadedFile;
-        }
       }
     }
   }
 
   fclose(logFile);
 
-  return root;
+  return 0;
 }
 
 // gets first matching key, depth first

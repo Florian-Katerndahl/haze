@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
   }
 
   if (opts->download) {
-    if ((downloadedFiles = download(handle, opts, aoi)) == NULL) {
+    if (download(handle, opts, aoi)) {
       fprintf(stderr, "Error downloading files\n");
       exitCode = EXIT_FAILURE;
       goto teardown;

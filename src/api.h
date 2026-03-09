@@ -143,10 +143,9 @@ char *constructStringRequest(const int *years, const int *months, const int *day
  * @param handle Reference to allocated and initialized cURL handle
  * @param options Reference to parsed options.
  * @param aoi Reference to a north-up bounding box with EPSG:4326 coordinates to restrict AOI, possibly NULL.
- * @return stringList* Reference to linked list containing file paths of downloaded files.
+ * @return stringList* 0 on success, 1 on failure.
  */
-[[nodiscard]] stringList *download(CURL *handle, const option_t *options,
-                                        const OGREnvelope *aoi);
+[[nodiscard]] int download(CURL *handle, const option_t *options, const OGREnvelope *aoi);
 
 /**
  * @brief Construct a JSON object from a JSON string and search for a key in DFS
