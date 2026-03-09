@@ -137,8 +137,8 @@ void printHelp(void)
     return NULL;
   }
 
-  userOptions->download = (bool) strcmp("download", argv[optind]);
-  userOptions->process = (bool) strcmp("process", argv[optind]);
+  userOptions->download = strcmp("download", argv[optind]) == 0;
+  userOptions->process = strcmp("process", argv[optind]) == 0;
 
   if (!(userOptions->download || userOptions->process)) {
     fprintf(stderr, "Unknown sub-program specified: '%s'\n", argv[optind]);
@@ -476,6 +476,7 @@ void forceNoTrailingSlash(const option_t *options)
   return;
 }
 
+/// TODO: needs to be updated with new fields
 void printOptions(const option_t *options)
 {
   printf("YEAR: ");
