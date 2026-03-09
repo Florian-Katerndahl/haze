@@ -58,6 +58,8 @@ void printHelp(void)
   userOptions->aoiName = NULL;
   userOptions->outputDirectory = NULL;
   userOptions->authenticationToken = NULL;
+  userOptions->download = false;
+  userOptions->process = false;
 
   static struct option long_options[] = {
     {"help", no_argument, NULL, 'h'},
@@ -129,9 +131,27 @@ void printHelp(void)
 
   int positionalArguments = argc - optind;
 
-  if (positionalArguments == 1 && userOptions->global) {
+  if (positionalArguments == 0 || positionalArguments > 3) {
+    fprintf(stderr, "Encountered wrong number of positional arguments\n\n");
+    freeOption(userOptions);
+    return NULL;
+  }
+
+  userOptions->download = (bool) strcmp("download", argv[optind]);
+  userOptions->process = (bool) strcmp("process", argv[optind]);
+
+  if (!(userOptions->download || userOptions->process)) {
+    fprintf(stderr, "Unknown sub-program specified: '%s'\n", argv[optind]);
+    freeOption(userOptions);
+    return NULL;
+  }
+
+  positionalArguments--;
+  optind++;
+
+  if (positionalArguments == 1 && (userOptions->global && userOptions->download || userOptions->process)) {
     userOptions->outputDirectory = argv[optind];
-  } else if (positionalArguments == 2 && !userOptions->global) {
+  } else if (positionalArguments == 2 && (!userOptions->global && userOptions->download || userOptions->process)) {
     userOptions->areaOfInterest = argv[optind];
     optind++;
     userOptions->outputDirectory = argv[optind];
@@ -141,7 +161,7 @@ void printHelp(void)
     return NULL;
   }
 
-  if (!userOptions->global && !(fileExists(userOptions->areaOfInterest) && fileReadable(userOptions->areaOfInterest))) {
+  if ((!userOptions->global || userOptions->process) && !(fileExists(userOptions->areaOfInterest) && fileReadable(userOptions->areaOfInterest))) {
     fprintf(stderr, "AOI file not readable\n\n");
     freeOption(userOptions);
     return NULL;
@@ -171,7 +191,7 @@ void printHelp(void)
 
   forceNoTrailingSlash(userOptions);
 
-  if (getAuthentication(&userOptions->authenticationToken, NULL) == 1) {
+  if (userOptions->download && getAuthentication(&userOptions->authenticationToken, NULL) == 1) {
     fprintf(stderr, "Failed to get authentication token from enironment or $HOME/.cdsapirc\n\n");
     freeOption(userOptions);
     return NULL;

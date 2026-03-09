@@ -10,6 +10,7 @@
 #include <gdal/cpl_conv.h>
 #include <gdal/ogr_core.h>
 #include <curl/curl.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 /* fucntion from GEOS documentation */
@@ -25,32 +26,31 @@ static void geos_msg_handler(const char* fmt, ...)
 
 int main(int argc, char *argv[])
 {
-  int exit = EXIT_SUCCESS;
+  int exitCode = EXIT_SUCCESS;
   /* SETUP EXTERNAL LIBRARIES */
   initGEOS(geos_msg_handler, geos_msg_handler);
   GDALAllRegister();
   curl_global_init(CURL_GLOBAL_ALL);
 
   /* START OF PROGRAM */
+  CURL *handle = NULL;
   const OGREnvelope *aoi = NULL;
+  stringList *downloadedFiles = NULL;
+
   option_t *opts = parseOptions(argc, argv);
 
   if (opts == NULL || opts->printHelp) {
     printHelp();
-
     freeOption(opts);
-    
-    /* TEARDOWN EXTERNAL LIBRARIES */
-    finishGEOS();
-    curl_global_cleanup();
-    return opts != NULL;
+    exitCode = opts != NULL;
+    goto teardown;
   }
 
 #ifdef DEBUG
   printOptions(opts);
 #endif
 
-  CURL *handle = curl_easy_init();
+  handle = curl_easy_init();
 
   if (handle == NULL) {
     fprintf(stderr, "Failed to setup cURL\n");
@@ -60,22 +60,23 @@ int main(int argc, char *argv[])
   if (!opts->global) {
     aoi = boxFromPath(opts->areaOfInterest, opts->aoiName);
     if (aoi == NULL) {
-      exit = EXIT_FAILURE;
+      exitCode = EXIT_FAILURE;
       goto teardown;
     }
   }
 
-  stringList *downloadedFiles = NULL;
-  if ((downloadedFiles = download(handle, opts, aoi)) == NULL) {
-    fprintf(stderr, "Error while downloading files\n");
-    exit = EXIT_FAILURE;
-    goto teardown;
-  }
-
-  if (processDaily(downloadedFiles, opts) == 1) {
-    fprintf(stderr, "Failed to process all datasets\n");
-    exit = EXIT_FAILURE;
-    goto teardown;
+  if (opts->download) {
+    if ((downloadedFiles = download(handle, opts, aoi)) == NULL) {
+      fprintf(stderr, "Error downloading files\n");
+      exitCode = EXIT_FAILURE;
+      goto teardown;
+    }
+  } else if (opts->process) {
+    if (processDaily(downloadedFiles, opts) == 1) {
+      fprintf(stderr, "Failed to process all datasets\n");
+      exitCode = EXIT_FAILURE;
+      goto teardown;
+    }
   }
 
 teardown:
@@ -90,5 +91,5 @@ teardown:
   curl_easy_cleanup(handle);
   curl_global_cleanup();
 
-  return exit;
+  return exitCode;
 }

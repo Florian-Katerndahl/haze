@@ -176,6 +176,8 @@ typedef struct options
   char *aoiName;
   char *outputDirectory;
   char *authenticationToken;
+  bool download;
+  bool process;
 } option_t;
 
 /**
