@@ -229,48 +229,7 @@ cleanup:
 
 }
 
-[[nodiscard]] int handleDownloadChain(CURL *handle, const option_t *options, const OGREnvelope *aoi, const char *outputPath, const int *subsetYears, const int *subsetMonths, const int *subsetDays, const int *subsetHours, const size_t yearsElements, const size_t monthsElements, const size_t daysElements, const size_t hoursElements, const unsigned int maxAttempts) {
-  char *requestId = cdsRequestProduct(handle, subsetYears, subsetMonths, subsetDays,
-                                          subsetHours, yearsElements, monthsElements,
-                                          daysElements, hoursElements, aoi, options);
-
-  if (requestId == NULL) {
-    fprintf(stderr, "Failed to request product or extract job id\n");
-    return 1;
-  }
-#ifdef DEBUG
-  printf("Posted product request with Id: %s\n", requestId);
-#endif
-
-  if (cdsWaitForProduct(handle, requestId, options, maxAttempts)) {
-    fprintf(stderr, "Error while waiting for product\n");
-    free(requestId);
-    return 1;
-  }
-#ifdef DEBUG
-  printf("Waited for product request with Id: %s\n", requestId);
-#endif
-
-  if (cdsDownloadProduct(handle, requestId, outputPath, options)) {
-    fprintf(stderr, "Failed to download data.\n");
-    free(requestId);
-    return 1;
-  }
-#ifdef DEBUG
-  printf("Downloaded file for product request %s\n", requestId);
-#endif
-
-  cdsDeleteProductRequest(handle, requestId, options);
-#ifdef DEBUG
-  printf("Deleted product request with Id: %s\n", requestId);
-#endif
-
-  free(requestId);
-
-  return 0;
-}
-
-[[nodiscard]] stringList *downloadDaily(CURL *handle, const option_t *options,
+[[nodiscard]] stringList *download(CURL *handle, const option_t *options,
                                         const OGREnvelope *aoi)
 {
   const unsigned int maxAttempts = 12;
@@ -435,9 +394,49 @@ char *slurpAndGetString(const char *input, const char *key)
   return ret;
 }
 
-// ALSO: If I actually want to do daily requests, year month and day should be scalar values and only hours an array. Then, two
-// different implementations may make sense. One for scalar year, month day and one for vector years, months, days. Scalar version can
-// simply call vector version with n = 1
+[[nodiscard]] int handleDownloadChain(CURL *handle, const option_t *options, const OGREnvelope *aoi, const char *outputPath, const int *subsetYears, const int *subsetMonths, const int *subsetDays, const int *subsetHours, const size_t yearsElements, const size_t monthsElements, const size_t daysElements, const size_t hoursElements, const unsigned int maxAttempts) {
+  char *requestId = cdsRequestProduct(handle, subsetYears, subsetMonths, subsetDays,
+                                          subsetHours, yearsElements, monthsElements,
+                                          daysElements, hoursElements, aoi, options);
+
+  if (requestId == NULL) {
+    fprintf(stderr, "Failed to request product or extract job id\n");
+    return 1;
+  }
+#ifdef DEBUG
+  printf("Posted product request with Id: %s\n", requestId);
+#endif
+
+  if (cdsWaitForProduct(handle, requestId, options, maxAttempts)) {
+    fprintf(stderr, "Error while waiting for product\n");
+    cdsDeleteProductRequest(handle, requestId, options);
+    free(requestId);
+    return 1;
+  }
+#ifdef DEBUG
+  printf("Waited for product request with Id: %s\n", requestId);
+#endif
+
+  if (cdsDownloadProduct(handle, requestId, outputPath, options)) {
+    fprintf(stderr, "Failed to download data.\n");
+    cdsDeleteProductRequest(handle, requestId, options);
+    free(requestId);
+    return 1;
+  }
+#ifdef DEBUG
+  printf("Downloaded file for product request %s\n", requestId);
+#endif
+
+  cdsDeleteProductRequest(handle, requestId, options);
+#ifdef DEBUG
+  printf("Deleted product request with Id: %s\n", requestId);
+#endif
+
+  free(requestId);
+
+  return 0;
+}
+
 char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days,
                         const int *hours, const size_t yearsElements, const size_t monthsElements,
                         const size_t daysElements, const size_t hoursElements,

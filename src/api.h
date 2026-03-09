@@ -140,14 +140,12 @@ char *constructStringRequest(const int *years, const int *months, const int *day
  *          to query the CDS API, wait for successful processing and downloads file.
  *          A cURL handle is allocated and de-allocated for the scope of this function
  *
- * @note Contrary to the function's name, data is downloaded for an entire month.
- *
  * @param handle Reference to allocated and initialized cURL handle
  * @param options Reference to parsed options.
  * @param aoi Reference to a north-up bounding box with EPSG:4326 coordinates to restrict AOI, possibly NULL.
  * @return stringList* Reference to linked list containing file paths of downloaded files.
  */
-[[nodiscard]] stringList *downloadDaily(CURL *handle, const option_t *options,
+[[nodiscard]] stringList *download(CURL *handle, const option_t *options,
                                         const OGREnvelope *aoi);
 
 /**
@@ -162,6 +160,29 @@ char *constructStringRequest(const int *years, const int *months, const int *day
  * @return char* Reference to value associated with key or NULL on error.
  */
 char *slurpAndGetString(const char *input, const char *key);
+
+/**
+ * @brief Wrapper around chain of API requests needed to perform a download
+ *
+ * @note Time frames for download are to be passed explicitly via arguments
+ *       and not the options struct.
+ *
+ * @param handle Reference to existing cURL handle used for request after duplication.
+ * @param options Reference to parsed options.
+ * @param aoi Reference to a north-up bounding box with EPSG:4326 coordinates to restrict AOI, possibly NULL.
+ * @param outputPath Reference to file path, no ownership is taken.
+ * @param subsetYears Reference to array of integers giving years to post request for.
+ * @param subsetMonths Reference to array of integers giving months to post request for.
+ * @param subsetDays Reference to array of integers giving days to post request for.
+ * @param subsetHours Reference to array of integers giving hours to post request for.
+ * @param yearsElements Number of entries in respective array.
+ * @param monthsElements Number of entries in respective array.
+ * @param daysElements Number of entries in respective array.
+ * @param hoursElements Number of entries in respective array.
+ * @param maxAttempts Maximum number of status requests made before request is deemed faulty.
+ * @return int 0 on success, 1 on error.
+ */
+[[nodiscard]] int handleDownloadChain(CURL *handle, const option_t *options, const OGREnvelope *aoi, const char *outputPath, const int *subsetYears, const int *subsetMonths, const int *subsetDays, const int *subsetHours, const size_t yearsElements, const size_t monthsElements, const size_t daysElements, const size_t hoursElements, const unsigned int maxAttempts)
 
 /**
  * @brief Perform product request with CDS API
