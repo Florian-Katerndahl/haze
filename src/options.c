@@ -20,22 +20,25 @@
 void printHelp(void)
 {
   printf("haze - Integrate reprocessed ERA5 single level data into FORCE for atmospheric correction\n");
-  printf("usage: haze [-h|--help] [-g|--global] [-l|--layer] [-d|--daily] --year --month --day --hour --logfile aoi outdir\n\n");
-  printf("Optional arguments:\n");
-  printf("\t-h|--help:   Print help and exit.\n");
+  printf("Usage: haze <subprogram> <options>\n");
+  printf("Where <subprogram> is either 'download' to download data from CDS or 'process' to process downloaded files\n");
+  printf("<options> is of the form: [-h|--help] [-g|--global] [-l|--layer] [-d|--daily] --year --month --day --hour --logfile aoi outdir\n");
+  printf("\nGlobal optional keyword arguments (valid for both subprograms):\n");
+  printf("\t-h|--help:  Print help and exit.\n");
+  printf("\t-l|--layer: Layer to open from AOI dataset.\n");
+  printf("Global mandatory keyword arguments:\n");
+  printf("\t--logfile: Path to logfile storing successful downloads and processing statuses\n");
+  printf("\nOptional keyword arguments valid for download subprogram:\n");
   printf("\t-g|--global: Request product worldwide instead of using an AOI dataset.\n");
-  printf("\t-l|--layer:  Layer to open from AOI dataset.\n");
   printf("\t-d|--daily:  Group product requests by day instead of month.\n");
-  printf("Mandatory keyword arguments (either scalar vlaue, start:stop or comma seperated list. In the first case, endpoints are inclusive.):\n");
-  printf("\t--year:    Years for which data should be downloaded.\n");
-  printf("\t--month:   Months for which data should be downloaded.\n");
-  printf("\t--day:     Days for which data should be downloaded.\n");
-  printf("\t--hour:    Hours for which data should be downloaded (zero-based).\n");
-  printf("\t--logfile: Path to logfile storing successful downloads\n");
-  printf("Optional positional arguments:\n");
-  printf("\taoi:     File path to OGR-readble file containing one or more polygons for which to extract data. Either `layer` or the first layer is read.\n");
+  printf("Mandatory keyword arguments valid for download subprogram (either scalar vlaue, start:stop or comma seperated list. In the first case, endpoints are inclusive.):\n");
+  printf("\t--year:  Years for which data should be downloaded.\n");
+  printf("\t--month: Months for which data should be downloaded.\n");
+  printf("\t--day:   Days for which data should be downloaded.\n");
+  printf("\t--hour:  Hours for which data should be downloaded (zero-based).\n");
   printf("Mandatory positional arguments:\n");
-  printf("\toutdir:  Directory into which output CSVs are written.\n");
+  printf("\taoi:    File path to OGR-readble file containing one or more polygons for which to extract data. Either `layer` or the first layer is read. Mandatory for processing.\n");
+  printf("\toutdir: Directory into which output CSVs are written.\n");
 }
 
 [[nodiscard]] option_t *parseOptions(int argc, char *argv[])
