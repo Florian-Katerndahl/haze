@@ -272,6 +272,8 @@ cleanup:
             free(outputPath);
             continue;
           }
+
+          free(outputPath);
         }
       }
     }
@@ -304,6 +306,8 @@ cleanup:
           free(outputPath);
           continue;
         }
+
+        free(outputPath);
       }
     }
   }
