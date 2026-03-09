@@ -237,7 +237,7 @@ cleanup:
 
   if (logFile == NULL) {
     fprintf(stderr, "Failed to open logfile\n");
-    return NULL;
+    return 1;
   }
 
   if (options->downloadByDay) {
