@@ -169,6 +169,7 @@ typedef struct options
   size_t daysElements;
   int hours[MAXHOUR];
   size_t hoursElements;
+  bool downloadByDay;
   char *logFile;
   bool global;
   char *areaOfInterest;

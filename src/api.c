@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
 #include <limits.h>
@@ -229,6 +230,47 @@ cleanup:
 
 }
 
+[[nodiscard]] int handleDownloadChain(CURL *handle, const option_t *options, const OGREnvelope *aoi, const char *outputPath, const int *subsetYears, const int *subsetMonths, const int *subsetDays, const int *subsetHours, const size_t yearsElements, const size_t monthsElements, const size_t daysElements, const size_t hoursElements) {
+  char *requestId = cdsRequestProduct(handle, requestYears, requestMonths, options->days,
+                                          options->hours, 1, 1,
+                                          options->daysElements, options->hoursElements, aoi, options);
+
+  if (requestId == NULL) {
+    fprintf(stderr, "Failed to request product or extract job id\n");
+    return 1;
+  }
+#ifdef DEBUG
+  printf("Posted product request with Id: %s\n", requestId);
+#endif
+
+  if (cdsWaitForProduct(handle, requestId, options, maxAttempts)) {
+    fprintf(stderr, "Error while waiting for product\n");
+    free(requestId);
+    return 1;
+  }
+#ifdef DEBUG
+  printf("Waited for product request with Id: %s\n", requestId);
+#endif
+
+  if (cdsDownloadProduct(handle, requestId, outputPath, options)) {
+    fprintf(stderr, "Failed to download data.\n");
+    free(requestId);
+    return 1;
+  }
+#ifdef DEBUG
+  printf("Downloaded file for product request %s\n", requestId);
+#endif
+
+  cdsDeleteProductRequest(handle, requestId, options);
+#ifdef DEBUG
+  printf("Deleted product request with Id: %s\n", requestId);
+#endif
+
+  free(requestId);
+
+  return 0;
+}
+
 [[nodiscard]] stringList *downloadDaily(CURL *handle, const option_t *options,
                                         const OGREnvelope *aoi)
 {
@@ -243,89 +285,108 @@ cleanup:
     return NULL;
   }
 
-  for (size_t yearIdx = 0; yearIdx < options->yearsElements; yearIdx++) {
-    for (size_t monthIdx = 0; monthIdx < options->monthsElements; monthIdx++) {
-      int year = options->years[yearIdx];
-      int month = options->months[monthIdx];
+  if (options->downloadByDay) {
+    for (size_t yearIdx = 0; yearIdx < options->yearsElements; yearIdx++) {
+      for (size_t monthIdx = 0; monthIdx < options->monthsElements; monthIdx++) {
+        for (size_t dayIdx = 0; dayIdx < options->daysElements; dayIdx++) {
+          int year = options->years[yearIdx];
+          int month = options->months[monthIdx];
+          int day = options->days[dayIdx];
 
-      char *outputPath = constructFilePath("%s/%.4d-%.2d.grib", options->outputDirectory, year, month);
+          char *outputPath = constructFilePath("%s/%.4d-%.2d-%.2d.grib", options->outputDirectory, year, month, day);
 
-      if (outputPath == NULL) {
-        fprintf(stderr, "Failed to construct local file path\n");
-        fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", year, month);
-        continue;
+          if (outputPath == NULL) {
+            fprintf(stderr, "Failed to construct local file path\n");
+            continue;
+          }
+
+          int requestYears[1] = {year};
+          int requestMonths[1] = {month};
+          int requestDays[1] = {day};
+
+          if (handleDownloadChain(handle, options, aoi, outputPath, requestYears, requestMonths, requestDays, options->hours, 1, 1, 1, options->hoursElements)) {
+            fprintf(stderr, "Failed to download data for %.4d-%.2d-%.2d", year, month, day);
+            unlink(outputPath); // no information at what stage the download failed
+            free(outputPath);
+            continue;
+          }
+
+          if (fprintf(logFile, "%s\tDOWNLOADED\n", outputPath) < 0) {
+            fprintf(stderr, "Failed to add downloaded file to log file. Deleting file and continuing.\n");
+            unlink(outputPath);
+            free(outputPath);
+            continue;
+          }
+
+          stringList *downloadedFile = calloc(1, sizeof(stringList));
+          if (downloadedFile == NULL) {
+            perror("calloc");
+            fprintf(stderr, "Failed to alloc node in linked list for %s. Deleting file and continuing.\n", outputPath);
+            unlink(outputPath);
+            free(outputPath);
+            continue;
+          }
+
+          downloadedFile->string = outputPath;
+
+          if (root == NULL) {
+            root = downloadedFile;
+          } else {
+            downloadedFile->next = root;
+            root = downloadedFile;
+          }
+        }
       }
+    }
+  } else {
+    for (size_t yearIdx = 0; yearIdx < options->yearsElements; yearIdx++) {
+      for (size_t monthIdx = 0; monthIdx < options->monthsElements; monthIdx++) {
+          int year = options->years[yearIdx];
+          int month = options->months[monthIdx];
 
-      int requestYears[1] = {year};
-      int requestMonths[1] = {month};
+          char *outputPath = constructFilePath("%s/%.4d-%.2d.grib", options->outputDirectory, year, month);
 
-      char *requestId = cdsRequestProduct(handle, requestYears, requestMonths, options->days,
-                                          options->hours, 1, 1,
-                                          options->daysElements, options->hoursElements, aoi, options);
-      if (requestId == NULL) {
-        fprintf(stderr, "Failed to request product or extract job id\n");
-        fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", year, month);
-        free(outputPath);
-        continue;
+          if (outputPath == NULL) {
+            fprintf(stderr, "Failed to construct local file path\n");
+            continue;
+          }
+
+          int requestYears[1] = {year};
+          int requestMonths[1] = {month};
+
+          if (handleDownloadChain(handle, options, aoi, outputPath, requestYears, requestMonths, options->days, options->hours, 1, 1, options->daysElements, options->hoursElements)) {
+            fprintf(stderr, "Failed to download data for %.4d-%.2d", year, month);
+            unlink(outputPath); // no information at what stage the download failed
+            free(outputPath);
+            continue;
+          }
+
+          if (fprintf(logFile, "%s\tDOWNLOADED\n", outputPath) < 0) {
+            fprintf(stderr, "Failed to add downloaded file to log file. Deleting file and continuing.\n");
+            unlink(outputPath);
+            free(outputPath);
+            continue;
+          }
+
+          stringList *downloadedFile = calloc(1, sizeof(stringList));
+          if (downloadedFile == NULL) {
+            perror("calloc");
+            fprintf(stderr, "Failed to alloc node in linked list for %s. Deleting file and continuing.\n", outputPath);
+            unlink(outputPath);
+            free(outputPath);
+            continue;
+          }
+
+          downloadedFile->string = outputPath;
+
+          if (root == NULL) {
+            root = downloadedFile;
+          } else {
+            downloadedFile->next = root;
+            root = downloadedFile;
+          }
+        }
       }
-#ifdef DEBUG
-      printf("Posted product request with Id: %s\n", requestId);
-#endif
-
-      if (cdsWaitForProduct(handle, requestId, options, maxAttempts)) {
-        fprintf(stderr, "Error while waiting for product\n");
-        fprintf(stderr, "Failed to process data %.4d-%.2d. Continuing.\n", year, month);
-        free(requestId);
-        free(outputPath);
-        continue;
-      }
-#ifdef DEBUG
-      printf("Waited for product request with Id: %s\n", requestId);
-#endif
-
-      if (cdsDownloadProduct(handle, requestId, outputPath, options)) {
-        fprintf(stderr, "Failed to download data %.4d-%.2d. Continuing.\n", year, month);
-        free(requestId);
-        free(outputPath);
-        continue;
-      }
-#ifdef DEBUG
-      printf("Downloaded file for product request %s\n", requestId);
-#endif
-
-      cdsDeleteProductRequest(handle, requestId, options);
-#ifdef DEBUG
-      printf("Deleted product request with Id: %s\n", requestId);
-#endif
-
-      if (fprintf(logFile, "%s\tDOWNLOADED\n", outputPath) < 0) {
-        fprintf(stderr, "Failed to add downloaded file to log file. Deleting file and continuing.\n");
-        free(requestId);
-        unlink(outputPath);
-        free(outputPath);
-        continue;
-      }
-
-      stringList *downloadedFile = calloc(1, sizeof(stringList));
-      if (downloadedFile == NULL) {
-        perror("calloc");
-        fprintf(stderr, "Failed to process data %.4d-%.2d. Deleting file and continuing.\n", year, month);
-        free(requestId);
-        unlink(outputPath);
-        free(outputPath);
-        continue;
-      }
-
-      downloadedFile->string = outputPath;
-
-      if (root == NULL) {
-        root = downloadedFile;
-      } else {
-        downloadedFile->next = root;
-        root = downloadedFile;
-      }
-
-      free(requestId);
     }
   }
 

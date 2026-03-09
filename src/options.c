@@ -1,3 +1,4 @@
+#include <bits/getopt_ext.h>
 #define _POSIX_C_SOURCE 200809L
 #define _DEFAULT_SOURCE
 
@@ -20,11 +21,12 @@
 void printHelp(void)
 {
   printf("haze - Integrate reprocessed ERA5 single level data into FORCE for atmospheric correction\n");
-  printf("usage: haze [-h|--help] [-g|--global] [-l|--layer] --year --month --day --hour --logfile aoi outdir\n\n");
+  printf("usage: haze [-h|--help] [-g|--global] [-l|--layer] [-d|--daily] --year --month --day --hour --logfile aoi outdir\n\n");
   printf("Optional arguments:\n");
   printf("\t-h|--help:   Print help and exit.\n");
   printf("\t-g|--global: Request product worldwide instead of using an AOI dataset.\n");
   printf("\t-l|--layer:  Layer to open from AOI dataset.\n");
+  printf("\t-d|--daily:  Group product requests by day instead of month.\n");
   printf("Mandatory keyword arguments (either scalar vlaue, start:stop or comma seperated list. In the first case, endpoints are inclusive.):\n");
   printf("\t--year:    Years for which data should be downloaded.\n");
   printf("\t--month:   Months for which data should be downloaded.\n");
@@ -50,6 +52,7 @@ void printHelp(void)
   userOptions->monthsElements = 0;
   userOptions->daysElements = 0;
   userOptions->hoursElements = 0;
+  userOptions->downloadByDay = false;
   userOptions->global = false;
   userOptions->logFile = NULL;
   userOptions->areaOfInterest = NULL;
@@ -61,17 +64,18 @@ void printHelp(void)
     {"help", no_argument, NULL, 'h'},
     {"year", required_argument, NULL, 'y'},
     {"month", required_argument, NULL, 'm'},
-    {"day", required_argument, NULL, 'd'},
+    {"day", required_argument, NULL, 69},
     {"hour", required_argument, NULL, 't'},
     {"logfile", required_argument, NULL, 67},
     {"global", no_argument, NULL, 'g'},
     {"layer", required_argument, NULL, 'l'},
+    {"daily", no_argument, NULL, 'd'},
     {0, 0, 0, 0}
   };
 
   int opt;
 
-  while ((opt = getopt_long(argc, argv, "hlg", long_options, NULL)) != -1) {
+  while ((opt = getopt_long(argc, argv, "hlgd", long_options, NULL)) != -1) {
     switch (opt) {
       case 'h':
         userOptions->printHelp = true;
@@ -90,7 +94,7 @@ void printHelp(void)
           return NULL;
         }
         break;
-      case 'd':
+      case 69:
         if (parseIntegers(userOptions->days, MAXDAY, &userOptions->daysElements, optarg, 1, 31)) {
           fprintf(stderr, "Failed to parse days or argument not specified\n\n");
           freeOption(userOptions);
@@ -112,6 +116,9 @@ void printHelp(void)
         break;
       case 'l':
         userOptions->aoiName = optarg;
+        break;
+      case 'd':
+        userOptions->downloadByDay = true;
         break;
       case '?':
         [[fallthrough]];
