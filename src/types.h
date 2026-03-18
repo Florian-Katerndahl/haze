@@ -206,6 +206,7 @@ typedef enum
 typedef struct stringList
 {
   char *string;
+  char *status;
   struct stringList *next;
 } stringList;
 

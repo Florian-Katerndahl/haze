@@ -86,6 +86,7 @@ void freeStringList(stringList *list)
   while (list != NULL) {
     tmp = list->next;
     free(list->string);
+    free(list->status);
     free(list);
     list = tmp;
   }
