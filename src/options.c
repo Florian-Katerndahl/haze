@@ -5,6 +5,7 @@
 #include "options.h"
 #include "fscheck.h"
 #include "types.h"
+#include "math-utils.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -510,12 +511,4 @@ void printOptions(const option_t *options)
   printf("aoi file: %s\n", options->areaOfInterest);
 
   printf("out directory: %s\n", options->outputDirectory);
-}
-
-int intcmp(const void *a, const void *b)
-{
-  int aInt = *(int *) a;
-  int bInt = *(int *) b;
-
-  return aInt - bInt;
 }

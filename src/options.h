@@ -189,13 +189,4 @@ void forceNoTrailingSlash(const option_t *options);
  */
 void printOptions(const option_t *options);
 
-/**
- * @brief Callback function for `qsort` to compare integers
- *
- * @param a Void-casted reference to first value of comparison.
- * @param b Void-casted reference to second value of comparison.
- * @return int Negative value if a < b, 0 if a = b, positive value if a > b.
- */
-int intcmp(const void *a, const void *b);
-
 #endif // OPTIONS_H
