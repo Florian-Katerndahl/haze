@@ -165,7 +165,69 @@ int writeWeightedMeans(mean_t *values, const char *filePath);
 double coordinateFromCell(double origin, double axisOfInterest, double pixelExtent,
                           double complementaryAxis, double rotation);
 
-int processDaily(stringList *successfulDownloads, const option_t *options);
+/**
+ * @brief Parse logfile for processing
+ *
+ * @details This function reads lines of the log file sequentially, extracting the
+ *          the file path of respective ERA-5 dataset and processing status. It's
+ *          assuming the format mentioned below.
+ *          The order of lines in the log file are preserved in the returned linked list
+ *          to keep diffs between program runs minimal.
+ *
+ * @note The log file's format is "<file path>\tSTATUS".
+ *
+ * @param filePath File path to logfile.
+ * @return Reference to linked list storing one line per node, possibly NULL on error.
+ */
+stringList *parseLogFile(const char *filePath);
+
+/**
+ * @brief Update logfile with new dataset statuses
+ *
+ * @note The log file's format is "<file path>\tSTATUS".
+ *
+ * @param list Linked list storing one line per node with file path of ERA-5 dataset and processing status.
+ * @param filePath File path to logfile.
+ * @return int 0 on success, 1 on error.
+ */
+int writeUpdatedLogFile(stringList *list, const char *filePath);
+
+/**
+ * @brief Deduce temporal information from a given dataset
+ *
+ * @details This function deduces temoporal information (contained years, months, days and hours)
+ *          of a given dataest by reading the metadata from all bands and counting observed
+ *          values.
+ *
+ * @note The options struct is manipulated by this function; assumes files contain only a single
+ *       year and a single month, thus only storing arbitrary days and hours combinations.
+ *
+ * @param options Reference to parsed options, without temoporal information fields set.
+ * @param dataset Opened GDAL dataset, from which temoporal information should be read.
+ * @return 0 on success, 1 on error.
+ */
+int backFillOptions(option_t *options, GDALDatasetH dataset);
+
+/**
+ * @brief Main procedure to process downloaded ERA-5 datasets
+ *
+ * @details This function implements processing ERA-5 datasets to a water vapor database usable by FORCE.
+ *          Each unprocessed dataset is scanned to deduce temporal information stored in it, averaged on
+ *          a daily basis, vectorized and stored in a STRTree.
+ *          The supplied vector dataset containing the area of interest is converted to GEOS geometries
+ *          once and possibly reprojected to EPSG:4326.
+ *          Intersections between vectorized ERA-5 data and AOI are used to compute area-weighted
+ *          mean of water vapor, whereby a single geometry entry in the AOI is used to compute weight values.
+ *
+ * @note The SRS of input files is hardcoded to EPSG:4326 as ECMWF is aligned to it
+ *       horizontally. Should this change in the future, this procedure would need to
+ *       be updated.
+ *
+ * @param options Reference to parsed options struct.
+ * @return 0 on success, 1 on error.
+ */
+
+int process(option_t *options);
 
 /**
  * @brief Test if given combination of year, month and day is a valid date.

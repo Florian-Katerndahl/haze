@@ -35,14 +35,12 @@ int main(int argc, char *argv[])
   /* START OF PROGRAM */
   CURL *handle = NULL;
   const OGREnvelope *aoi = NULL;
-  stringList *downloadedFiles = NULL;
 
   option_t *opts = parseOptions(argc, argv);
 
   if (opts == NULL || opts->printHelp) {
     printHelp();
-    freeOption(opts);
-    exitCode = opts != NULL;
+    exitCode = (opts == NULL);
     goto teardown;
   }
 
@@ -72,7 +70,7 @@ int main(int argc, char *argv[])
       goto teardown;
     }
   } else if (opts->process) {
-    if (processDaily(downloadedFiles, opts) == 1) {
+    if (process(opts) == 1) {
       fprintf(stderr, "Failed to process all datasets\n");
       exitCode = EXIT_FAILURE;
       goto teardown;
@@ -83,7 +81,6 @@ teardown:
   /* END OF PROGRAM, FREE STACK OBJECTS */
   CPLFree((void *) aoi);
   freeOption(opts);
-  freeStringList(downloadedFiles);
 
   /* TEARDOWN EXTERNAL LIBRARIES */
   GDALDestroy();

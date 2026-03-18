@@ -1,3 +1,5 @@
+#define _XOPEN_SOURCE
+#define _POSIX_C_SOURCE 200809L
 #include "haze.h"
 #include "paths.h"
 #include "types.h"
@@ -6,17 +8,21 @@
 #include "strtree.h"
 #include <dirent.h>
 #include <bits/posix2_lim.h>
-#include <gdal/cpl_conv.h>
 #include <geos_c.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 #include <gdal/gdal.h>
 #include <gdal/gdal_version.h>
 #include <gdal/cpl_error.h>
+#include <gdal/cpl_conv.h>
+#include <gdal/cpl_port.h>
+#include <gdal/cpl_string.h>
 #include <gdal/ogr_core.h>
 #include <gdal/ogr_api.h>
 #include <gdal/ogr_srs_api.h>
@@ -217,9 +223,16 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 
   OGRSpatialReferenceH spatialRef = OSRNewSpatialReference(rasterWkt);
   if (spatialRef == NULL) {
-    fprintf(stderr, "Could not determine if CRS is projected or not");
+    fprintf(stderr, "Could not create new OGRSpatialReferenceH from WKT\n");
     return NULL;
   }
+
+  // disregard SRS axis ordering in favor of hard coded long/lat ordering
+  // WKT/WKB order the data as tuples of x/long and y/lat. When reading them into OGRGeometryH-objects, this order is preserved and no axis
+  // swapping is performed. Assigning a spatial reference system to a geometry object assumes the coordinate fields are already correctly
+  // ordered. While I wouldn't say that this is the root problem: The hard coded SRS string 'SRS_WKT_WGS84_LAT_LONG' assumes data ordering
+  // of latitude longitude.
+  OSRSetAxisMappingStrategy(spatialRef, OAMS_TRADITIONAL_GIS_ORDER);
 
   CRS_TYPE CRSType = getCRSType(rasterWkt);
 
@@ -294,24 +307,21 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     for (size_t i = 0; i < intersections->intersectionCount; i++) {
       values[i] = temp->entry->value; // shit, here I do copy data again...
 
-      OGRGeometryH cellAsOGR = OGR_G_CreateGeometry(wkbPolygon);
-      OGR_G_AssignSpatialReference(cellAsOGR, spatialRef);
+      OGRGeometryH cellAsOGR;
 
-      const unsigned char *geometryAsWkb = GEOSWKBWriter_write(wkbWriter, temp->entry->geometry,
-                                           &wkbSize);
+      const unsigned char *geometryAsWkb = GEOSWKBWriter_write(wkbWriter, temp->entry->geometry, &wkbSize);
       if (geometryAsWkb == NULL) {
         fprintf(stderr, "Failed to export geometry as WKB\n");
         GEOSWKBWriter_destroy(wkbWriter);
         OSRDestroySpatialReference(spatialRef);
         freeWeightedMeans(root);
         OGR_G_DestroyGeometry(centroid);
-        OGR_G_DestroyGeometry(cellAsOGR);
         free(values);
         free(weights);
         return NULL;
       }
 
-      if (OGR_G_ImportFromWkb(cellAsOGR, (void *) geometryAsWkb, (int) wkbSize) != OGRERR_NONE) {
+      if (OGR_G_CreateFromWkb(geometryAsWkb, spatialRef, &cellAsOGR, wkbSize) != OGRERR_NONE || cellAsOGR == NULL) {
         fprintf(stderr, "Failed to import WKB to OGR: %s\n", CPLGetLastErrorMsg());
         GEOSWKBWriter_destroy(wkbWriter);
         OSRDestroySpatialReference(spatialRef);
@@ -338,9 +348,15 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         return NULL;
       }
 
+      // Intersection is missing its SRS, even though both input geometries have it
       OGR_G_AssignSpatialReference(intersection, spatialRef);
 
       double intersectingArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(intersection);
+
+      if (isnan(intersectingArea) || isnan(referenceArea) || intersectingArea < 0.0 || referenceArea < 0.0) {
+        fprintf(stderr, "Area of intersecting geometry or area of reference is invalid\n");
+        /// FIXME: cleanup
+      }
 
       weights[i] = intersectingArea / referenceArea;
 
@@ -365,6 +381,13 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     meanEntry->value = calculateWeightedAverage(values, weights, intersections->intersectionCount);
     meanEntry->x = OGR_G_GetX(centroid, 0);
     meanEntry->y = OGR_G_GetY(centroid, 0);
+
+    // constrain to +/- 180°
+    if (meanEntry->x > 180.0) {
+      meanEntry->x -= 360.0;
+    } else if (meanEntry->x < -180.0) {
+      meanEntry->x += 360.0;
+    }
 
     if (root == NULL) {
       root = meanEntry;
@@ -421,74 +444,255 @@ double coordinateFromCell(double origin, double axisOfInterest, double pixelExte
   return origin + axisOfInterest * pixelExtent + complementaryAxis * rotation;
 }
 
-int processDaily(stringList *successfulDownloads, const option_t *options)
+stringList *parseLogFile(const char *filePath)
 {
-  while (successfulDownloads != NULL) {
-#ifdef DEBUG
-    printf("Processing file %s\n", successfulDownloads->string);
+  stringList *out = NULL, *tail;
+
+  if (filePath == NULL) {
+    return NULL;
+  }
+
+  FILE *f = fopen(filePath, "r");
+  if (f == NULL) {
+    return NULL;
+  }
+
+  char *lineptr = NULL;
+  size_t n = 0;
+
+  while (getline(&lineptr, &n, f) != -1) {
+    // remove newline
+    size_t length = strlen(lineptr);
+    
+    if (lineptr[length - 1] == '\n') {
+      lineptr[length - 1] = '\0';
+    }
+
+    char *downloadedFile = strtok(lineptr, "\t");
+    char *status = strtok(NULL, "\t");
+
+    if (downloadedFile == NULL || status == NULL) {
+      fprintf(stderr, "Failed to parse line in log file\n");
+      freeStringList(out);
+      free(lineptr);
+      fclose(f);
+      return NULL;
+    }
+
+    stringList *node = calloc(1, sizeof(stringList));
+    if (node == NULL) {
+      fprintf(stderr, "Failed to allocate memory for stringList node\n");
+      freeStringList(out);
+      free(lineptr);
+      fclose(f);
+      return NULL;
+    }
+
+    node->string = strdup(downloadedFile);
+    node->status = strdup(status);
+
+    if (node->string == NULL || node->status == NULL) {
+      fprintf(stderr, "Failed to store fields in node\n");
+      free(node->string);
+      free(node->status);
+      freeStringList(out);
+      free(lineptr);
+      fclose(f);
+      return NULL;
+    }
+
+    if (out == NULL) {
+      out = tail = node;
+    } else {
+      tail->next = node;
+      tail = node;
+    }
+
+    free(lineptr);
+    n = 0;
+  }
+
+  if (!feof(f)) {
+    fprintf(stderr, "An error occurred while reading %s\n", filePath);
+    freeStringList(out);
+    out = NULL;
+  }
+
+  free(lineptr);
+  fclose(f);
+
+  return out;
+}
+
+int writeUpdatedLogFile(stringList *list, const char *filePath)
+{
+  if (list == NULL || filePath == NULL) {
+    return 1;
+  }
+
+  FILE *f = fopen(filePath, "w");
+  if (f == NULL) {
+    fprintf(stderr, "Failed to open log file for writing\n");
+    return 1;
+  }
+
+  for (stringList *ptr = list; ptr != NULL; ptr = ptr->next) {
+    if (fprintf(f, "%s\t%s\n", ptr->string,ptr->status) < 0) {
+      fprintf(stderr, "Encountered error while writing updated log file. Start all over at this point...\n");
+      fclose(f);
+      return 1;
+    }
+  }
+
+  fclose(f);
+
+  return 0;
+}
+
+int backFillOptions(option_t *options, GDALDatasetH dataset)
+{
+  // make sure to start fresh options for new file
+  memset(options->years, 0, sizeof(int) * options->yearsElements);
+  memset(options->months, 0, sizeof(int) * options->monthsElements);
+  memset(options->days, 0, sizeof(int) * options->daysElements);
+  memset(options->hours, 0, sizeof(int) * options->hoursElements);
+  options->daysElements = 0;
+  options->hoursElements = 0;
+  
+  const int nLayers = GDALGetRasterCount(dataset);
+
+  // back-fill fields of options struct with one strong assumptions: only ever fill back hours and potentially days;
+  // each file is thus assumed to only contain data for either an entire day or entire month
+  options->yearsElements = 1;
+  options->monthsElements = 1;
+  struct tm time;
+
+  int daysHistogram[31] = {0};
+  int hoursHistogram[24] = {0};
+
+  for (int i = 1; i <= nLayers; i++) {
+    GDALRasterBandH band = openRasterBand(dataset, i);
+
+    if (band == NULL) {
+      /// FIXME: ERROR HANDLING
+    }
+    
+    const char *refTime = GDALGetMetadataItem(band, "GRIB_REF_TIME", NULL);
+    if (refTime == NULL) {
+      /// FIXME: ERROR HANDLING
+    }
+
+    memset(&time, 0, sizeof(time));
+
+    if (strptime(refTime, "%s", &time) == NULL) {
+      /// FIXME: ERROR HANDLING
+    }
+
+    options->years[0] = time.tm_year + 1900;
+    options->months[0] = time.tm_mon + 1;
+    daysHistogram[time.tm_mday - 1] += 1;
+    hoursHistogram[time.tm_hour] += 1;
+  }
+
+  for (int i = 0; i < 31; i++) {
+    if (daysHistogram[i]) {
+      options->days[options->daysElements] = i + 1;
+      options->daysElements += 1;
+    }
+  }
+
+  for (int i = 0; i < 24; i++) {
+    if (hoursHistogram[i]) {
+      options->hours[options->hoursElements] = i;
+      options->hoursElements += 1;
+    }
+  }
+
+  return 0;
+}
+
+int process(option_t *options)
+{
+  bool someErrors;
+
+  stringList *logFileList = parseLogFile(options->logFile);
+
+  if (logFileList == NULL) {
+    return 1;
+  }
+
+  /// hacked together implementation to only build this data structure once
+  vectorGeometryList *areasOfInterest = NULL;
+
+  for (stringList *ptr = logFileList; ptr != NULL; ptr = ptr->next) {
+    someErrors = false;
+
+    if (strcmp("DOWNLOADED", ptr->status) != 0) {
+      continue;
+    }
+
+    #ifdef DEBUG
+    printf("Processing file %s\n", ptr->string);
 #endif
-    GDALDatasetH ds = openRasterDataset(successfulDownloads->string);
+    GDALDatasetH ds = openRasterDataset(ptr->string);
 
     if (ds == NULL)
       return -1;
 
-    const char *rasterWkt = extractCRSAsWKT(ds, NULL);
+    const int nLayers = GDALGetRasterCount(ds);
 
-    vectorGeometryList *areasOfInterest = buildGEOSGeometriesFromFile(options->areaOfInterest, options->aoiName,
-                                          rasterWkt);
+    if (backFillOptions(options, ds)) {
+      fprintf(stderr, "Failed to extract temporal information from dataset\n");
+      closeGDALDataset(ds);
+      continue;
+    }
+
+    // WKT of ERA5 is assumed to be set to WGS84 and won't change over time; former information from:
+    // https://confluence.ecmwf.int/display/CKB/ERA5%3A+data+documentation#heading-SpatialreferencesystemsandEarthmodel and
+    // https://gis.stackexchange.com/a/380251
+    if (areasOfInterest == NULL) {
+      areasOfInterest = buildGEOSGeometriesFromFile(options->areaOfInterest, options->aoiName,
+                                          SRS_WKT_WGS84_LAT_LONG);
+    }
+    
+    if (areasOfInterest == NULL) {
+      fprintf(stderr, "Failed to process area of interest\n");
+      closeGDALDataset(ds);
+      continue;
+    }
 
     struct rawData data = {0};
     if (readRasterDataset(ds, &data)) {
       closeGDALDataset(ds);
-      CPLFree((void* ) rasterWkt);
-      freeVectorGeometryList(areasOfInterest);
-      return -1;
+      continue;
     }
 
     struct geoTransform transform = {0};
     if (getRasterMetadata(ds, &transform)) {
-      fprintf(stderr, "Failed to get geo transformation from dataset %s\n", successfulDownloads->string);
+      fprintf(stderr, "Failed to get geo transformation from dataset %s\n", ptr->string);
       closeGDALDataset(ds);
-      CPLFree((void* ) rasterWkt);
-      freeVectorGeometryList(areasOfInterest);
       freeRawData(&data);
-      return -1;
+      continue;
     }
-
-    const int nLayers = GDALGetRasterCount(ds);
 
     closeGDALDataset(ds);
 
     size_t hoursPerDay = options->hoursElements;
     size_t processedDays = 0;
 
+    int currentYear = options->years[0];
+    int currentMonth = options->months[0];
+
     for (size_t i = 0; i < options->daysElements
          && (int) (processedDays * hoursPerDay) < nLayers; i++, processedDays++) {
       int day = options->days[i];
 #ifdef DEBUG
       printf("%ld/%d\n", processedDays * hoursPerDay, nLayers);
-#endif
-
-      int currentYear;
-      int currentMonth;
-
-      const char *inputFileName = strrchr(successfulDownloads->string, '/');
-      if (inputFileName == NULL) {
-        fprintf(stderr, "Malformed file path. Could not get final path delimiter\n");
-        continue;
-      }
-
-      inputFileName++;
-
-      if (sscanf(inputFileName, "%d-%d.grib", &currentYear, &currentMonth) != 2) {
-        fprintf(stderr, "Failed to extract year and month from file name\n");
-        continue;
-      }
+#endif      
 
       if (!isValidDate(currentYear, currentMonth, day)) {
 #ifdef DEBUG
-        printf("Skipping invalid date %.4d-%.2d-%.2d: %s\n", currentYear, currentMonth, day,
-               successfulDownloads->string);
+        printf("Skipping invalid date %.4d-%.2d-%.2d: %s\n", currentYear, currentMonth, day, ptr->string);
 #endif
         continue;
       }
@@ -503,12 +707,18 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
       if (averageRawDataWithSizeOffset(&data, &average, hoursPerDay, processedDays * hoursPerDay)) {
         fprintf(stderr, "Failed to compute averages\n");
         freeAverageData(&average);
-        continue;
+        someErrors = true;
+        break;
       }
 
       cellGeometryList *rasterCellsAsGEOS = NULL;
 
       GEOSSTRtree *rasterTree = buildSTRTreefromRaster(&average, &transform, &rasterCellsAsGEOS);
+      if (rasterTree == NULL || rasterCellsAsGEOS == NULL) {
+        fprintf(stderr, "Failed to construct STRTree from raster file %s", ptr->string);
+        /// TODO: cleanup
+        continue;
+      }
 
       // a function to query the tree constructed by buildSTRTreefromRaster which somehow gets me for each polygon in areasOfInterest
       // the intersecting polygons of the tree so I can calculate the area-weighted average
@@ -519,7 +729,8 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
         freeAverageData(&average);
         freeCellGeometryList(rasterCellsAsGEOS);
         GEOSSTRtree_destroy(rasterTree);
-        break; // break out of foor loop and continue with next raster dataset
+        someErrors = true;
+        break;
       }
 
       // a functions that (should be split up into smaller pieces)
@@ -529,17 +740,16 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
       // 3. b) query a WKT/dataset for property
       // 4. calculate area-weighted average
       // 5. get centroid of polygon
-      mean_t *weightedMeans = calculateAreaWeightedMean(intersections, rasterWkt);
+      mean_t *weightedMeans = calculateAreaWeightedMean(intersections, SRS_WKT_WGS84_LAT_LONG);
       if (weightedMeans == NULL) {
         fprintf(stderr, "Failed to calculate weighted means\n");
-        freeVectorGeometryList(areasOfInterest);
         freeRawData(&data);
         freeAverageData(&average);
         freeCellGeometryList(rasterCellsAsGEOS);
         GEOSSTRtree_destroy(rasterTree);
         freeIntersections(intersections);
-        CPLFree((void* ) rasterWkt);
-        return 1;
+        someErrors = true;
+        break;
       }
 
       char *textOutputFilePath = constructFilePath("%s/%.4d-%.2d-%.2d.txt", options->outputDirectory,
@@ -547,14 +757,13 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
 
       if (textOutputFilePath == NULL) {
         fprintf(stderr, "Failed to construct file path for output text file\n");
-        freeVectorGeometryList(areasOfInterest);
         freeRawData(&data);
         freeAverageData(&average);
         freeCellGeometryList(rasterCellsAsGEOS);
         GEOSSTRtree_destroy(rasterTree);
         freeIntersections(intersections);
-        CPLFree((void* ) rasterWkt);
-        return 1;
+        someErrors = true;
+        break;
       }
 
       // 6. write tuple (centroid coordinates, average value, ERA5) to a file
@@ -570,13 +779,33 @@ int processDaily(stringList *successfulDownloads, const option_t *options)
       free(textOutputFilePath);
     }
 
-    CPLFree((void* ) rasterWkt);
-    freeVectorGeometryList(areasOfInterest);
     freeRawData(&data);
 
-    successfulDownloads = successfulDownloads->next;
+    if (!someErrors) {
+#ifndef DEBUG
+      char *msg = strdup("PROCESSED");
+      if (msg == NULL) {
+        fprintf(stderr, "Failed to allocate memory for new message. Not marking %s as processed\n", ptr->string);
+      } else {
+        free(ptr->status);
+        ptr->status = msg;
+      }
+#endif
+    } else {
+      fprintf(stderr, "Encountered errors while processing %s\n", ptr->string);
+    }
+  }
+  
+  freeVectorGeometryList(areasOfInterest);
+
+  if (writeUpdatedLogFile(logFileList, options->logFile)) {
+    fprintf(stderr, "Failed to update log file. Log file and output directory are inconsistent now, clean up manually\n");
+    freeStringList(logFileList);
+    return 1;
   }
 
+  freeStringList(logFileList);
+  
   return 0;
 }
 
