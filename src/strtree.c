@@ -17,6 +17,7 @@
 #include <string.h>
 #include <time.h>
 
+/// TODO: move to gdal-ops
 [[nodiscard]] char *extractCRSAsWKT(GDALDatasetH dataset, const char *layerName)
 {
   GDALDriverH driver = GDALGetDatasetDriver(dataset);
@@ -75,8 +76,6 @@
       [[fallthrough]];
     case wkbMultiPolygon:
       [[fallthrough]];
-    case wkbCurvePolygon:
-      [[fallthrough]];
     case wkbMultiSurface:
       [[fallthrough]];
     case wkbSurface:
@@ -90,7 +89,7 @@
 
     default:
       fprintf(stderr, "Layer has unsupported geometry type. "
-                      "Allowed types are: Polygon, Multipolygon, Curvepolygon, Multisurface, "
+                      "Allowed types are: Polygon, Multipolygon, Multisurface, "
                       "Surface, Polyhedralsurface, TIN and triangle.\n");
       closeGDALDataset(vectorDataset);
       return NULL;
@@ -135,7 +134,7 @@
       return NULL;
     }
 
-    transformer = OGR_GeomTransformer_Create(transformation, NULL);
+    transformer = OGR_GeomTransformer_Create(transformation, transformerAddonOptions);
 
     if (transformer == NULL) {
       fprintf(stderr, "Failed to create coordinate transformer object\n");
@@ -245,7 +244,6 @@
     const struct geoTransform *transformation, cellGeometryList **cells)
 {
   unsigned int err = 0;
-
   GEOSSTRtree *tree = GEOSSTRtree_create(TREE_NODE_CAP);
   if (tree == NULL) {
     fprintf(stderr, "Failed to allocate tree\n");
@@ -265,7 +263,7 @@
                                      transformation->pixelHeight,
                                      (double) x, transformation->colRotation);
 
-      // the ternary madness is needed because images may not be north-up
+      /// TODO: swapping into which places x and y go based on the underlying SRS not needed because GEOS does not care when no SRS is attached -- right?
       GEOSGeometry *geom = GEOSGeom_createRectangle(
                              MIN(x1, x2),
                              MIN(y1, y2),
@@ -450,6 +448,7 @@ void trackIntersectingGeometries(void *item, void *userdata)
     return NULL;
   }
 
+  /// FIXME: hoist reader out of loop/function!
   GEOSWKBReader *reader = GEOSWKBReader_create();
   if (reader == NULL) {
     fprintf(stderr, "Failed to create GEOS WKB reader\n");
