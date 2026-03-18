@@ -153,9 +153,11 @@ void printHelp(void)
   positionalArguments--;
   optind++;
 
-  if (positionalArguments == 1 && (userOptions->global && userOptions->download || userOptions->process)) {
+  if (positionalArguments == 1 && (userOptions->global && userOptions->download
+                                   || userOptions->process)) {
     userOptions->outputDirectory = argv[optind];
-  } else if (positionalArguments == 2 && (!userOptions->global && userOptions->download || userOptions->process)) {
+  } else if (positionalArguments == 2 && (!userOptions->global && userOptions->download
+                                          || userOptions->process)) {
     userOptions->areaOfInterest = argv[optind];
     optind++;
     userOptions->outputDirectory = argv[optind];
@@ -165,7 +167,8 @@ void printHelp(void)
     return NULL;
   }
 
-  if ((!userOptions->global || userOptions->process) && !(fileExists(userOptions->areaOfInterest) && fileReadable(userOptions->areaOfInterest))) {
+  if ((!userOptions->global || userOptions->process) && !(fileExists(userOptions->areaOfInterest)
+      && fileReadable(userOptions->areaOfInterest))) {
     fprintf(stderr, "AOI file not readable\n\n");
     freeOption(userOptions);
     return NULL;
@@ -184,7 +187,8 @@ void printHelp(void)
     return NULL;
   }
 
-  if ((!(fileExists(userOptions->logFile) && fileWritable(userOptions->logFile))) && !fileWritable(dirname(dupedLogFile))) {
+  if ((!(fileExists(userOptions->logFile) && fileWritable(userOptions->logFile)))
+      && !fileWritable(dirname(dupedLogFile))) {
     fprintf(stderr, "Logile is not writable\n\n");
     free(dupedLogFile);
     freeOption(userOptions);
@@ -375,7 +379,8 @@ int getAuthenticationFromEnvironment(char **authenticationToken)
 {
   char *environmentToken = getenv("ADSAUTH");
 
-  if (environmentToken == NULL) return 1;
+  if (environmentToken == NULL)
+    return 1;
 
   *authenticationToken = strdup(environmentToken);
 

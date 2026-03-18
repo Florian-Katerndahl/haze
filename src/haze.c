@@ -57,7 +57,8 @@ int readRasterDataset(GDALDatasetH raster, struct rawData *dataBuffer)
     return 1;
   }
 
-  dataBuffer->data = calloc(dataBuffer->rows * dataBuffer->columns * dataBuffer->bands, sizeof(double));
+  dataBuffer->data = calloc(dataBuffer->rows * dataBuffer->columns * dataBuffer->bands,
+                            sizeof(double));
   if (dataBuffer->data == NULL) {
     perror("calloc");
     return 1;
@@ -204,7 +205,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       for (size_t band = 0; band < data->bands; band++) {
         originBandOffset = band * data->columns * data->rows;
         targetBandOffset = band;
-        temporaryArray[targetBandOffset + targetXOffset + targetYOffset] = data->data[originYOffset + originXOffset + originBandOffset];
+        temporaryArray[targetBandOffset + targetXOffset + targetYOffset] = data->data[originYOffset +
+            originXOffset + originBandOffset];
       }
     }
   }
@@ -309,7 +311,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 
       OGRGeometryH cellAsOGR;
 
-      const unsigned char *geometryAsWkb = GEOSWKBWriter_write(wkbWriter, temp->entry->geometry, &wkbSize);
+      const unsigned char *geometryAsWkb = GEOSWKBWriter_write(wkbWriter, temp->entry->geometry,
+                                           &wkbSize);
       if (geometryAsWkb == NULL) {
         fprintf(stderr, "Failed to export geometry as WKB\n");
         GEOSWKBWriter_destroy(wkbWriter);
@@ -321,7 +324,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         return NULL;
       }
 
-      if (OGR_G_CreateFromWkb(geometryAsWkb, spatialRef, &cellAsOGR, wkbSize) != OGRERR_NONE || cellAsOGR == NULL) {
+      if (OGR_G_CreateFromWkb(geometryAsWkb, spatialRef, &cellAsOGR, wkbSize) != OGRERR_NONE
+          || cellAsOGR == NULL) {
         fprintf(stderr, "Failed to import WKB to OGR: %s\n", CPLGetLastErrorMsg());
         GEOSWKBWriter_destroy(wkbWriter);
         OSRDestroySpatialReference(spatialRef);
@@ -351,9 +355,11 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       // Intersection is missing its SRS, even though both input geometries have it
       OGR_G_AssignSpatialReference(intersection, spatialRef);
 
-      double intersectingArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(intersection);
+      double intersectingArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(
+                                  intersection);
 
-      if (isnan(intersectingArea) || isnan(referenceArea) || intersectingArea < 0.0 || referenceArea < 0.0) {
+      if (isnan(intersectingArea) || isnan(referenceArea) || intersectingArea < 0.0
+          || referenceArea < 0.0) {
         fprintf(stderr, "Area of intersecting geometry or area of reference is invalid\n");
         /// FIXME: cleanup
       }
@@ -423,12 +429,13 @@ int writeWeightedMeans(mean_t *values, const char *filePath)
 
   while (values != NULL) {
     // unfeasable to compute number of characters beforehand, but we can check for errors
-    if (fprintf(outFile, "%.4lf %.4lf %f ERA\n",values->x, values->y, (float) kgsqmTocow(values->value)) < 0) {
+    if (fprintf(outFile, "%.4lf %.4lf %f ERA\n", values->x, values->y,
+                (float) kgsqmTocow(values->value)) < 0) {
       fprintf(stderr, "Failed to write weighted meann\n");
       fclose(outFile);
       unlink(filePath);
       return 1;
-    }    
+    }
 
     values = values->next;
   }
@@ -463,7 +470,7 @@ stringList *parseLogFile(const char *filePath)
   while (getline(&lineptr, &n, f) != -1) {
     // remove newline
     size_t length = strlen(lineptr);
-    
+
     if (lineptr[length - 1] == '\n') {
       lineptr[length - 1] = '\0';
     }
@@ -537,8 +544,9 @@ int writeUpdatedLogFile(stringList *list, const char *filePath)
   }
 
   for (stringList *ptr = list; ptr != NULL; ptr = ptr->next) {
-    if (fprintf(f, "%s\t%s\n", ptr->string,ptr->status) < 0) {
-      fprintf(stderr, "Encountered error while writing updated log file. Start all over at this point...\n");
+    if (fprintf(f, "%s\t%s\n", ptr->string, ptr->status) < 0) {
+      fprintf(stderr,
+              "Encountered error while writing updated log file. Start all over at this point...\n");
       fclose(f);
       return 1;
     }
@@ -558,7 +566,7 @@ int backFillOptions(option_t *options, GDALDatasetH dataset)
   memset(options->hours, 0, sizeof(int) * options->hoursElements);
   options->daysElements = 0;
   options->hoursElements = 0;
-  
+
   const int nLayers = GDALGetRasterCount(dataset);
 
   // back-fill fields of options struct with one strong assumptions: only ever fill back hours and potentially days;
@@ -576,7 +584,7 @@ int backFillOptions(option_t *options, GDALDatasetH dataset)
     if (band == NULL) {
       /// FIXME: ERROR HANDLING
     }
-    
+
     const char *refTime = GDALGetMetadataItem(band, "GRIB_REF_TIME", NULL);
     if (refTime == NULL) {
       /// FIXME: ERROR HANDLING
@@ -631,7 +639,7 @@ int process(option_t *options)
       continue;
     }
 
-    #ifdef DEBUG
+#ifdef DEBUG
     printf("Processing file %s\n", ptr->string);
 #endif
     GDALDatasetH ds = openRasterDataset(ptr->string);
@@ -652,9 +660,9 @@ int process(option_t *options)
     // https://gis.stackexchange.com/a/380251
     if (areasOfInterest == NULL) {
       areasOfInterest = buildGEOSGeometriesFromFile(options->areaOfInterest, options->aoiName,
-                                          SRS_WKT_WGS84_LAT_LONG);
+                        SRS_WKT_WGS84_LAT_LONG);
     }
-    
+
     if (areasOfInterest == NULL) {
       fprintf(stderr, "Failed to process area of interest\n");
       closeGDALDataset(ds);
@@ -688,7 +696,7 @@ int process(option_t *options)
       int day = options->days[i];
 #ifdef DEBUG
       printf("%ld/%d\n", processedDays * hoursPerDay, nLayers);
-#endif      
+#endif
 
       if (!isValidDate(currentYear, currentMonth, day)) {
 #ifdef DEBUG
@@ -785,7 +793,8 @@ int process(option_t *options)
 #ifndef DEBUG
       char *msg = strdup("PROCESSED");
       if (msg == NULL) {
-        fprintf(stderr, "Failed to allocate memory for new message. Not marking %s as processed\n", ptr->string);
+        fprintf(stderr, "Failed to allocate memory for new message. Not marking %s as processed\n",
+                ptr->string);
       } else {
         free(ptr->status);
         ptr->status = msg;
@@ -795,17 +804,18 @@ int process(option_t *options)
       fprintf(stderr, "Encountered errors while processing %s\n", ptr->string);
     }
   }
-  
+
   freeVectorGeometryList(areasOfInterest);
 
   if (writeUpdatedLogFile(logFileList, options->logFile)) {
-    fprintf(stderr, "Failed to update log file. Log file and output directory are inconsistent now, clean up manually\n");
+    fprintf(stderr,
+            "Failed to update log file. Log file and output directory are inconsistent now, clean up manually\n");
     freeStringList(logFileList);
     return 1;
   }
 
   freeStringList(logFileList);
-  
+
   return 0;
 }
 

@@ -60,7 +60,7 @@
 
   if (!EQUAL(layerWKT, SRS_WKT_WGS84_LAT_LONG)) {
     OGRCoordinateTransformationH transformation = transformationFromWKTs(layerWKT,
-      SRS_WKT_WGS84_LAT_LONG);
+        SRS_WKT_WGS84_LAT_LONG);
 
     if (transformation == NULL) {
       fprintf(stderr, "Failed to create transformation object: %s", CPLGetLastErrorMsg());

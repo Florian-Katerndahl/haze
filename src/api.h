@@ -181,7 +181,10 @@ char *slurpAndGetString(const char *input, const char *key);
  * @param maxAttempts Maximum number of status requests made before request is deemed faulty.
  * @return int 0 on success, 1 on error.
  */
-[[nodiscard]] int handleDownloadChain(CURL *handle, const option_t *options, const OGREnvelope *aoi, const char *outputPath, const int *subsetYears, const int *subsetMonths, const int *subsetDays, const int *subsetHours, const size_t yearsElements, const size_t monthsElements, const size_t daysElements, const size_t hoursElements, const unsigned int maxAttempts);
+[[nodiscard]] int handleDownloadChain(CURL *handle, const option_t *options, const OGREnvelope *aoi,
+                                      const char *outputPath, const int *subsetYears, const int *subsetMonths, const int *subsetDays,
+                                      const int *subsetHours, const size_t yearsElements, const size_t monthsElements,
+                                      const size_t daysElements, const size_t hoursElements, const unsigned int maxAttempts);
 
 /**
  * @brief Perform product request with CDS API
@@ -218,7 +221,8 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
  * @param options Reference to parsed options.
  * @return productStatus Product status.
  */
-productStatus cdsGetProductStatus(CURL *handle, const char *requestId, const option_t *options); // Result.update
+productStatus cdsGetProductStatus(CURL *handle, const char *requestId,
+                                  const option_t *options); // Result.update
 
 /**
  * @brief Compute binary exponential backoff
@@ -242,7 +246,8 @@ int binaryExponentialBackoff(int attempt);
  *                    connection requests.
  * @return int 0 on success, 1 on error.
  */
-int cdsWaitForProduct(CURL *handle, const char *requestId, const option_t *options, unsigned int maxAttempts);
+int cdsWaitForProduct(CURL *handle, const char *requestId, const option_t *options,
+                      unsigned int maxAttempts);
 
 /**
  * @brief Download data related to previously made request to local file
@@ -256,7 +261,8 @@ int cdsWaitForProduct(CURL *handle, const char *requestId, const option_t *optio
  * @return int 0 on success, 1 on failure.
  */
 int cdsDownloadProduct(CURL *handle, const char *requestId,
-                       const char *outputPath, const option_t *options); // same URL as product status but with /results appended which then returns the actual download URL
+                       const char *outputPath, const option_t
+                       *options); // same URL as product status but with /results appended which then returns the actual download URL
 
 /**
  * @brief Delete a prodcut request from personal CDS space
@@ -266,6 +272,7 @@ int cdsDownloadProduct(CURL *handle, const char *requestId,
  * @param options Reference to parsed options.
  * @return int 0 on success, 1 on failure.
  */
-int cdsDeleteProductRequest(CURL *handle, const char *requestId, const option_t *options); // Result.delete
+int cdsDeleteProductRequest(CURL *handle, const char *requestId,
+                            const option_t *options); // Result.delete
 
 #endif // API_H

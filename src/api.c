@@ -248,7 +248,8 @@ cleanup:
           int month = options->months[monthIdx];
           int day = options->days[dayIdx];
 
-          char *outputPath = constructFilePath("%s/%.4d-%.2d-%.2d.grib", options->outputDirectory, year, month, day);
+          char *outputPath = constructFilePath("%s/%.4d-%.2d-%.2d.grib", options->outputDirectory, year,
+                                               month, day);
 
           if (outputPath == NULL) {
             fprintf(stderr, "Failed to construct local file path\n");
@@ -259,7 +260,8 @@ cleanup:
           int requestMonths[1] = {month};
           int requestDays[1] = {day};
 
-          if (handleDownloadChain(handle, options, aoi, outputPath, requestYears, requestMonths, requestDays, options->hours, 1, 1, 1, options->hoursElements, maxAttempts)) {
+          if (handleDownloadChain(handle, options, aoi, outputPath, requestYears, requestMonths, requestDays,
+                                  options->hours, 1, 1, 1, options->hoursElements, maxAttempts)) {
             fprintf(stderr, "Failed to download data for %.4d-%.2d-%.2d", year, month, day);
             unlink(outputPath); // no information at what stage the download failed
             free(outputPath);
@@ -296,7 +298,8 @@ cleanup:
         int requestYears[1] = {year};
         int requestMonths[1] = {month};
 
-        if (handleDownloadChain(handle, options, aoi, outputPath, requestYears, requestMonths, options->days, options->hours, 1, 1, options->daysElements, options->hoursElements, maxAttempts)) {
+        if (handleDownloadChain(handle, options, aoi, outputPath, requestYears, requestMonths,
+                                options->days, options->hours, 1, 1, options->daysElements, options->hoursElements, maxAttempts)) {
           fprintf(stderr, "Failed to download data for %.4d-%.2d", year, month);
           unlink(outputPath); // no information at what stage the download failed
           free(outputPath);
@@ -365,10 +368,14 @@ char *slurpAndGetString(const char *input, const char *key)
   return ret;
 }
 
-[[nodiscard]] int handleDownloadChain(CURL *handle, const option_t *options, const OGREnvelope *aoi, const char *outputPath, const int *subsetYears, const int *subsetMonths, const int *subsetDays, const int *subsetHours, const size_t yearsElements, const size_t monthsElements, const size_t daysElements, const size_t hoursElements, const unsigned int maxAttempts) {
+[[nodiscard]] int handleDownloadChain(CURL *handle, const option_t *options, const OGREnvelope *aoi,
+                                      const char *outputPath, const int *subsetYears, const int *subsetMonths, const int *subsetDays,
+                                      const int *subsetHours, const size_t yearsElements, const size_t monthsElements,
+                                      const size_t daysElements, const size_t hoursElements, const unsigned int maxAttempts)
+{
   char *requestId = cdsRequestProduct(handle, subsetYears, subsetMonths, subsetDays,
-                                          subsetHours, yearsElements, monthsElements,
-                                          daysElements, hoursElements, aoi, options);
+                                      subsetHours, yearsElements, monthsElements,
+                                      daysElements, hoursElements, aoi, options);
 
   if (requestId == NULL) {
     fprintf(stderr, "Failed to request product or extract job id\n");
@@ -586,7 +593,8 @@ int binaryExponentialBackoff(int attempt)
   return (int) backoff;
 }
 
-int cdsWaitForProduct(CURL *handle, const char *requestId, const option_t *options, unsigned int maxAttempts)
+int cdsWaitForProduct(CURL *handle, const char *requestId, const option_t *options,
+                      unsigned int maxAttempts)
 {
   int sleepSeconds;
   unsigned int attempt = 1;
@@ -615,7 +623,8 @@ int cdsWaitForProduct(CURL *handle, const char *requestId, const option_t *optio
   return 1;
 }
 
-int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPath, const option_t *options)
+int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPath,
+                       const option_t *options)
 {
   CURL *downloadHandle = curl_easy_duphandle(handle);
   if (downloadHandle == NULL) {

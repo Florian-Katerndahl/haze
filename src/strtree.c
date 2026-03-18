@@ -89,8 +89,8 @@
 
     default:
       fprintf(stderr, "Layer has unsupported geometry type. "
-                      "Allowed types are: Polygon, Multipolygon, Multisurface, "
-                      "Surface, Polyhedralsurface, TIN and triangle.\n");
+              "Allowed types are: Polygon, Multipolygon, Multisurface, "
+              "Surface, Polyhedralsurface, TIN and triangle.\n");
       closeGDALDataset(vectorDataset);
       return NULL;
   }
