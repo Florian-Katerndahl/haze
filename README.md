@@ -16,33 +16,11 @@
 
 ## Acknowledgement
 
-```
-@Manual{GDAL2025,
-  title = {{GDAL/OGR} Geospatial Data Abstraction software Library},
-  author = {{GDAL/OGR contributors}},
-  organization = {Open Source Geospatial Foundation},
-  year = {2025},
-  version = {3.11.3},
-  url = {https://gdal.org},
-  doi = {10.5281/zenodo.5884351},
-}
+`haze` was funded in part by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) – Project-ID 414984028 – SFB 1404 FONDA. 
 
-@Manual{GEOS2023,
-  title = {{GEOS} computational geometry library},
-  author = {{GEOS contributors}},
-  organization = {Open Source Geospatial Foundation},
-  year = {2023},
-  version = {3.12.1},
-  url = {https://libgeos.org/},
-  doi = {10.5281/zenodo.11396894}
-}
+Additionally, `haze` heavily relies on the libraries listed below, without which it could not exist in this form. Consider supporting them, if you can!
 
-@Manual{Jansson2021,
-  title = {Jansson},
-  author = {{Jansson contributors}},
-  year = {2021},
-  version = {2.14.0},
-  url = {https://github.com/akheron/jansson}
-}
-```
-
+- [cURL](https://curl.se/)
+- [GDAL/OGR](https://gdal.org/)
+- [GEOS computational geometry library](https://libgeos.org/)
+- [Jansson](https://github.com/akheron/jansson)
