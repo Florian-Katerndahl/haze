@@ -80,7 +80,7 @@
         AXIS["geodetic longitude (Lon)",east,
           ORDER[2],
           ANGLEUNIT["degree",0.0174532925199433]],
-      mean: -59 lon => 59 west and 58 lat => 58 north
+    mean: -59 lon => 59 west and 58 lat => 58 north
 
     It's needed because I work with the coordinates directly, would I only be interested in the geometry, e.g. for
     area calculation, this wouldn't be necessary!
