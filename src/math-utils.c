@@ -24,3 +24,11 @@ double calculateWeightedAverage(const double *values, const double *weights, siz
 
   return numerator / denominator;
 }
+
+int intcmp(const void *a, const void *b)
+{
+  int aInt = *(int *) a;
+  int bInt = *(int *) b;
+
+  return aInt - bInt;
+}

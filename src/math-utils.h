@@ -41,4 +41,13 @@ double kgsqmTocow(double x);
  */
 double calculateWeightedAverage(const double *values, const double *weights, size_t count);
 
+/**
+ * @brief Callback function for `qsort` to compare integers
+ *
+ * @param a Void-casted reference to first value of comparison.
+ * @param b Void-casted reference to second value of comparison.
+ * @return int Negative value if a < b, 0 if a = b, positive value if a > b.
+ */
+int intcmp(const void *a, const void *b);
+
 #endif // MATH_UTILS_H
