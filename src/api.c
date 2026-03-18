@@ -273,6 +273,9 @@ cleanup:
             continue;
           }
 
+          // feels more appropriate to write immediately
+          fflush(logFile);
+
           free(outputPath);
         }
       }
@@ -306,6 +309,9 @@ cleanup:
           free(outputPath);
           continue;
         }
+
+        // feels more appropriate to write immediately
+        fflush(logFile);
 
         free(outputPath);
       }
