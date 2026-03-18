@@ -3,6 +3,8 @@ docs/
 build/
 data/
 main
-feature-tests/test-strtree
+feature-tests/
+testing-data/
 *.orig
 *.csv
+*.grib
