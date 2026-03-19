@@ -12,7 +12,7 @@ OBJECTS := paths.o fscheck.o aoi.o haze.o types.o gdal-ops.o math-utils.o option
 OBJECT_PATHS := $(foreach obj,$(OBJECTS),build/$(obj))
 
 .PHONY: all
-all: haze
+all: haze docs
 
 $(OBJECT_PATHS): build/%.o: src/%.c
 	$(CC) $(DEFINES) $(CFLAGS) $^ -c -o $@
@@ -20,7 +20,11 @@ $(OBJECT_PATHS): build/%.o: src/%.c
 haze: main.c $(OBJECT_PATHS)
 	$(CC) $(DEFINES) $(CFLAGS) $^ $(LINKFLAGS) -o $@
 
+docs: Doxyfile manual/*.md src/*.h
+	doxygen Doxyfile
+
 .PHONY: clean
 clean:
 	rm -f haze
 	rm -f build/*
+	rm -fr docs/*
