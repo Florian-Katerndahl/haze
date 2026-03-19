@@ -1,3 +1,5 @@
+#ifndef FSCHECK_H
+#define FSCHECK_H
 /**
  * @file fscheck.h
  * @author Florian Katerndahl <florian@katerndahl.com>
@@ -7,9 +9,9 @@
  *
  * @copyright Copyright (c) 2026
  *
+ * @defgroup fscheck File System Checks
+ * @{
  */
-#ifndef FSCHECK_H
-#define FSCHECK_H
 
 #include <stdbool.h>
 
@@ -44,4 +46,5 @@ bool fileWritable(const char *filePath);
  */
 bool fileReadable(const char *filePath);
 
+/** @} */ // end of group
 #endif // FSCHECK_H

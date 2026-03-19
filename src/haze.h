@@ -1,3 +1,5 @@
+#ifndef HAZE_H
+#define HAZE_H
 /**
  * @file haze.h
  * @author Florian Katerndahl <florian@katerndahl.com>
@@ -7,9 +9,9 @@
  *
  * @copyright Copyright (c) 2026
  *
+ * @defgroup haze Water Vapor Processing
+ * @{
  */
-#ifndef HAZE_H
-#define HAZE_H
 
 #define _DEFAULT_SOURCE
 
@@ -247,4 +249,5 @@ int process(option_t *options);
  */
 bool isValidDate(int year, int month, int day);
 
+/** @} */ // end of group
 #endif // HAZE_H

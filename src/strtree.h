@@ -1,3 +1,5 @@
+#ifndef STRTREE_H
+#define STRTREE_H
 /**
  * @file strtree.h
  * @author Florian Katerndahl <florian@katerndahl.com>
@@ -7,9 +9,9 @@
  *
  * @copyright Copyright (c) 2026
  *
+ * @defgroup strtree STRTree Generation and Usage
+ * @{
  */
-#ifndef STRTREE_H
-#define STRTREE_H
 
 #include "types.h"
 #include <gdal/gdal.h>
@@ -127,4 +129,5 @@ void trackIntersectingGeometries(void *item, void *userdata);
  */
 [[nodiscard]] GEOSGeometry *OGRToGEOS(const OGRGeometryH geom);
 
+/** @} */ // end of group
 #endif // STRTREE_H

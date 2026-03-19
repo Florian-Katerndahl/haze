@@ -1,3 +1,5 @@
+#ifndef OPTIONS_H
+#define OPTIONS_H
 /**
  * @file options.h
  * @author Florian Katerndahl <florian@katerndahl.com>
@@ -7,9 +9,9 @@
  *
  * @copyright Copyright (c) 2026
  *
+ * @defgroup options CLI Arguments Parsing and Program Setup
+ * @{
  */
-#ifndef OPTIONS_H
-#define OPTIONS_H
 
 #include "types.h"
 #include <stdbool.h>
@@ -189,4 +191,5 @@ void forceNoTrailingSlash(const option_t *options);
  */
 void printOptions(const option_t *options);
 
+/** @} */ // end of group
 #endif // OPTIONS_H

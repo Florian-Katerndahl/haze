@@ -1,3 +1,5 @@
+#ifndef GDAL_OPS_H
+#define GDAL_OPS_H
 /**
  * @file gdal-ops.h
  * @author Florian Katerndahl <florian@katerndahl.com>
@@ -7,9 +9,9 @@
  *
  * @copyright Copyright (c) 2026
  *
+ * @defgroup gdal-ops General GDAL Operations
+ * @{
  */
-#ifndef GDAL_OPS_H
-#define GDAL_OPS_H
 
 #include "types.h"
 #include <gdal/gdal.h>
@@ -106,4 +108,5 @@ CRS_TYPE getCRSType(const char *Wkt);
  */
 OGRCoordinateTransformationH transformationFromWKTs(const char *from, const char *to);
 
+/** @} */ // end of group
 #endif // GDAL_OPS_H

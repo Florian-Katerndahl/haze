@@ -1,3 +1,5 @@
+#ifndef PATHS_H
+#define PATHS_H
 /**
  * @file paths.h
  * @author Florian Katerndahl <florian@katerndahl.com>
@@ -7,9 +9,9 @@
  *
  * @copyright Copyright (c) 2026
  *
+ * @defgroup paths Resource Path generation
+ * @{
  */
-#ifndef PATHS_H
-#define PATHS_H
 
 #define MAX_PATH_LENGTH 1024
 
@@ -43,4 +45,5 @@ char *constructURL(const char *fmt, ...);
  */
 char *constructFilePath(const char *fmt, ...);
 
+/** @} */ // end of group
 #endif // PATHS_H

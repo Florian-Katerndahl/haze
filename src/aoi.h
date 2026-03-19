@@ -1,3 +1,5 @@
+#ifndef AOI_H
+#define AOI_H
 /**
  * @file aoi.h
  * @author Florian Katerndahl <florian@katerndahl.com>
@@ -7,9 +9,9 @@
  *
  * @copyright Copyright (c) 2026
  *
+ * @defgroup aoi Area Of Interest Generation
+ * @{
  */
-#ifndef AOI_H
-#define AOI_H
 
 #include <gdal/ogr_core.h>
 
@@ -32,4 +34,5 @@
  */
 void printBoundingBox(const OGREnvelope *box);
 
+/** @} */ // end of group
 #endif // AOI_H

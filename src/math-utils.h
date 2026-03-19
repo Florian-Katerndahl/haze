@@ -1,3 +1,5 @@
+#ifndef MATH_UTILS_H
+#define MATH_UTILS_H
 /**
  * @file math-utils.h
  * @author Florian Katerndahl <florian@katerndahl.com>
@@ -7,9 +9,9 @@
  *
  * @copyright Copyright (c) 2026
  *
+ * @defgroup math-utils General Math Operations
+ * @{
  */
-#ifndef MATH_UTILS_H
-#define MATH_UTILS_H
 
 #include <stdlib.h>
 
@@ -50,4 +52,5 @@ double calculateWeightedAverage(const double *values, const double *weights, siz
  */
 int intcmp(const void *a, const void *b);
 
+/** @} */ // end of group
 #endif // MATH_UTILS_H

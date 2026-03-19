@@ -1,3 +1,5 @@
+#ifndef API_H
+#define API_H
 /**
  * @file api.h
  * @author Florian Katerndahl <florian@katerndahl.com>
@@ -7,9 +9,9 @@
  *
  * @copyright Copyright (c) 2026
  *
+ * @defgroup api CDSAPI Operations
+ * @{
  */
-#ifndef API_H
-#define API_H
 
 #include "types.h"
 #include <gdal/ogr_core.h>
@@ -100,7 +102,7 @@ json_t *getKeyRecursively(json_t *root, const char *key);
  * @note After the function returns, the caller owns the returned object and musst free it.
  *
  * @param arr Reference to array of integers.
- * @param elemnts Number of entries in respective array.
+ * @param elements Number of entries in respective array.
  * @param formatString Format string to use when converting integers to their string representation, used for each element.
  * @return json_t* Reference to newly allocated JSON array or NULL on error.
  */
@@ -275,4 +277,5 @@ int cdsDownloadProduct(CURL *handle, const char *requestId,
 int cdsDeleteProductRequest(CURL *handle, const char *requestId,
                             const option_t *options); // Result.delete
 
+/** @} */ // end of group
 #endif // API_H
