@@ -1,6 +1,6 @@
 # Usage {#usage}
 
-How to use haze
+How to use haze [See the supplied tutorial for step-by-step guide](@ref tutorial).
 
 ## Downloading of ERA-5 Data
 
