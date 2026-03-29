@@ -6,8 +6,8 @@ on:
   push:
     branches: ["development-restart"]
     paths:
-      - './manual/**'
-      - './src/*.h'
+      - 'manual/**'
+      - 'src/*.h'
       - 'Doxyfile'
 
   # Allows you to run this workflow manually from the Actions tab
