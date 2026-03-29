@@ -24,7 +24,7 @@ Both a release and a debug target exist, which can't be used concurrently as the
 
 ```bash
 make haze
-#or
+# or
 make debug
 ```
 
