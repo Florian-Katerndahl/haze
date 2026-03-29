@@ -38,12 +38,7 @@ jobs:
           wget --no-verbose https://www.doxygen.nl/files/doxygen-1.16.1.linux.bin.tar.gz
           mkdir -p $HOME/doxygen $HOME/.local/bin
           tar -xzf doxygen-1.16.1.linux.bin.tar.gz -C $HOME/doxygen --strip-components=1
-          ls $HOME/doxygen/bin
           mv $HOME/doxygen/bin/doxygen $HOME/.local/bin
-      - name: Print path
-        run: echo $PATH
-      - name : print local binaries
-        run: ls $HOME/.local/bin
       - name: Checkout
         uses: actions/checkout@v4
       - name: Build Documentation
