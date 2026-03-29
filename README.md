@@ -42,7 +42,11 @@ haze download --year 2005 --month 1:12 --day 1:31 --hour 12 --logfile data-dir/l
 
 ### Processing
 
-The user can specify a different vector database for processing than for downloading, the `.cdsapirc` is not needed for processing.q
+The user can specify a different vector database for processing than for downloading, the `.cdsapirc` is not needed for processing.
+
+```bash
+haze process --logfile data-dir/logfile --layer europe aoi/world.gpkg data-dir/
+```
 
 ## Features
 
