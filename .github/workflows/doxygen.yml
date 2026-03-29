@@ -1,4 +1,3 @@
-# Simple workflow for deploying static content to GitHub Pages
 name: Deploy Doxygen Documentation to GH pages
 
 on:
@@ -33,10 +32,16 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
+      - name: Install make
+        run: sudo apt-get install -y make
+      - name: Install Doxygen
+        working-directory: /doxygen
+        run: |
+          wget https://www.doxygen.nl/files/doxygen-1.16.1.linux.bin.tar.gz
+          tar -xzf doxygen-1.16.1.linux.bin.tar.gz
+          make install
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Install Dependencies
-        run: sudo apt-get install -y doxygen make
       - name: Build Documentation
         run: make docs
       - name: Setup Pages
