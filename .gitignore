@@ -5,6 +5,8 @@ data/
 main
 feature-tests/
 testing-data/
+manual/*_files
+manual/*.html
 *.orig
 *.csv
 *.grib
