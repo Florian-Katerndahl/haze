@@ -1,7 +1,12 @@
+.github/
 .vscode/
+aoi/
 build/
 data/
+data-dir/
 feature-tests/
+manual/
+testing-data/
 .git/
 .astylerc
 .gitignore

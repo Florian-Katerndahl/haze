@@ -6,7 +6,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
     apt-get install -y gcc libcurl4-openssl-dev libgeos-dev libjansson-dev make pkgconf && \
-    apt-get clean
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY . /home/haze
     
