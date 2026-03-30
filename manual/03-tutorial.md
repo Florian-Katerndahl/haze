@@ -59,4 +59,4 @@ A single file holds four columns: x-coordinate of geometry centroid, y-coordinat
 head data-dir/...txt
 ```
 
-To minimize friction between FORCE and haze, the newly created txt files can be copied into their separate directory. FORCE can then be pointed to this directory via its configuration, i.e. the `DIR_WVPLUT ` option within the level 2 parameter file.
+To minimize friction between FORCE and haze, the newly created txt files can be copied into their separate directory. FORCE can then be pointed to this directory via its configuration, i.e. the `DIR_WVPLUT` option within the level 2 parameter file.
