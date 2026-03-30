@@ -1,5 +1,3 @@
-#include <cstddef>
-#include <linux/limits.h>
 #define _XOPEN_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #include "haze.h"
@@ -266,11 +264,11 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 
   fprintf(stderr, "Exporting intersecting geometries in debug mode at %s\n", debugOutputPath);
 
-  GDALDriver *debugOutputDriver = GDALGetDriverByName("GPKG");
+  GDALDriverH *debugOutputDriver = GDALGetDriverByName("GPKG");
   if (debugOutputDriver == NULL) {
     fprintf(stderr, "Failed to get GPKG driver. Aborting.\n");
     freeWeightedMeans(root);
-    free(debugOutputPath);
+    free((char*) debugOutputPath);
     return NULL;
   }
 
@@ -279,7 +277,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     fprintf(stderr, "Failed to create output dataset %s. Aborting.\n", debugOutputPath);
     GDALDestroyDriver(debugOutputDriver);
     freeWeightedMeans(root);
-    free(debugOutputPath);
+    free((char*) debugOutputPath);
     return NULL;
   }
 
@@ -290,11 +288,11 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     GDALDestroyDriver(debugOutputDriver);
     freeWeightedMeans(root);
     unlink(debugOutputPath);
-    free(debugOutputPath);
+    free((char*) debugOutputPath);
     return NULL;
   }
 
-  OGRFieldDfnH parentIdDefinition = OGR_Fld_Create("parentFID", OFTInteger64);
+  OGRFieldDefnH parentIdDefinition = OGR_Fld_Create("parentFID", OFTInteger64);
   if (OGR_L_CreateField(debugOutputLayer, parentIdDefinition, true) != OGRERR_NONE) {
     fprintf(stderr, "Failed to create field\n");
     OGR_Fld_Destroy(parentIdDefinition);
@@ -302,21 +300,21 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     GDALDestroyDriver(debugOutputDriver);
     freeWeightedMeans(root);
     unlink(debugOutputPath);
-    free(debugOutputPath);
+    free((char*) debugOutputPath);
     return NULL;
   }
 
   OGR_Fld_Destroy(parentIdDefinition);
 
-  OGRFieldDfnH valueDefinition = OGR_Fld_Create("waterVapor", OFTReal);
-  if (OGR_L_CreateField(debugOutputLayer, valueDefinition) != OGRERR_NONE) {
+  OGRFieldDefnH valueDefinition = OGR_Fld_Create("waterVapor", OFTReal);
+  if (OGR_L_CreateField(debugOutputLayer, valueDefinition, true) != OGRERR_NONE) {
     fprintf(stderr, "Failed to create field\n");
     OGR_Fld_Destroy(valueDefinition);
     GDALClose(debugOutputDataset);
     GDALDestroyDriver(debugOutputDriver);
     freeWeightedMeans(root);
     unlink(debugOutputPath);
-    free(debugOutputPath);
+    free((char*) debugOutputPath);
     return NULL;
   }
 
@@ -334,7 +332,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       GDALClose(debugOutputDataset);
       GDALDestroyDriver(debugOutputDriver);
       unlink(debugOutputPath);
-      free(debugOutputPath);
+      free((char*) debugOutputPath);
 #endif
       return NULL;
     }
@@ -349,7 +347,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       GDALClose(debugOutputDataset);
       GDALDestroyDriver(debugOutputDriver);
       unlink(debugOutputPath);
-      free(debugOutputPath);
+      free((char*) debugOutputPath);
 #endif
       return NULL;
     }
@@ -367,7 +365,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       GDALClose(debugOutputDataset);
       GDALDestroyDriver(debugOutputDriver);
       unlink(debugOutputPath);
-      free(debugOutputPath);
+      free((char*) debugOutputPath);
 #endif
       return NULL;
     }
@@ -383,7 +381,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       GDALClose(debugOutputDataset);
       GDALDestroyDriver(debugOutputDriver);
       unlink(debugOutputPath);
-      free(debugOutputPath);
+      free((char*) debugOutputPath);
 #endif
       return NULL;
     }
@@ -400,7 +398,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       GDALClose(debugOutputDataset);
       GDALDestroyDriver(debugOutputDriver);
       unlink(debugOutputPath);
-      free(debugOutputPath);
+      free((char*) debugOutputPath);
 #endif
       return NULL;
     }
@@ -427,7 +425,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         GDALClose(debugOutputDataset);
         GDALDestroyDriver(debugOutputDriver);
         unlink(debugOutputPath);
-        free(debugOutputPath);
+        free((char*) debugOutputPath);
 #endif
         return NULL;
       }
@@ -447,7 +445,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         GDALClose(debugOutputDataset);
         GDALDestroyDriver(debugOutputDriver);
         unlink(debugOutputPath);
-        free(debugOutputPath);
+        free((char*) debugOutputPath);
 #endif
         return NULL;
       }
@@ -467,7 +465,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         GDALClose(debugOutputDataset);
         GDALDestroyDriver(debugOutputDriver);
         unlink(debugOutputPath);
-        free(debugOutputPath);
+        free((char*) debugOutputPath);
 #endif
         return NULL;
       }
@@ -494,7 +492,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         GDALClose(debugOutputDataset);
         GDALDestroyDriver(debugOutputDriver);
         unlink(debugOutputPath);
-        free(debugOutputPath);
+        free((char*) debugOutputPath);
         return NULL;
       }
       
@@ -531,7 +529,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       GDALClose(debugOutputDataset);
       GDALDestroyDriver(debugOutputDriver);
       unlink(debugOutputPath);
-      free(debugOutputPath);
+      free((char*) debugOutputPath);
 #endif
       return NULL;
     }
@@ -564,6 +562,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 #ifdef DEBUG
   GDALClose(debugOutputDataset);
   GDALDestroyDriver(debugOutputDriver);
+  free((char*) debugOutputPath);
 #endif
 
   GEOSWKBWriter_destroy(wkbWriter);
