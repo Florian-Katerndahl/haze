@@ -21,12 +21,19 @@ wget https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs
 unzip -d aoi WRS2_descending_0.zip
 ```
 
+To cut down on processing time, we restrict our AOI to a small part of eastern Russia that crosses the dateline boundary.
+
+```bash
+cd aoi/
+ogr2ogr -spat -179 63 -181 68 -nlt MULTIPOLYGON subset.gpkg WRS2_descending.shp WRS2_descending
+```
+
 ## Downloading Raw Data
 
 > [!note]
 > The example below passes the API key via an environment variable instead of the `.cdsapirc` file!
 
-Because we create a water vapor database to be used globally, no AOI needs to specified when downloading data. Instead, we specify the `--global` flag to request world wide coverage.
+While the concrete water vapor database is only generated for a small subset to illustrate functionality, data is still downloaded with a global footprint, thus no AOI needs to be specified. Instead, we set the `--global` flag to request world wide coverage.
 
 ```bash
 mkdir data-dir
@@ -46,7 +53,7 @@ We use the WRS-2 footprints downloaded and extracted above as our processing ref
 docker run --rm -u $(id -u):$(id -g) -v /home/katerndf/git-repos/haze:/home/ubuntu \
   -e HOME=/home/ubuntu floriankaterndahl/haze:debug-latest \
   process --logfile /home/ubuntu/data-dir/wvpdb.log \
-  /home/ubuntu/aoi/WRS2_descending.shp /home/ubuntu/data-dir
+  /home/ubuntu/aoi/subset.gpkg /home/ubuntu/data-dir
 ```
 
 ## Using Water Vapor Database with FORCE
