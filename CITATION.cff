@@ -13,4 +13,14 @@ authors:
     email: florian@katerndahl.com
     orcid: 'https://orcid.org/0000-0001-6137-061X'
 repository-code: 'https://github.com/Florian-Katerndahl/haze'
+url: 'https://www.katerndahl.net/haze/index.html'
+abstract: >-
+  haze is a drop-in replacement to process water vapor to be
+  used with FORCE
+keywords:
+  - force-eo
+  - remote-sensing
+  - earth-observation
+  - ecmwf-reanalysis-data
+  - atmoshperic-correction
 license: GPL-3.0-only
