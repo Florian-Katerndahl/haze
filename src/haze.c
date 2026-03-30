@@ -919,7 +919,6 @@ int process(option_t *options)
       mean_t *weightedMeans = calculateAreaWeightedMean(intersections, SRS_WKT_WGS84_LAT_LONG);
       if (weightedMeans == NULL) {
         fprintf(stderr, "Failed to calculate weighted means\n");
-        freeRawData(&data);
         freeAverageData(&average);
         freeCellGeometryList(rasterCellsAsGEOS);
         GEOSSTRtree_destroy(rasterTree);
@@ -933,7 +932,6 @@ int process(option_t *options)
 
       if (textOutputFilePath == NULL) {
         fprintf(stderr, "Failed to construct file path for output text file\n");
-        freeRawData(&data);
         freeAverageData(&average);
         freeCellGeometryList(rasterCellsAsGEOS);
         GEOSSTRtree_destroy(rasterTree);
