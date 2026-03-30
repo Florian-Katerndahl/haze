@@ -26,6 +26,10 @@ haze download --global --daily --year 2000:2020 --month 2,4,6 --day 12 --hour 0:
 
 ## Processing of ERA-5 Data
 
+> [!warning]
+> It's a known issue that multipolygons bound to +/- 180° (i.e. split on the date line) do not intersect correctly(?) when using rasters as input that extend below or above +/- 180°!
+> Example: Given the WRS-2 tile 093012, which is split at the date line in the USGS supplied WRS-2 dataset, and a raster with the extent 166.000,-50.000 : 205.000,73.000 ((xmin, ymin):(xmax, ymax)) one may expect the *western* parts of WRS-2 tile 093012 to intersect with the *eastern* part of the supplied raster because of the cyclicity of coordinates. **This, however, is currently not implemented as it's not clear how to handle this corner case correctly.** Instead, either the geometries would need to be merged or a raster dataset covering the range -180° to 180° must be supplied.
+
 Processing data is based on the supplied log file and subsequent executions do not reprocess data (unless the debug build is used). Compared to data download, there are tighter restrictions on the geometry types usable because of the underlying GEOS implementation to prepare geometries for intersection testing (wkbPolygon, wkbMultiPolygon, wkbMultiSurface, wkbSurface, wkbPolyhedralSurface, wkbTIN, wkbTriangle). Again, input geometries are reprojected to EPSG:4326, if needed. When processing data, an AOI file must be given.
 
 The snipped below would process the data downloaded in the previous step for Europe:
