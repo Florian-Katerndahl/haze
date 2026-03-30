@@ -473,42 +473,54 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       // Intersection is missing its SRS, even though both input geometries have it
       OGR_G_AssignSpatialReference(intersection, spatialRef);
 
+      if (OGR_G_GetGeometryType(intersection) == wkbPolygon || OGR_G_GetGeometryType(intersection) == wkbMultiPolygon) {
 #ifdef DEBUG
-      OGRFeatureH feature = OGR_F_Create(OGR_L_GetLayerDefn(debugOutputLayer));
-      
-      OGR_F_SetFieldInteger(feature, OGR_F_GetFieldIndex(feature, "parentFID"), intersections->referenceFID);
-      OGR_F_SetFieldDouble(feature, OGR_F_GetFieldIndex(feature, "waterVapor"), values[i]);
-      OGR_F_SetGeometry(feature, intersection);
+        OGRFeatureH feature = OGR_F_Create(OGR_L_GetLayerDefn(debugOutputLayer));
+        
+        OGR_F_SetFieldInteger(feature, OGR_F_GetFieldIndex(feature, "parentFID"), intersections->referenceFID);
+        OGR_F_SetFieldDouble(feature, OGR_F_GetFieldIndex(feature, "waterVapor"), values[i]);
+        OGR_F_SetGeometry(feature, intersection);
 
-      if (OGR_L_CreateFeature(debugOutputLayer, feature) != OGRERR_NONE) {
-        GEOSWKBWriter_destroy(wkbWriter);
-        OSRDestroySpatialReference(spatialRef);
-        freeWeightedMeans(root);
-        OGR_G_DestroyGeometry(centroid);
-        OGR_G_DestroyGeometry(cellAsOGR);
-        free(values);
-        free(weights);
-        GEOSFree((void *) geometryAsWkb);
-        GDALClose(debugOutputDataset);
-        /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
-        unlink(debugOutputPath);
-        free((char*) debugOutputPath);
-        return NULL;
-      }
-      
-      OGR_F_Destroy(feature);
+        if (OGR_L_CreateFeature(debugOutputLayer, feature) != OGRERR_NONE) {
+          GEOSWKBWriter_destroy(wkbWriter);
+          OSRDestroySpatialReference(spatialRef);
+          freeWeightedMeans(root);
+          OGR_G_DestroyGeometry(centroid);
+          OGR_G_DestroyGeometry(cellAsOGR);
+          free(values);
+          free(weights);
+          GEOSFree((void *) geometryAsWkb);
+          GDALClose(debugOutputDataset);
+          /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
+          unlink(debugOutputPath);
+          free((char*) debugOutputPath);
+          return NULL;
+        }
+        
+        OGR_F_Destroy(feature);
 #endif
+        double intersectingArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(
+                                    intersection);
 
-      double intersectingArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(
-                                  intersection);
+        if (isnan(intersectingArea) || isnan(referenceArea) || intersectingArea < 0.0
+            || referenceArea < 0.0) {
+          fprintf(stderr, "Area of intersecting geometry or area of reference is invalid\n");
+          /// FIXME: cleanup
+        }
 
-      if (isnan(intersectingArea) || isnan(referenceArea) || intersectingArea < 0.0
-          || referenceArea < 0.0) {
-        fprintf(stderr, "Area of intersecting geometry or area of reference is invalid\n");
-        /// FIXME: cleanup
+        weights[i] = intersectingArea / referenceArea;
+      } else if (OGR_G_GetGeometryType(intersection) == wkbPoint) {
+        fprintf(stderr, "Intersection resulted in point geometry. Setting both value and weight to 0.\n");
+        values[i] = 0.0;
+        weights[i] = 0.0;
+      } else {
+        fprintf(stderr, "Got unexpected geometry type: %s\n", OGR_G_GetGeometryName(intersection));
+#ifdef DEBUG
+        OGR_G_DumpReadable(intersections->reference, stdout, NULL);
+        OGR_G_DumpReadable(cellAsOGR, stdout, NULL);
+        OGR_G_DumpReadable(intersection, stdout, NULL);
+#endif
       }
-
-      weights[i] = intersectingArea / referenceArea;
 
       temp = temp->next;
 
