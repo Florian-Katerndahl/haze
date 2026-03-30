@@ -33,3 +33,7 @@ The snipped below would process the data downloaded in the previous step for Eur
 ```bash
 haze process --logfile data-dir/logfile --layer europe aoi/world.gpkg data-dir/
 ```
+
+### Debug Build
+
+haze can be compiled with the debug flag set via `make debug`. The debug build does not update the processing status of datasets in the logfile and outputs a vector dataset with intersection geometries in the current working directory from which haze was launched in addition to slightly more verbose output on the command line.
