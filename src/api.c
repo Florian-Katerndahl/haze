@@ -199,6 +199,7 @@ char *constructStringRequest(const int *years, const int *months, const int *day
       goto cleanup;
   }
 
+  /// NOTE: delegates data-checking to API, i.e. it's valid to submit a request for 31th of Feburary
   // steals references to JSON objects
   jsonRequest = json_pack("{s: {s:[s], s:o, s:o, s:o, s:o, s:o*, s:s, s:s, s:[s]}}",
                           "inputs", "product_type", "reanalysis", "year", yearsArray, "month", monthsArray, "day", daysArray,
