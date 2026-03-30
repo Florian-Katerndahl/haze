@@ -23,6 +23,9 @@ unzip -d aoi WRS2_descending_0.zip
 
 ## Downloading Raw Data
 
+> [!note]
+> The example below passes the API key via an environment variable instead of the `.cdsapirc` file!
+
 Because we create a water vapor database to be used globally, no AOI needs to specified when downloading data. Instead, we specify the `--global` flag to request world wide coverage.
 
 ```bash
@@ -30,7 +33,8 @@ mkdir data-dir
 
 docker run --rm -u $(id -u):$(id -g) -v /home/katerndf/git-repos/haze:/home/ubuntu \
   -e HOME=/home/ubuntu floriankaterndahl/haze:debug-latest \
-  download --global --year 2023 --month 1:12 --day 1:31 --hour 0:23 \
+  -e ADSAUTH="123456789-abc-def-987654321" \
+  download --global --year 2023 --month 1,3 --day 1:31 --hour 0:23 \
   --logfile /home/ubuntu/data-dir/wvpdb.log /home/ubuntu/data-dir
 ```
 
