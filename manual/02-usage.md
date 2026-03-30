@@ -14,9 +14,9 @@ Without any further options, the downloaded data is grouped by month, i.e. a sin
 
 All time fields can be given in various formats:
 
-- single values, e.g. `--days 1`
-- comma-separated list of values, e.g. `--days 1,2,3`
-- range of values with inclusive end points, e.g. `--days 1:3`
+- single values, e.g. `--day 1`
+- comma-separated list of values, e.g. `--day 1,2,3`
+- range of values with inclusive end points, e.g. `--day 1:3`
 
 An examplanatory program call to download data of global coverage for the 12th of Feburary, April and June for the years 2000 to 2020 between 0 o'clock and 23 o'clock (i.e. for every hour). The data is grouped by day and stored in the directory data-dir.
 
