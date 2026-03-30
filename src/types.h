@@ -98,6 +98,7 @@ typedef struct cellGeometryList
 typedef struct intersection
 {
   OGRGeometryH reference;
+  GIntBig referenceFID;
   cellGeometryList *intersectingCells;
   size_t intersectionCount;
   struct intersection *next;

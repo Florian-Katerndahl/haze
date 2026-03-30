@@ -409,6 +409,7 @@ void trackIntersectingGeometries(void *item, void *userdata)
     /// NOTE: no ownership of areasOfInterest->entry->OGRGeometry is taken,
     ///       owner of `areaOfInterest` is responsible to free object!
     node->reference = areasOfInterest->entry->OGRGeometry;
+    node->referenceFID = areasOfInterest->entry->id;
     node->intersectionCount = userdata.intersectionCount;
     node->intersectingCells = userdata.intersectingCells;
     node->next = NULL;

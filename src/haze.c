@@ -1,3 +1,5 @@
+#include <cstddef>
+#include <linux/limits.h>
 #define _XOPEN_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #include "haze.h"
@@ -251,6 +253,76 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     return NULL;
   }
 
+#ifdef DEBUG
+  char pwd[PATH_MAX];
+  if (getcwd(pwd, sizeof(pwd)) == NULL) {
+    fprintf(stderr, "Failed to get current working directory\n");
+    freeWeightedMeans(root);
+    return NULL;
+  }
+
+  const char *debugOutputPath = constructFilePath("%s/debug-%ld.gpkg", pwd, time(NULL));
+  const char *debugOutputLayerName = "intersections";
+
+  fprintf(stderr, "Exporting intersecting geometries in debug mode at %s\n", debugOutputPath);
+
+  GDALDriver *debugOutputDriver = GDALGetDriverByName("GPKG");
+  if (debugOutputDriver == NULL) {
+    fprintf(stderr, "Failed to get GPKG driver. Aborting.\n");
+    freeWeightedMeans(root);
+    free(debugOutputPath);
+    return NULL;
+  }
+
+  GDALDatasetH debugOutputDataset = GDALCreate(debugOutputDriver, debugOutputPath, 0, 0, 0, GDT_Unknown, NULL);
+  if (debugOutputDataset == NULL) {
+    fprintf(stderr, "Failed to create output dataset %s. Aborting.\n", debugOutputPath);
+    GDALDestroyDriver(debugOutputDriver);
+    freeWeightedMeans(root);
+    free(debugOutputPath);
+    return NULL;
+  }
+
+  OGRLayerH debugOutputLayer = GDALDatasetCreateLayer(debugOutputDataset, debugOutputLayerName, spatialRef, wkbMultiPolygon, NULL);
+  if (debugOutputLayer == NULL) {
+    fprintf(stderr, "Failed to create output layer. Aborting\n");
+    GDALClose(debugOutputDataset);
+    GDALDestroyDriver(debugOutputDriver);
+    freeWeightedMeans(root);
+    unlink(debugOutputPath);
+    free(debugOutputPath);
+    return NULL;
+  }
+
+  OGRFieldDfnH parentIdDefinition = OGR_Fld_Create("parentFID", OFTInteger64);
+  if (OGR_L_CreateField(debugOutputLayer, parentIdDefinition, true) != OGRERR_NONE) {
+    fprintf(stderr, "Failed to create field\n");
+    OGR_Fld_Destroy(parentIdDefinition);
+    GDALClose(debugOutputDataset);
+    GDALDestroyDriver(debugOutputDriver);
+    freeWeightedMeans(root);
+    unlink(debugOutputPath);
+    free(debugOutputPath);
+    return NULL;
+  }
+
+  OGR_Fld_Destroy(parentIdDefinition);
+
+  OGRFieldDfnH valueDefinition = OGR_Fld_Create("waterVapor", OFTReal);
+  if (OGR_L_CreateField(debugOutputLayer, valueDefinition) != OGRERR_NONE) {
+    fprintf(stderr, "Failed to create field\n");
+    OGR_Fld_Destroy(valueDefinition);
+    GDALClose(debugOutputDataset);
+    GDALDestroyDriver(debugOutputDriver);
+    freeWeightedMeans(root);
+    unlink(debugOutputPath);
+    free(debugOutputPath);
+    return NULL;
+  }
+
+  OGR_Fld_Destroy(valueDefinition);
+#endif
+
   while (intersections != NULL) {
     OGRGeometryH centroid = OGR_G_CreateGeometry(wkbPoint);
     if (centroid == NULL) {
@@ -258,6 +330,12 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       GEOSWKBWriter_destroy(wkbWriter);
       OSRDestroySpatialReference(spatialRef);
       freeWeightedMeans(root);
+#ifdef DEBUG
+      GDALClose(debugOutputDataset);
+      GDALDestroyDriver(debugOutputDriver);
+      unlink(debugOutputPath);
+      free(debugOutputPath);
+#endif
       return NULL;
     }
 
@@ -267,6 +345,12 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       OSRDestroySpatialReference(spatialRef);
       freeWeightedMeans(root);
       OGR_G_DestroyGeometry(centroid);
+#ifdef DEBUG
+      GDALClose(debugOutputDataset);
+      GDALDestroyDriver(debugOutputDriver);
+      unlink(debugOutputPath);
+      free(debugOutputPath);
+#endif
       return NULL;
     }
 
@@ -279,6 +363,12 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       OSRDestroySpatialReference(spatialRef);
       freeWeightedMeans(root);
       OGR_G_DestroyGeometry(centroid);
+#ifdef DEBUG
+      GDALClose(debugOutputDataset);
+      GDALDestroyDriver(debugOutputDriver);
+      unlink(debugOutputPath);
+      free(debugOutputPath);
+#endif
       return NULL;
     }
 
@@ -289,6 +379,12 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       OSRDestroySpatialReference(spatialRef);
       freeWeightedMeans(root);
       OGR_G_DestroyGeometry(centroid);
+#ifdef DEBUG
+      GDALClose(debugOutputDataset);
+      GDALDestroyDriver(debugOutputDriver);
+      unlink(debugOutputPath);
+      free(debugOutputPath);
+#endif
       return NULL;
     }
 
@@ -300,6 +396,12 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       freeWeightedMeans(root);
       OGR_G_DestroyGeometry(centroid);
       free(values);
+#ifdef DEBUG
+      GDALClose(debugOutputDataset);
+      GDALDestroyDriver(debugOutputDriver);
+      unlink(debugOutputPath);
+      free(debugOutputPath);
+#endif
       return NULL;
     }
 
@@ -321,6 +423,12 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         OGR_G_DestroyGeometry(centroid);
         free(values);
         free(weights);
+#ifdef DEBUG
+        GDALClose(debugOutputDataset);
+        GDALDestroyDriver(debugOutputDriver);
+        unlink(debugOutputPath);
+        free(debugOutputPath);
+#endif
         return NULL;
       }
 
@@ -335,6 +443,12 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         free(values);
         free(weights);
         GEOSFree((void *) geometryAsWkb);
+#ifdef DEBUG
+        GDALClose(debugOutputDataset);
+        GDALDestroyDriver(debugOutputDriver);
+        unlink(debugOutputPath);
+        free(debugOutputPath);
+#endif
         return NULL;
       }
 
@@ -349,11 +463,43 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         free(values);
         free(weights);
         GEOSFree((void *) geometryAsWkb);
+#ifdef DEBUG
+        GDALClose(debugOutputDataset);
+        GDALDestroyDriver(debugOutputDriver);
+        unlink(debugOutputPath);
+        free(debugOutputPath);
+#endif
         return NULL;
       }
 
       // Intersection is missing its SRS, even though both input geometries have it
       OGR_G_AssignSpatialReference(intersection, spatialRef);
+
+#ifdef DEBUG
+      OGRFeatureH feature = OGR_F_Create(OGR_L_GetLayerDefn(debugOutputLayer));
+      
+      OGR_F_SetFieldInteger(feature, OGR_F_GetFieldIndex(feature, "parentFID"), intersections->referenceFID);
+      OGR_F_SetFieldDouble(feature, OGR_F_GetFieldIndex(feature, "waterVapor"), values[i]);
+      OGR_F_SetGeometry(feature, intersection);
+
+      if (OGR_L_CreateFeature(debugOutputLayer, feature) != OGRERR_NONE) {
+        GEOSWKBWriter_destroy(wkbWriter);
+        OSRDestroySpatialReference(spatialRef);
+        freeWeightedMeans(root);
+        OGR_G_DestroyGeometry(centroid);
+        OGR_G_DestroyGeometry(cellAsOGR);
+        free(values);
+        free(weights);
+        GEOSFree((void *) geometryAsWkb);
+        GDALClose(debugOutputDataset);
+        GDALDestroyDriver(debugOutputDriver);
+        unlink(debugOutputPath);
+        free(debugOutputPath);
+        return NULL;
+      }
+      
+      OGR_F_Destroy(feature);
+#endif
 
       double intersectingArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(
                                   intersection);
@@ -381,6 +527,12 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       freeWeightedMeans(root);
       free(values);
       free(weights);
+#ifdef DEBUG
+      GDALClose(debugOutputDataset);
+      GDALDestroyDriver(debugOutputDriver);
+      unlink(debugOutputPath);
+      free(debugOutputPath);
+#endif
       return NULL;
     }
 
@@ -408,6 +560,11 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     free(weights);
     OGR_G_DestroyGeometry(centroid);
   }
+
+#ifdef DEBUG
+  GDALClose(debugOutputDataset);
+  GDALDestroyDriver(debugOutputDriver);
+#endif
 
   GEOSWKBWriter_destroy(wkbWriter);
   OSRDestroySpatialReference(spatialRef);
