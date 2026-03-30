@@ -128,6 +128,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data);
  *
  * @note After the function returns, the caller owns the returned object and musst free it.
  *
+ * @note Outputs intersection geometries in debug builds in a GeoPackage in the current working directory.
+ *
  * @param intersections List containing AOI features and all vectorized raster cells that intersect a given feature.
  * @param rasterWkt CRS in WKT representation of raster dataset.
  * @return mean_t* Reference to list containing centroids of AOI geometries and associated water column value, NULL on error.
