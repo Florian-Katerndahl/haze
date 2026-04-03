@@ -1,6 +1,7 @@
 FROM ghcr.io/osgeo/gdal:ubuntu-small-3.10.2
 
 LABEL author="Florian Katerndahl <florian@katerndahl.com>"
+LABEL description="haze aims to be a drop-in replacement for water vapor processing of ERA-5 datasets to be used with FORCE."
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -17,8 +18,9 @@ WORKDIR /home/haze
 # remove level of include structure
 RUN sed -i -e "s#gdal/##" src/*.c src/*.h main.c && \
     mkdir build/ && \
-    make -j debug && \
-    mv haze /usr/bin/
+    make -j haze && \
+    mv haze /usr/bin/ && \
+    make clean
 
 USER ubuntu
 

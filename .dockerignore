@@ -12,3 +12,4 @@ testing-data/
 .gitignore
 Doxyfile
 README.md
+test-aoi.gpkg
