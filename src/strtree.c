@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 /// TODO: move to gdal-ops
 [[nodiscard]] char *extractCRSAsWKT(GDALDatasetH dataset, const char *layerName)
@@ -116,7 +117,7 @@
   OGRGeomTransformerH transformer = NULL;
 
   if (needsReprojection) {
-    transformation = transformationFromWKTs(layerWKT, inputReferenceSystem);
+    transformation = transformationFromWKTs(layerWKT, (char *) inputReferenceSystem, false);
 
     if (transformation == NULL) {
       fprintf(stderr, "Failed to create transformation between CRS's: %s", CPLGetLastErrorMsg());
@@ -125,6 +126,7 @@
       return NULL;
     }
 
+    /// FIXME: Not sure anymore if wrapdateline makes sense. If splitting is done the same for downlading and processing, ok. Otherwise: split at both or at none
     if ((transformerAddonOptions = CSLAddStringMayFail(transformerAddonOptions,
                                    "WRAPDATELINE=YES")) == NULL) {
       fprintf(stderr, "Failed to create CRS transformer options\n");
@@ -263,7 +265,7 @@
                                      transformation->pixelHeight,
                                      (double) x, transformation->colRotation);
 
-      /// TODO: swapping into which places x and y go based on the underlying SRS not needed because GEOS does not care when no SRS is attached -- right?
+      // as per GDAL's RFC 73, the raster drivers use *gis-friendly* axis ordering; no further changes needed here!
       GEOSGeometry *geom = GEOSGeom_createRectangle(
                              MIN(x1, x2),
                              MIN(y1, y2),

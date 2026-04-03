@@ -1,6 +1,7 @@
 #include "aoi.h"
 #include "gdal-ops.h"
 #include "fscheck.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <gdal/gdal.h>
 #include <gdal/cpl_conv.h>
@@ -44,8 +45,15 @@
   }
 
   OGREnvelope *mbr = CPLCalloc(1, sizeof(OGREnvelope));
+  if (mbr == NULL) {
+    fprintf(stderr, "Failed to alloacte envelope object\n");
+    closeGDALDataset(aoi);
+    return NULL;
+  }
+
   if (OGR_L_GetExtent(layer, mbr, 1) == OGRERR_FAILURE) {
-    fprintf(stderr, "Failed to get layer extent: %s", CPLGetLastErrorMsg());
+    fprintf(stderr, "Failed to get layer extent: %s\n", CPLGetLastErrorMsg());
+    CPLFree((void *) mbr);
     closeGDALDataset(aoi);
     return NULL;
   }
@@ -59,8 +67,9 @@
   }
 
   if (!EQUAL(layerWKT, SRS_WKT_WGS84_LAT_LONG)) {
+    // authority compliant axes set to true because it's handled by myself below
     OGRCoordinateTransformationH transformation = transformationFromWKTs(layerWKT,
-        SRS_WKT_WGS84_LAT_LONG);
+        SRS_WKT_WGS84_LAT_LONG, true);
 
     if (transformation == NULL) {
       fprintf(stderr, "Failed to create transformation object: %s", CPLGetLastErrorMsg());
@@ -84,6 +93,7 @@
 
     It's needed because I work with the coordinates directly, would I only be interested in the geometry, e.g. for
     area calculation, this wouldn't be necessary!
+    See notes in transformationFromWKTs and docstring for openVectorDataset as well! 
     */
     int nAxes = 0;
     const int *dataAxisToSRS = OSRGetDataAxisToSRSAxisMapping(layerRef, &nAxes);

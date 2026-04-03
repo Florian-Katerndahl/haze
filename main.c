@@ -32,6 +32,14 @@ int main(int argc, char *argv[])
     GDALAllRegister();
     curl_global_init(CURL_GLOBAL_ALL);
 
+    // see note for transformationFromWKTs and docstring for openVectorDataset
+    GDALDriverH gml = GDALGetDriverByName("GML");
+    GDALDriverH gmlas = GDALGetDriverByName("GMLAS");
+    GDALDeregisterDriver(gml);
+    GDALDeregisterDriver(gmlas);
+    GDALDestroyDriver(gml);
+    GDALDestroyDriver(gmlas);
+
     /* START OF PROGRAM */
     CURL *handle = NULL;
     const OGREnvelope *aoi = NULL;

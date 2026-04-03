@@ -42,6 +42,9 @@ GDALRasterBandH openRasterBand(GDALDatasetH raster, int index);
 /**
  * @brief Open a vector dataset in read-only mode.
  *
+ * @warning The GML and GMLLAS drivers are dregistered because it's explicitly mentioned they
+ *          maybe not import coordinates in a "gis friendly" way!
+ *
  * @remark After the function returns, the caller owns the returned `GDALDatasetH` object and must close it after use.
  *
  * @param filePath Vector file to open.
@@ -104,9 +107,12 @@ CRS_TYPE getCRSType(const char *Wkt);
  *
  * @param from Source CRS as WKT string.
  * @param to Destination CRS as WKT string.
+ * @param inputUsesCompliantOrdering Boolean flag indicating if the CRS associated with the object to transform
+ *        uses authority compliant ordering or *gis friendly* ordering. When data is read from file, this is most
+ *        likely `false`.
  * @return OGRCoordinateTransformationH A new transformation object, NULL on error.
  */
-OGRCoordinateTransformationH transformationFromWKTs(const char *from, const char *to);
+OGRCoordinateTransformationH transformationFromWKTs(char *from, char *to, bool inputUsesCompliantOrdering);
 
 /** @} */ // end of group
 #endif // GDAL_OPS_H

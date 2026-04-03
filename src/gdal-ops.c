@@ -98,7 +98,7 @@ CRS_TYPE getCRSType(const char *Wkt)
   return geographic == true ? CRS_GEOGRAPHIC : CRS_PROJECTED;
 }
 
-OGRCoordinateTransformationH transformationFromWKTs(const char *from, const char *to)
+OGRCoordinateTransformationH transformationFromWKTs(char *from, char *to, bool inputUsesCompliantOrdering)
 {
   if (from == NULL || to == NULL) {
     return NULL;
@@ -117,6 +117,20 @@ OGRCoordinateTransformationH transformationFromWKTs(const char *from, const char
     fprintf(stderr, "Failed to create spatial reference system for target: %s", CPLGetLastErrorMsg());
     OSRDestroySpatialReference(sourceReferenceSystem);
     return NULL;
+  }
+
+  /// NOTE: This makes me a bit unhappy, mostly because I don't fully understand the issue. If I understand the documentation at
+  //        https://gdal.org/en/stable/tutorials/osr_api_tut.html#crs-and-axis-order, the RFC 73 at 
+  //        https://gdal.org/en/latest/development/rfc/rfc73_proj6_wkt2_srsbarn.html#axis-order-issues, together with various
+  //        entries on the mailing list (e.g. from Wed, 22 May 2019 15:41:28 +0200) correctly, I would not need to set the
+  //        axis order when creating new geometries in a authority compliant way.
+  //        But since "almost all vector drivers" set this flag on reading, data is ordered *gis friendly* (longitude/latitude, easting/northing)
+  //        which, to my assumption, is done both for historical reasons and to harmonize axes within GDAL itself.
+  //        Thus, transforming between different CRS needs to set those variables on input and output CRS as well.
+  //        As the GML/GLMAS driver are listed to be a special cases, they're outright removed from allowed input dirvers!
+  if (!inputUsesCompliantOrdering) {
+    OSRSetAxisMappingStrategy(sourceReferenceSystem, OAMS_TRADITIONAL_GIS_ORDER);    
+    OSRSetAxisMappingStrategy(targetReferenceSystem, OAMS_TRADITIONAL_GIS_ORDER);    
   }
 
   transform = OCTNewCoordinateTransformationEx(
