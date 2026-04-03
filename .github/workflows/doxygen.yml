@@ -3,7 +3,7 @@ name: Deploy Doxygen Documentation to GH pages
 on:
   # Runs on pushes targeting the default branch
   push:
-    branches: ["development-restart"]
+    branches: ["development"]
     paths:
       - 'manual/**'
       - 'src/*.h'
