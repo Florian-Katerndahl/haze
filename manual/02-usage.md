@@ -4,6 +4,9 @@ haze offers two subprograms, one for downloading data from ECMWF's Climate Data 
 
 ## Downloading of ERA-5 Data
 
+> [!note]
+> When using a custom geometry to specify the bounds of the AOI, less data may be downloaded than anticipated and the footprint of downloaded data may be smaller than the geometry suggests. This is due to how the CDS handles product requests. When in doubt, download a small file to visually check that the entire AOI is covered by water vapor cells.
+
 haze handles the [ERA5 hourly data on single levels from 1940 to present](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=overview). This data is delivered as GRIB files and refrenced horizontally to EPSG:4326. Thus, this is the reference CRS used to align data to.
 
 To download data, the user needs an CDS account and follow the instructions to correctly set up the .cdsapirc file [detailed here](https://cds.climate.copernicus.eu/how-to-api). haze looks for this file when the download program is run. However, haze also tries to retrieve the API key from an environment variable named `ADSAUTH` before accessing above named file in the home directory of the user executing the program. If neither options succeeds, the program fails. Also note, that the API endpoint is hard-coded to `https://cds.climate.copernicus.eu/api` and cannot be changed at the moment.
