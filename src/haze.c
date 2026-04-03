@@ -232,8 +232,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
   // disregard SRS axis ordering in favor of hard coded long/lat ordering
   // WKT/WKB order the data as tuples of x/long and y/lat. When reading them into OGRGeometryH-objects, this order is preserved and no axis
   // swapping is performed. Assigning a spatial reference system to a geometry object assumes the coordinate fields are already correctly
-  // ordered. While I wouldn't say that this is the root problem: The hard coded SRS string 'SRS_WKT_WGS84_LAT_LONG' assumes data ordering
-  // of latitude longitude.
+  // ordered.
   OSRSetAxisMappingStrategy(spatialRef, OAMS_TRADITIONAL_GIS_ORDER);
 
   CRS_TYPE CRSType = getCRSType(rasterWkt);
