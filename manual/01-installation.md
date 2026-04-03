@@ -32,10 +32,10 @@ make debug
 
 To use haze via Docker, you can pull the corresponding image from Docker Hub. At the time of writing, the published images are not tagged via semantic versioning.
 
-To pull the debug version, run `docker pull floriankaterndahl/haze:debug-latest`. A release version is currently not distributed.
+To pull the debug version, run `docker pull floriankaterndahl/haze:latest`. To pull the debug version, run `docker pull floriankaterndahl/haze:debug-latest`.
 
 ## Installation via Apptainer
 
 To use haze via Apptainer, you can pull the corresponding image from Docker Hub. At the time of writing, the published images are not tagged via semantic versioning.
 
-To pull the debug version, run `apptainer pull docker://floriankaterndahl/haze:debug-latest`. A release version is currently not distributed.
+To pull the debug version, run `docker pull floriankaterndahl/haze:latest`. To pull the debug version, run `docker pull floriankaterndahl/haze:debug-latest`.
