@@ -12,10 +12,6 @@ env:
   REGISTRY: docker.io
   IMAGE_NAME: haze
 
-permissions:
-  contents: read
-  id-token: read
-
 jobs:
   release-build:
     environment:
