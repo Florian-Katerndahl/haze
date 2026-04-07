@@ -16,13 +16,14 @@ sudo apt install libgdal-dev libcurl4-openssl-dev libgeos-dev libjansson-dev mak
 
 For other systems, please refer to the respective package repositories. To build the project, create a directory named `build/` and either call `make debug` for the debug build or `make haze` for the release build.
 
-Additionally, haze is available as a pre-build Docker image.
+Additionally, haze is available as a pre-build Docker image with different tags:
 
-```bash
-docker pull floriankaterndahl/haze:latest
-# or
-docker pull floriankaterndahl/haze:debug-latest
-```
+- `edge`: Latest commit on development branch. Newest features/fixes but this version may be unstable.
+- `edge-debug`: Latest commit on development branch. Newest features/fixes but this version may be unstable. Additionally, uses the debug build target.
+- `latest`: Alias for newest release, only build from main branch. **It's recommended to use a specific release version instead!**
+- `latest-debug`: Alias for newest release, only build from main branch. Additionally, uses the debug build target.  **It's recommended to use a specific release version instead!**
+- `x.y.z`: Specific release, only build from main branch.
+- `x.y.z-debug`: Specific release, only build from main branch. Additionally, uses the debug build target.
 
 ## Usage
 
