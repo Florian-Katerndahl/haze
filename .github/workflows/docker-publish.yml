@@ -49,7 +49,7 @@ jobs:
       - name: Build and push release Docker image
         uses: docker/build-push-action@v7
         with:
-          file: {context}/docker/release.Dockerfile
+          file: ./docker/release.Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           provenance: true
