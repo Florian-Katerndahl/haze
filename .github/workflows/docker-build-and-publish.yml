@@ -17,7 +17,6 @@ on:
       - 'Makefile'
   pull_request:
     branches:
-      - main
       - development
     paths:
       - '.github/workflows/docker-build-and-publish.yml'
