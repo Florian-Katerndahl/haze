@@ -2,10 +2,14 @@ name: Build and Publish Docker Images
 
 on:
   push:
-    branches: [ "development" ]
+    branches:
+      - main
+      - development
     tags: [ 'v*.*.*' ]
   pull_request:
-    branches: [ "development" ]
+    branches:
+      - main
+      - development
   workflow_dispatch:
 
 env:
@@ -29,6 +33,7 @@ jobs:
           images: ${{ vars.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
           tags: |
             type=semver,pattern={{version}},enabled={{is_default_branch}}
+            type=edge,branch=development
           labels: |
             org.opencontainers.image.authors=Florian Katerndahl <florian@katerndahl.com>
             org.opencontainers.image.title=haze
@@ -51,6 +56,7 @@ jobs:
         with:
           context: .
           file: ./docker/release.dockerfile
+          push: ${{ github.repository == 'Florian-Katerndahl/haze' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           provenance: true
