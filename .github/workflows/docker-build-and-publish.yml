@@ -6,10 +6,28 @@ on:
       - main
       - development
     tags: [ 'v*.*.*' ]
+    paths:
+      - '.github/workflows/docker-build-and-publish.yml'
+      - 'docker/*'
+      - 'src/*'
+      - '.dockerignore'
+      - '.gitignore'
+      - 'LICENSE'
+      - 'main.c'
+      - 'Makefile'
   pull_request:
     branches:
       - main
       - development
+    paths:
+      - '.github/workflows/docker-build-and-publish.yml'
+      - 'docker/*'
+      - 'src/*'
+      - '.dockerignore'
+      - '.gitignore'
+      - 'LICENSE'
+      - 'main.c'
+      - 'Makefile'
   workflow_dispatch:
 
 env:
