@@ -51,6 +51,7 @@ jobs:
           images: ${{ vars.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
           tags: |
             type=semver,pattern={{version}},enabled={{is_default_branch}}
+            type=edge,branch=main
             type=edge,branch=development
           labels: |
             org.opencontainers.image.authors=Florian Katerndahl <florian@katerndahl.com>
@@ -96,6 +97,7 @@ jobs:
           images: ${{ vars.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
           tags: |
             type=semver,pattern={{version}},enabled={{is_default_branch}},suffix=-debug
+            type=edge,branch=main,suffix=-debug
             type=edge,branch=development,suffix=-debug
           labels: |
             org.opencontainers.image.authors=Florian Katerndahl <florian@katerndahl.com>
