@@ -24,6 +24,8 @@ RUN sed -i -e "s#gdal/##" src/*.c src/*.h main.c && \
 
 USER ubuntu
 
+ENV HOME=/home/ubuntu
+
 WORKDIR /home/ubuntu
 
 ENTRYPOINT [ "haze" ]
