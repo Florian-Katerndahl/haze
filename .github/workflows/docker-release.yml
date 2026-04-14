@@ -68,8 +68,11 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ${{ vars.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=auto
+            suffix=-debug,onlatest=true
           tags: |
-            type=semver,pattern={{version}},suffix=-debug
+            type=semver,pattern={{version}}
           labels: |
             org.opencontainers.image.authors=Florian Katerndahl <florian@katerndahl.com>
             org.opencontainers.image.title=haze
