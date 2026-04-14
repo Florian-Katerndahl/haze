@@ -85,3 +85,25 @@ haze process --logfile data-dir/logfile --layer europe aoi/world.gpkg data-dir/
 ### Debug Build
 
 haze can be compiled with the debug flag set via `make debug`. The debug build does not update the processing status of datasets in the logfile and outputs a vector dataset with intersection geometries in the current working directory from which haze was launched in addition to slightly more verbose output on the command line.
+
+## Docker Specifics
+
+The user within the Docker image is most likely different from your account on the host machine. Thus, to correctly map the user and group ID and avoid any access restrictions you need to specifcy the `--user` or `-u` flag as follows:
+
+```bash
+docker run -u $(id -u):$(id -g) floriankaterndahl/haze:latest
+```
+
+Since haze expects the `.cdsapirc` file to be in the home directory, you also need to map the directory on your host machine to the docker container. While you can map the `.cdsapirc` file directly, this disregards the mapping between the working directory within the container to your host machine and requires another mount to be specified!
+
+```bash
+docker run -u $(id -u):$(id -g) -v $HOME:/home/ubuntu floriankaterndahl/haze:latest
+# or
+docker run -u $(id -u):$(id -g) -v $HOME/.cdsapirc:/home/ubuntu/.cdsapirc floriankaterndahl/haze:latest
+```
+
+It's also possible to choose a different directory path inside the container, e.g. set it equal to your home directory on the host machine. Please note, that you need to update both the working directory (`-w`) and the `$HOME` environment variable (`-e`) in this case as well.
+
+```bash
+docker run -u $(id -u):$(id -g) -v $HOME:$HOME -w $HOME -e HOME=$HOME floriankaterndahl/haze:latest
+```
