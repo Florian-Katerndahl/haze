@@ -2,8 +2,6 @@ name: Build (and Publish) Release Docker Images
 
 on:
   push:
-    branches:
-      - main
     tags: [ 'v*.*.*' ]
   workflow_dispatch:
 
