@@ -6,7 +6,7 @@ LABEL description="haze aims to be a drop-in replacement for water vapor process
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
-    apt-get install -y gcc libcurl4-openssl-dev libgeos-dev libjansson-dev make pkgconf && \
+    apt-get install -y gcc libcurl4-openssl-dev libgeos-dev libjansson-dev make pkgconf tini && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -30,6 +30,6 @@ WORKDIR /home/ubuntu
 
 RUN chmod go+rx /home/ubuntu
 
-ENTRYPOINT [ "haze" ]
+ENTRYPOINT [ "tini", "--", "haze" ]
 
 CMD [ "--help" ]
