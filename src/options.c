@@ -200,7 +200,7 @@ void printHelp(void)
   forceNoTrailingSlash(userOptions);
 
   if (userOptions->download && getAuthentication(&userOptions->authenticationToken, NULL) == 1) {
-    fprintf(stderr, "Failed to get authentication token from enironment or $HOME/.cdsapirc\n\n");
+    fprintf(stderr, "Failed to get authentication token from environment or $HOME/.cdsapirc\n\n");
     freeOption(userOptions);
     return NULL;
   }
