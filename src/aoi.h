@@ -9,7 +9,7 @@
  *
  * @copyright Copyright (c) 2026
  *
- * @defgroup aoi Area Of Interest Generation
+ * @defgroup aoigen Area Of Interest Generation
  * @{
  */
 
