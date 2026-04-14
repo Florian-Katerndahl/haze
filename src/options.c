@@ -80,7 +80,7 @@ void printHelp(void)
 
   int opt;
 
-  while ((opt = getopt_long(argc, argv, "hlgd", long_options, NULL)) != -1) {
+  while ((opt = getopt_long(argc, argv, "hl:gd", long_options, NULL)) != -1) {
     switch (opt) {
       case 'h':
         userOptions->printHelp = true;
