@@ -11,6 +11,7 @@ Before the data can be downloaded and processed, you need to setup your access t
 -# Create an account or login to your exisitng one on [ECMWF's Climate Data Store site](https://cds.climate.copernicus.eu/)
 -# Navigate to your [user profile](https://cds.climate.copernicus.eu/profile)
 -# Scroll down to the "API key" section and copy the contents to a file at `~/.cdsapirc`. As detailed in the [usage section](@ref usage), this file could be named and placed arbitrarily or you could rely on environment variables to pass your account's API key.
+-# From your user profile, navigate to the "Licenses" section at the top of the page and accept the "CC-BY licence". Without this, you won't be able to access the ERA-5 dataset!
 
 ### Geometries for Processing
 
