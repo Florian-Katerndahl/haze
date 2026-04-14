@@ -1,6 +1,7 @@
 .github/
 .vscode/
 aoi/
+benchmarks/
 build/
 data/
 data-dir/
