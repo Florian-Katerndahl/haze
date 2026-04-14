@@ -28,6 +28,8 @@ ENV HOME=/home/ubuntu
 
 WORKDIR /home/ubuntu
 
+RUN chmod go+rx /home/ubuntu
+
 ENTRYPOINT [ "haze" ]
 
 CMD [ "--help" ]
