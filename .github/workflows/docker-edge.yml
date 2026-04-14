@@ -3,9 +3,7 @@ name: Build and Publish Docker Images
 on:
   push:
     branches:
-      - main
       - development
-    tags: [ 'v*.*.*' ]
     paths:
       - '.github/workflows/docker-build-and-publish.yml'
       - 'docker/*'
@@ -49,8 +47,6 @@ jobs:
         with:
           images: ${{ vars.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}},enabled={{is_default_branch}}
-            type=edge,branch=main
             type=edge,branch=development
           labels: |
             org.opencontainers.image.authors=Florian Katerndahl <florian@katerndahl.com>
@@ -95,8 +91,6 @@ jobs:
         with:
           images: ${{ vars.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}},enabled={{is_default_branch}},suffix=-debug
-            type=edge,branch=main,suffix=-debug
             type=edge,branch=development,suffix=-debug
           labels: |
             org.opencontainers.image.authors=Florian Katerndahl <florian@katerndahl.com>
