@@ -28,7 +28,7 @@ void printHelp(void)
   printf("\t-h|--help:  Print help and exit.\n");
   printf("\t-l|--layer: Layer to open from AOI dataset.\n");
   printf("Global mandatory keyword arguments:\n");
-  printf("\t--logfile: Path to logfile storing successful downloads and processing statuses\n");
+  printf("\t--logfile: Path to logfile storing successful downloads and processing statuses.\n");
   printf("\nOptional keyword arguments valid for download subprogram:\n");
   printf("\t-g|--global: Request product worldwide instead of using an AOI dataset.\n");
   printf("\t-d|--daily:  Group product requests by day instead of month.\n");
@@ -39,7 +39,7 @@ void printHelp(void)
   printf("\t--hour:  Hours for which data should be downloaded (zero-based).\n");
   printf("Mandatory positional arguments:\n");
   printf("\taoi:    File path to OGR-readble file containing one or more polygons for which to extract data. Either `layer` or the first layer is read. Mandatory for processing.\n");
-  printf("\toutdir: Directory into which output CSVs are written.\n");
+  printf("\toutdir: Directory into which output data products and CSVs are written.\n");
 }
 
 [[nodiscard]] option_t *parseOptions(int argc, char *argv[])
