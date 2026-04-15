@@ -187,6 +187,7 @@ void printHelp(void)
     return NULL;
   }
 
+  /// FIXME: Why must the directory where the logfile is stored be writable? File is sufficient!
   if ((!(fileExists(userOptions->logFile) && fileWritable(userOptions->logFile)))
       && !fileWritable(dirname(dupedLogFile))) {
     fprintf(stderr, "Logfile is not writable\n\n");
