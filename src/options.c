@@ -189,7 +189,7 @@ void printHelp(void)
 
   if ((!(fileExists(userOptions->logFile) && fileWritable(userOptions->logFile)))
       && !fileWritable(dirname(dupedLogFile))) {
-    fprintf(stderr, "Logile is not writable\n\n");
+    fprintf(stderr, "Logfile is not writable\n\n");
     free(dupedLogFile);
     freeOption(userOptions);
     return NULL;
