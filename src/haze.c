@@ -796,8 +796,17 @@ int process(option_t *options)
     return 1;
   }
 
-  /// hacked together implementation to only build this data structure once
-  vectorGeometryList *areasOfInterest = NULL;
+  // WKT of ERA5 is assumed to be set to WGS84 and won't change over time; former information from:
+  // https://confluence.ecmwf.int/display/CKB/ERA5%3A+data+documentation#heading-SpatialreferencesystemsandEarthmodel and
+  // https://gis.stackexchange.com/a/380251
+  vectorGeometryList *areasOfInterest = buildGEOSGeometriesFromFile(options->areaOfInterest, options->aoiName,
+                  SRS_WKT_WGS84_LAT_LONG);
+
+  if (areasOfInterest == NULL) {
+    fprintf(stderr, "Failed to process area of interest\n");
+    freeStringList(logFileList);
+    return 1;
+  }
 
   for (stringList *ptr = logFileList; ptr != NULL; ptr = ptr->next) {
     someErrors = false;
@@ -818,20 +827,6 @@ int process(option_t *options)
 
     if (backFillOptions(options, ds)) {
       fprintf(stderr, "Failed to extract temporal information from dataset\n");
-      closeGDALDataset(ds);
-      continue;
-    }
-
-    // WKT of ERA5 is assumed to be set to WGS84 and won't change over time; former information from:
-    // https://confluence.ecmwf.int/display/CKB/ERA5%3A+data+documentation#heading-SpatialreferencesystemsandEarthmodel and
-    // https://gis.stackexchange.com/a/380251
-    if (areasOfInterest == NULL) {
-      areasOfInterest = buildGEOSGeometriesFromFile(options->areaOfInterest, options->aoiName,
-                        SRS_WKT_WGS84_LAT_LONG);
-    }
-
-    if (areasOfInterest == NULL) {
-      fprintf(stderr, "Failed to process area of interest\n");
       closeGDALDataset(ds);
       continue;
     }
