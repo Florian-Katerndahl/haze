@@ -13,6 +13,10 @@
  * @{
  */
 
+#ifndef _DEFAULT_SOURCE
+#define _DEFAULT_SOURCE
+#endif
+
 #include "types.h"
 #include <gdal/gdal.h>
 #include <gdal/ogr_api.h>
@@ -99,9 +103,9 @@ void trackIntersectingGeometries(void *item, void *userdata);
  *
  * @param areasOfInterest Vector of "overlay" geometries used to query STRTree.
  * @param rasterTree STRTree of vectorized raster cells.
- * @return intersection_t* Reference to list connecting "overlay" geometries to intersecting vectorized raster cells.
+ * @return intersectionVector* Reference to vector connecting "overlay" geometries to intersecting vectorized raster cells.
  */
-[[nodiscard]] intersection_t *querySTRTree(vectorGeometryVector *areasOfInterest,
+[[nodiscard]] intersectionVector *querySTRTree(vectorGeometryVector *areasOfInterest,
     GEOSSTRtree *rasterTree);
 
 /**

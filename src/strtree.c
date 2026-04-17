@@ -356,10 +356,25 @@ void trackIntersectingGeometries(void *item, void *userdata)
   return;
 }
 
-[[nodiscard]] intersection_t *querySTRTree(vectorGeometryVector *areasOfInterest,
+[[nodiscard]] intersectionVector *querySTRTree(vectorGeometryVector *areasOfInterest,
     GEOSSTRtree *rasterTree)
 {
-  intersection_t *queryResults = NULL;
+  intersectionVector *queryResults = malloc(sizeof(intersectionVector));
+  if (queryResults == NULL) {
+    fprintf(stderr, "Failed to allocate memory for vector of STRTree query results\n");
+    return NULL;
+  }
+
+  queryResults->entries = malloc(areasOfInterest->size * sizeof(struct i));
+  queryResults->size = areasOfInterest->size;
+  size_t queryResultsEntries = 0;
+
+  if (queryResults->entries == NULL) {
+    fprintf(stderr, "Failed to allocate memory for array of STRTRee query results\n");
+    /// TODO: implement proper cleanup for intersectionVector
+    free(queryResults);
+    return NULL;
+  }
 
   for (size_t i = 0; i < areasOfInterest->size; i++) {
     userdata_t userdata = {
@@ -383,27 +398,26 @@ void trackIntersectingGeometries(void *item, void *userdata)
       continue;
     }
 
-    intersection_t *node = malloc(sizeof(intersection_t));
-
-    if (node == NULL) {
-      perror("malloc");
-      freeCellGeometryList(userdata.intersectingCells);
-      continue;
-    }
-
     /// NOTE: no ownership of areasOfInterest->entry->OGRGeometry is taken,
     ///       owner of `areaOfInterest` is responsible to free object!
-    node->reference = areasOfInterest->entries[i].OGRGeometry;
-    node->referenceFID = areasOfInterest->entries[i].id;
-    node->intersectionCount = userdata.intersectionCount;
-    node->intersectingCells = userdata.intersectingCells;
-    node->next = NULL;
+    queryResults->entries[queryResultsEntries].reference = areasOfInterest->entries[i].OGRGeometry;
+    queryResults->entries[queryResultsEntries].referenceFID = areasOfInterest->entries[i].id;
+    queryResults->entries[queryResultsEntries].intersectionCount = userdata.intersectionCount;
+    queryResults->entries[queryResultsEntries].intersectingCells = userdata.intersectingCells;
 
-    if (queryResults == NULL) {
-      queryResults = node;
+    queryResultsEntries++;
+  }
+
+  // forcefully reallocate/shrink array if not all AOI geometries intersected with raster/STRTree
+  if (queryResults->size - queryResultsEntries > 0) {
+    struct i *tmp = reallocarray(queryResults->entries, queryResultsEntries, sizeof(struct i));
+    
+    if (tmp == NULL) {
+      fprintf(stderr, "Failed to reallocate array of STRTree query results. Continuing with larger array, shadowing additional entries\n");
+      queryResults->size = queryResultsEntries;
     } else {
-      node->next = queryResults;
-      queryResults = node;
+      queryResults->entries = tmp;
+      queryResults->size = queryResultsEntries;
     }
   }
 

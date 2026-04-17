@@ -110,6 +110,18 @@ typedef struct intersection
   struct intersection *next;
 } intersection_t;
 
+struct i {
+  OGRGeometryH reference;
+  GIntBig referenceFID;
+  cellGeometryList *intersectingCells;
+  size_t intersectionCount;
+};
+
+typedef struct {
+  struct i *entries;
+  size_t size;
+} intersectionVector;
+
 typedef struct userdata
 {
   const GEOSPreparedGeometry *queryGeometry;
