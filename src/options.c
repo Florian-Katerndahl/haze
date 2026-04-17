@@ -167,36 +167,49 @@ void printHelp(void)
     return NULL;
   }
 
-  if ((!userOptions->global || userOptions->process) && !(fileExists(userOptions->areaOfInterest)
-      && fileReadable(userOptions->areaOfInterest))) {
-    fprintf(stderr, "AOI file not readable\n\n");
+  bool areaOfInterestExists = fileExists(userOptions->areaOfInterest);
+  bool areaOfInterestReadable = fileReadable(userOptions->areaOfInterest);
+  bool outputDirectoryExists = fileExists(userOptions->outputDirectory);
+  bool outputDirectoryWritable = fileWritable(userOptions->outputDirectory);
+  bool logFileExists = fileExists(userOptions->logFile);
+  bool logFileReadable = fileReadable(userOptions->logFile);
+  bool logFileWritable = fileWritable(userOptions->logFile);
+
+  if ((!userOptions->global || userOptions->process) && !areaOfInterestExists) {
+    fprintf(stderr, "AOI file '%s' does not exist\n\n", userOptions->areaOfInterest);
     freeOption(userOptions);
     return NULL;
   }
 
-  if (!(fileExists(userOptions->outputDirectory) && fileWritable(userOptions->outputDirectory))) {
-    fprintf(stderr, "Output directory not writable\n\n");
+  if ((!userOptions->global || userOptions->process) && !areaOfInterestReadable) {
+    fprintf(stderr, "AOI file '%s' not readable\n\n", userOptions->areaOfInterest);
     freeOption(userOptions);
     return NULL;
   }
 
-  char *dupedLogFile = strdup(userOptions->logFile);
-  if (dupedLogFile == NULL) {
-    fprintf(stderr, "Failed to duplicate log file path\n");
+  if (!outputDirectoryExists) {
+    fprintf(stderr, "Output directory '%s' does not exist\n\n", userOptions->outputDirectory);
     freeOption(userOptions);
     return NULL;
   }
 
-  /// FIXME: Why must the directory where the logfile is stored be writable? File is sufficient!
-  if ((!(fileExists(userOptions->logFile) && fileWritable(userOptions->logFile)))
-      && !fileWritable(dirname(dupedLogFile))) {
-    fprintf(stderr, "Logfile is not writable\n\n");
-    free(dupedLogFile);
+  if (!outputDirectoryWritable) {
+    fprintf(stderr, "Output directory '%s' not writable\n\n", userOptions->outputDirectory);
     freeOption(userOptions);
     return NULL;
   }
 
-  free(dupedLogFile);
+  if (!logFileExists) {
+    fprintf(stderr, "Logfile '%s' does not exist\n\n", userOptions->logFile);
+    freeOption(userOptions);
+    return NULL;
+  }
+
+  if (!(logFileReadable || logFileWritable)) {
+    fprintf(stderr, "Logfile '%s' is not readable and writable\n\n", userOptions->logFile);
+    freeOption(userOptions);
+    return NULL;
+  }
 
   forceNoTrailingSlash(userOptions);
 
