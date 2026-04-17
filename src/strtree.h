@@ -35,7 +35,7 @@
 [[nodiscard]] char *extractCRSAsWKT(GDALDatasetH dataset, const char *layerName);
 
 /**
- * @brief Create a linked list of GEOS geometries from an OGR-readable vector dataset
+ * @brief Create a vector of GEOS geometries from an OGR-readable vector dataset
  *
  * @details This functions opens an OGR-readable vector dataset and extracts a single layer from it.
  *          Every feature of the extracted layer is exported to a GEOS geometry and possibly transformed
@@ -50,9 +50,9 @@
  * @param filePath Path to vector dataset.
  * @param layerName Layer to extract. If NULL, the first layer will be used.
  * @param inputReferenceSystem Target CRS in WKT representation.
- * @return vectorGeometryList* Reference to list of GEOS geometries, NULL on error.
+ * @return vectorGeometryVector* Reference to vector of GEOS geometries, NULL on error.
  */
-[[nodiscard]] vectorGeometryList *buildGEOSGeometriesFromFile(const char *filePath,
+[[nodiscard]] vectorGeometryVector *buildGEOSGeometriesFromFile(const char *filePath,
     const char *layerName,
     const char *inputReferenceSystem);
 

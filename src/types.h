@@ -12,6 +12,7 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include <stddef.h>
 #include <stdlib.h>
 #include <geos_c.h>
 #include <gdal/gdal.h>
@@ -82,6 +83,11 @@ typedef struct vectorGeometryList
   struct vectorGeometry *entry;
   struct vectorGeometryList *next;
 } vectorGeometryList;
+
+typedef struct vectorGeometryVector {
+  struct vectorGeometry *entries;
+  size_t size;
+} vectorGeometryVector;
 
 struct cellGeometry
 {

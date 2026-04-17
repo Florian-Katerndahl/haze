@@ -13,7 +13,9 @@
 #include <gdal/ogr_srs_api.h>
 #include <geos_c.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
@@ -53,11 +55,16 @@
   }
 }
 
-[[nodiscard]] vectorGeometryList *buildGEOSGeometriesFromFile(const char *filePath,
+[[nodiscard]] vectorGeometryVector *buildGEOSGeometriesFromFile(const char *filePath,
     const char *layerName,
     const char *inputReferenceSystem)
 {
-  vectorGeometryList *geometries = NULL;
+  vectorGeometryVector *geometries = malloc(sizeof(vectorGeometryVector));
+
+  if (geometries == NULL) {
+    fprintf(stderr, "Failed to allocate memory for vector of GEOS geometries generated from AOI file\n");
+    return NULL;
+  }
 
   GDALDatasetH vectorDataset = openVectorDataset(filePath);
   if (vectorDataset == NULL) {
@@ -96,6 +103,8 @@
       return NULL;
   }
 
+  size_t featureCount = OGR_L_GetFeatureCount(layer, 1);
+
   OGRSpatialReferenceH layerCRS = OGR_L_GetSpatialRef(layer); // reference is owned by dataset
   if (layerCRS == NULL) {
     fprintf(stderr, "Failed to get layer CRS: %s", CPLGetLastErrorMsg());
@@ -111,6 +120,16 @@
   }
 
   const bool needsReprojection = !EQUAL(inputReferenceSystem, layerWKT);
+
+  geometries->entries = malloc(featureCount * sizeof(struct vectorGeometry));
+  geometries->size = featureCount;
+
+  if (geometries->entries == NULL) {
+    fprintf(stderr, "Failed to allocate memory for array of vector geometries\n");
+    free(geometries); /// TODO: dedicated function to free vectorGeometryVector later on?
+    closeGDALDataset(vectorDataset);
+    return NULL;
+  }
 
   OGRCoordinateTransformationH transformation = NULL;
   CSLConstList transformerAddonOptions = NULL;
@@ -148,6 +167,8 @@
     }
   }
 
+  size_t featureIndex = 0;
+
   OGR_FOR_EACH_FEATURE_BEGIN(feature, layer) {
     // take ownership of geometry both because it's possibly reprojected and inserted to linked list
     // with longer lifetime then the original feature layer
@@ -168,30 +189,16 @@
       geom = transformedGeometry;
     }
 
-    struct vectorGeometry *vecGeom = calloc(1, sizeof(struct vectorGeometry));
-    if (vecGeom == NULL) {
-      perror("calloc");
-      freeVectorGeometryList(geometries);
-      OGR_G_DestroyGeometry(geom);
-      OGR_F_Destroy(feature); // current feature as loop is not finished
-      CSLDestroy(transformerAddonOptions);
-      OGR_GeomTransformer_Destroy(transformer);
-      OCTDestroyCoordinateTransformation(transformation);
-      CPLFree((void *) layerWKT);
-      closeGDALDataset(vectorDataset);
-      return NULL;
-    }
-
-    vecGeom->geometry = OGRToGEOS(geom);
-    vecGeom->mbr = boundingBoxOfOGRToGEOS(geom);
-    vecGeom->id = OGR_F_GetFID(feature);
-    vecGeom->OGRGeometry = geom;
-    if (vecGeom->geometry == NULL || vecGeom->mbr == NULL) {
+    geometries->entries[featureIndex].geometry = OGRToGEOS(geom);
+    geometries->entries[featureIndex].mbr = boundingBoxOfOGRToGEOS(geom);
+    geometries->entries[featureIndex].id = OGR_F_GetFID(feature);
+    geometries->entries[featureIndex].OGRGeometry = geom;
+    if (geometries->entries[featureIndex].geometry == NULL || geometries->entries[featureIndex].mbr == NULL) {
       fprintf(stderr, "Failed to convert OGR geometry to GEOS\n");
-      GEOSGeom_destroy(vecGeom->geometry);
-      GEOSGeom_destroy(vecGeom->mbr);
-      free(vecGeom);
-      freeVectorGeometryList(geometries);
+      GEOSGeom_destroy(geometries->entries[featureIndex].geometry);
+      GEOSGeom_destroy(geometries->entries[featureIndex].mbr);
+      /// TODO: properly cleanup geometries
+      //freeVectorGeometryList(geometries);
       OGR_G_DestroyGeometry(geom);
       OGR_F_Destroy(feature); // current feature as loop is not finished
       CSLDestroy(transformerAddonOptions);
@@ -202,33 +209,12 @@
       return NULL;
     }
 
-    // now, insert into linked list!
-    vectorGeometryList *node = calloc(1, sizeof(vectorGeometryList));
-    if (node == NULL) {
-      perror("calloc");
-      GEOSGeom_destroy(vecGeom->geometry);
-      GEOSGeom_destroy(vecGeom->mbr);
-      free(vecGeom);
-      freeVectorGeometryList(geometries);
-      OGR_G_DestroyGeometry(geom);
-      OGR_F_Destroy(feature); // current feature as loop is not finished
-      CSLDestroy(transformerAddonOptions);
-      OGR_GeomTransformer_Destroy(transformer);
-      OCTDestroyCoordinateTransformation(transformation);
-      CPLFree((void *) layerWKT);
-      closeGDALDataset(vectorDataset);
-      return NULL;
-    }
+    featureIndex++;
 
-    node->entry = vecGeom;
-    node->next = NULL;
-    if (geometries == NULL) {
-      // first node
-      geometries = node;
-    } else {
-      // append to front
-      node->next = geometries;
-      geometries = node;
+    if (featureIndex > geometries->size) {
+      fprintf(stderr, "Encountered more iterations than features exist\n");
+      /// TODO: cleanup
+      return NULL;
     }
   }
   OGR_FOR_EACH_FEATURE_END(feature);

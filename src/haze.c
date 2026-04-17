@@ -799,7 +799,7 @@ int process(option_t *options)
   // WKT of ERA5 is assumed to be set to WGS84 and won't change over time; former information from:
   // https://confluence.ecmwf.int/display/CKB/ERA5%3A+data+documentation#heading-SpatialreferencesystemsandEarthmodel and
   // https://gis.stackexchange.com/a/380251
-  vectorGeometryList *areasOfInterest = buildGEOSGeometriesFromFile(options->areaOfInterest, options->aoiName,
+  vectorGeometryVector *areasOfInterest = buildGEOSGeometriesFromFile(options->areaOfInterest, options->aoiName,
                   SRS_WKT_WGS84_LAT_LONG);
 
   if (areasOfInterest == NULL) {
