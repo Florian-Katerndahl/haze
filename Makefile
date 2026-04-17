@@ -2,7 +2,7 @@ CC=gcc
 DEFINES=-D_FORTIFY_SOURCE=3
 SANITIZERS=-fsanitize=address,undefined,leak -fno-omit-frame-pointer -fsanitize-address-use-after-scope -fstack-protector-strong -fstack-clash-protection
 OPTIMIZATION=-O3
-CFLAGS=-Wall -Wextra -pedantic -std=c2x -flto $(SANITIZERS) $(OPTIMIZATION)
+CFLAGS=-Wall -Wextra -pedantic -std=c2x -flto $(SANITIZERS) $(OPTIMIZATION) -Werror=incompatible-pointer-types
 LINKFLAGS=$(shell pkg-config --cflags --libs jansson)
 LINKFLAGS+=$(shell pkg-config --cflags --libs libcurl)
 LINKFLAGS+=$(shell pkg-config --cflags --libs gdal)
