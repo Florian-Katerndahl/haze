@@ -132,11 +132,11 @@ int reorderToBandInterleavedByPixel(struct rawData *data);
  *
  * @note Outputs intersection geometries in debug builds in a GeoPackage in the current working directory.
  *
- * @param intersections List containing AOI features and all vectorized raster cells that intersect a given feature.
+ * @param intersections Vector containing AOI features and all vectorized raster cells that intersect a given feature.
  * @param rasterWkt CRS in WKT representation of raster dataset.
  * @return mean_t* Reference to list containing centroids of AOI geometries and associated water column value, NULL on error.
  */
-[[nodiscard]] mean_t *calculateAreaWeightedMean(intersection_t *intersections,
+[[nodiscard]] mean_t *calculateAreaWeightedMean(intersectionVector *intersections,
     const char *rasterWkt);
 
 /**

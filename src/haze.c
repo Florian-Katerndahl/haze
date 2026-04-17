@@ -218,7 +218,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
   return 0;
 }
 
-[[nodiscard]] mean_t *calculateAreaWeightedMean(intersection_t *intersections,
+[[nodiscard]] mean_t *calculateAreaWeightedMean(intersectionVector *intersections,
     const char *rasterWkt)
 {
   mean_t *root = NULL;
@@ -320,7 +320,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
   OGR_Fld_Destroy(valueDefinition);
 #endif
 
-  while (intersections != NULL) {
+  for (size_t referenceIndex = 0; referenceIndex < intersections->size; referenceIndex ++) {
     OGRGeometryH centroid = OGR_G_CreateGeometry(wkbPoint);
     if (centroid == NULL) {
       fprintf(stderr, "Failed to create empty centroid\n");
@@ -336,7 +336,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       return NULL;
     }
 
-    if (OGR_G_Centroid(intersections->reference, centroid) == OGRERR_FAILURE) {
+    if (OGR_G_Centroid(intersections->entries[referenceIndex].reference, centroid) == OGRERR_FAILURE) {
       fprintf(stderr, "Failed to calculate centroid\n");
       GEOSWKBWriter_destroy(wkbWriter);
       OSRDestroySpatialReference(spatialRef);
@@ -352,8 +352,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     }
 
     double referenceArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(
-                             intersections->reference) : OGR_G_Area(
-                             intersections->reference);
+                             intersections->entries[referenceIndex].reference) : OGR_G_Area(
+                             intersections->entries[referenceIndex].reference);
     if (referenceArea == -1) {
       fprintf(stderr, "Failed to calculate reference area\n");
       GEOSWKBWriter_destroy(wkbWriter);
@@ -369,7 +369,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       return NULL;
     }
 
-    double *values = calloc(intersections->intersectionCount, sizeof(double));
+    double *values = calloc(intersections->entries[referenceIndex].intersectionCount, sizeof(double));
     if (values == NULL) {
       perror("calloc");
       GEOSWKBWriter_destroy(wkbWriter);
@@ -385,7 +385,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       return NULL;
     }
 
-    double *weights = calloc(intersections->intersectionCount, sizeof(double));
+    double *weights = calloc(intersections->entries[referenceIndex].intersectionCount, sizeof(double));
     if (weights == NULL) {
       perror("calloc");
       GEOSWKBWriter_destroy(wkbWriter);
@@ -402,10 +402,10 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       return NULL;
     }
 
-    cellGeometryList *temp = intersections->intersectingCells;
+    cellGeometryList *temp = intersections->entries[referenceIndex].intersectingCells;
 
     // iterate over all found intersections
-    for (size_t i = 0; i < intersections->intersectionCount; i++) {
+    for (size_t i = 0; i < intersections->entries[referenceIndex].intersectionCount; i++) {
       values[i] = temp->entry->value; // shit, here I do copy data again...
 
       OGRGeometryH cellAsOGR;
@@ -449,7 +449,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         return NULL;
       }
 
-      OGRGeometryH intersection = OGR_G_Intersection(intersections->reference, cellAsOGR);
+      OGRGeometryH intersection = OGR_G_Intersection(intersections->entries[referenceIndex].reference, cellAsOGR);
       if (intersection == NULL) {
         fprintf(stderr, "Failed to create intersection-polygon: %s\n", CPLGetLastErrorMsg());
         GEOSWKBWriter_destroy(wkbWriter);
@@ -545,7 +545,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       return NULL;
     }
 
-    meanEntry->value = calculateWeightedAverage(values, weights, intersections->intersectionCount);
+    meanEntry->value = calculateWeightedAverage(values, weights, intersections->entries[referenceIndex].intersectionCount);
     meanEntry->x = OGR_G_GetX(centroid, 0);
     meanEntry->y = OGR_G_GetY(centroid, 0);
 
@@ -562,8 +562,6 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       meanEntry->next = root;
       root = meanEntry;
     }
-
-    intersections = intersections->next;
 
     free(values);
     free(weights);
