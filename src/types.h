@@ -148,11 +148,11 @@ typedef struct userdata
 void freeVectorGeometry(struct vectorGeometry *node);
 
 /**
- * @brief Free linked list of OGR vector geometries
+ * @brief Free vector of OGR vector geometries
  *
- * @param list List to free
+ * @param list Vector to free
  */
-void freeVectorGeometryList(vectorGeometryList *list);
+void freeVectorGeometryList(vectorGeometryVector *vector);
 
 /**
  * @brief Free a single cell geometry node and the encapsulated GEOS geometry
@@ -171,21 +171,21 @@ void freeCellGeometry(struct cellGeometry *node);
 void freeCellGeometryList(cellGeometryList *list);
 
 /**
- * @brief Free linked list of intersecting geometries
+ * @brief Free vector of intersecting geometries
  *
- * @details This frees both the entries in list as well as the list of geometries
- *          intersecting each entry in `list`.
+ * @details This frees both the entries in vector as well as the list of geometries
+ *          intersecting each entry in `vector`.
  *
  * @param list List to free
  */
-void freeIntersections(intersection_t *list);
+void freeIntersections(intersectionVector *vector);
 
 /**
- * @brief Free list containing centroids of AOI geometries and associated water column value
+ * @brief Free vector containing centroids of AOI geometries and associated water column value
  *
- * @param list List to free
+ * @param list Vector to free
  */
-void freeWeightedMeans(mean_t *list);
+void freeWeightedMeans(meanVector *vector);
 
 // options
 typedef struct options

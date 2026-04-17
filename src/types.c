@@ -8,19 +8,15 @@ void freeVectorGeometry(struct vectorGeometry *node)
   OGR_G_DestroyGeometry(node->OGRGeometry);
   GEOSGeom_destroy(node->geometry);
   GEOSGeom_destroy(node->mbr);
-  free(node);
-  node = NULL;
 }
 
-void freeVectorGeometryList(vectorGeometryList *list)
+void freeVectorGeometryList(vectorGeometryVector *vector)
 {
-  vectorGeometryList *temp;
-  while (list != NULL) {
-    freeVectorGeometry(list->entry);
-    temp = list;
-    list = list->next;
-    free(temp);
+  for (size_t i = 0; i < vector->size; i++) {
+    freeVectorGeometry(&vector->entries[i]);
   }
+  free(vector->entries);
+  free(vector);
 }
 
 void freeCellGeometry(struct cellGeometry *node)
@@ -40,35 +36,30 @@ void freeCellGeometryList(cellGeometryList *list)
   }
 }
 
-void freeIntersections(intersection_t *list)
+void freeIntersections(intersectionVector *vector)
 {
-  intersection_t *currentNode;
   cellGeometryList *cellNode;
 
-  while (list != NULL) {
+  for (size_t i = 0; i < vector->size; i++) {
     // NOTE: The elements within the nodes are owned by
     // the list created when constructing the tree!
     // Thus, I need to free the nodes but not their content!
-    cellNode = list->intersectingCells;
+    cellNode = vector->entries[i].intersectingCells;
     while (cellNode != NULL) {
       cellGeometryList *nextCellNode = cellNode->next;
       free(cellNode);
       cellNode = nextCellNode;
     }
-    currentNode = list;
-    list = list->next;
-    free(currentNode);
   }
+
+  free(vector->entries);
+  free(vector);
 }
 
-void freeWeightedMeans(mean_t *list)
+void freeWeightedMeans(meanVector *vector)
 {
-  mean_t *next;
-  while (list != NULL) {
-    next = list->next;
-    free(list);
-    list = next;
-  }
+  free(vector->entries);
+  free(vector);
 }
 
 void freeOption(option_t *options)

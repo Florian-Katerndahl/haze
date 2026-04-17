@@ -261,7 +261,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
   GEOSWKBWriter *wkbWriter = GEOSWKBWriter_create();
   if (wkbWriter == NULL) {
     fprintf(stderr, "Failed to create WKB writer\n");
-    //freeWeightedMeans(root);
+    freeWeightedMeans(means);
     return NULL;
   }
 
@@ -269,7 +269,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
   char pwd[PATH_MAX];
   if (getcwd(pwd, sizeof(pwd)) == NULL) {
     fprintf(stderr, "Failed to get current working directory\n");
-    freeWeightedMeans(root);
+    freeWeightedMeans(means);
     return NULL;
   }
 
@@ -281,7 +281,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
   GDALDriverH *debugOutputDriver = GDALGetDriverByName("GPKG");
   if (debugOutputDriver == NULL) {
     fprintf(stderr, "Failed to get GPKG driver. Aborting.\n");
-    freeWeightedMeans(root);
+    freeWeightedMeans(means);
     free((char*) debugOutputPath);
     return NULL;
   }
@@ -290,7 +290,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
   if (debugOutputDataset == NULL) {
     fprintf(stderr, "Failed to create output dataset %s. Aborting.\n", debugOutputPath);
     /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
-    freeWeightedMeans(root);
+    freeWeightedMeans(means);
     free((char*) debugOutputPath);
     return NULL;
   }
@@ -300,7 +300,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     fprintf(stderr, "Failed to create output layer. Aborting\n");
     GDALClose(debugOutputDataset);
     /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
-    freeWeightedMeans(root);
+    freeWeightedMeans(means);
     unlink(debugOutputPath);
     free((char*) debugOutputPath);
     return NULL;
@@ -312,7 +312,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     OGR_Fld_Destroy(parentIdDefinition);
     GDALClose(debugOutputDataset);
     /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
-    freeWeightedMeans(root);
+    freeWeightedMeans(means);
     unlink(debugOutputPath);
     free((char*) debugOutputPath);
     return NULL;
@@ -326,7 +326,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     OGR_Fld_Destroy(valueDefinition);
     GDALClose(debugOutputDataset);
     /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
-    freeWeightedMeans(root);
+    freeWeightedMeans(means);
     unlink(debugOutputPath);
     free((char*) debugOutputPath);
     return NULL;
@@ -341,7 +341,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       fprintf(stderr, "Failed to create empty centroid\n");
       GEOSWKBWriter_destroy(wkbWriter);
       OSRDestroySpatialReference(spatialRef);
-      //freeWeightedMeans(root);
+      freeWeightedMeans(means);
 #ifdef DEBUG
       GDALClose(debugOutputDataset);
       /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
@@ -355,7 +355,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       fprintf(stderr, "Failed to calculate centroid\n");
       GEOSWKBWriter_destroy(wkbWriter);
       OSRDestroySpatialReference(spatialRef);
-      //freeWeightedMeans(root);
+      freeWeightedMeans(means);
       OGR_G_DestroyGeometry(centroid);
 #ifdef DEBUG
       GDALClose(debugOutputDataset);
@@ -373,7 +373,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       fprintf(stderr, "Failed to calculate reference area\n");
       GEOSWKBWriter_destroy(wkbWriter);
       OSRDestroySpatialReference(spatialRef);
-      //freeWeightedMeans(root);
+      freeWeightedMeans(means);
       OGR_G_DestroyGeometry(centroid);
 #ifdef DEBUG
       GDALClose(debugOutputDataset);
@@ -389,7 +389,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       perror("calloc");
       GEOSWKBWriter_destroy(wkbWriter);
       OSRDestroySpatialReference(spatialRef);
-      //freeWeightedMeans(root);
+      freeWeightedMeans(means);
       OGR_G_DestroyGeometry(centroid);
 #ifdef DEBUG
       GDALClose(debugOutputDataset);
@@ -405,7 +405,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       perror("calloc");
       GEOSWKBWriter_destroy(wkbWriter);
       OSRDestroySpatialReference(spatialRef);
-      //freeWeightedMeans(root);
+      freeWeightedMeans(means);
       OGR_G_DestroyGeometry(centroid);
       free(values);
 #ifdef DEBUG
@@ -431,7 +431,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         fprintf(stderr, "Failed to export geometry as WKB\n");
         GEOSWKBWriter_destroy(wkbWriter);
         OSRDestroySpatialReference(spatialRef);
-        //freeWeightedMeans(root);
+        freeWeightedMeans(means);
         OGR_G_DestroyGeometry(centroid);
         free(values);
         free(weights);
@@ -449,7 +449,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         fprintf(stderr, "Failed to import WKB to OGR: %s\n", CPLGetLastErrorMsg());
         GEOSWKBWriter_destroy(wkbWriter);
         OSRDestroySpatialReference(spatialRef);
-        //freeWeightedMeans(root);
+        freeWeightedMeans(means);
         OGR_G_DestroyGeometry(centroid);
         OGR_G_DestroyGeometry(cellAsOGR);
         free(values);
@@ -469,7 +469,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         fprintf(stderr, "Failed to create intersection-polygon: %s\n", CPLGetLastErrorMsg());
         GEOSWKBWriter_destroy(wkbWriter);
         OSRDestroySpatialReference(spatialRef);
-        //freeWeightedMeans(root);
+        freeWeightedMeans(means);
         OGR_G_DestroyGeometry(centroid);
         OGR_G_DestroyGeometry(cellAsOGR);
         free(values);
@@ -498,7 +498,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         if (OGR_L_CreateFeature(debugOutputLayer, feature) != OGRERR_NONE) {
           GEOSWKBWriter_destroy(wkbWriter);
           OSRDestroySpatialReference(spatialRef);
-          freeWeightedMeans(root);
+          freeWeightedMeans(means);
           OGR_G_DestroyGeometry(centroid);
           OGR_G_DestroyGeometry(cellAsOGR);
           free(values);
@@ -903,8 +903,7 @@ int process(option_t *options)
         freeAverageData(&average);
         freeCellGeometryList(rasterCellsAsGEOS);
         GEOSSTRtree_destroy(rasterTree);
-        /// TODO: proper cleanup of intersection vector
-        //freeIntersections(intersections);
+        freeIntersections(intersections);
         someErrors = true;
         break;
       }
@@ -917,8 +916,7 @@ int process(option_t *options)
         freeAverageData(&average);
         freeCellGeometryList(rasterCellsAsGEOS);
         GEOSSTRtree_destroy(rasterTree);
-        /// TODO: proper cleanup of intersection vector
-        //freeIntersections(intersections);
+        freeIntersections(intersections);
         someErrors = true;
         break;
       }
@@ -927,9 +925,8 @@ int process(option_t *options)
       writeWeightedMeans(weightedMeans, textOutputFilePath);
 
       freeCellGeometryList(rasterCellsAsGEOS);
-      /// TODO: proper cleanup of intersection vector
-      //freeIntersections(intersections);
-      //freeWeightedMeans(weightedMeans);
+      freeIntersections(intersections);
+      freeWeightedMeans(weightedMeans);
 
       GEOSSTRtree_destroy(rasterTree);
 
@@ -955,8 +952,7 @@ int process(option_t *options)
     }
   }
 
-  /// TODO: cleanup
-  //freeVectorGeometryList(areasOfInterest);
+  freeVectorGeometryList(areasOfInterest);
 
   if (writeUpdatedLogFile(logFileList, options->logFile)) {
     fprintf(stderr,

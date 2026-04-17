@@ -197,8 +197,7 @@
       fprintf(stderr, "Failed to convert OGR geometry to GEOS\n");
       GEOSGeom_destroy(geometries->entries[featureIndex].geometry);
       GEOSGeom_destroy(geometries->entries[featureIndex].mbr);
-      /// TODO: properly cleanup geometries
-      //freeVectorGeometryList(geometries);
+      freeVectorGeometryList(geometries);
       OGR_G_DestroyGeometry(geom);
       OGR_F_Destroy(feature); // current feature as loop is not finished
       CSLDestroy(transformerAddonOptions);
