@@ -356,32 +356,30 @@ void trackIntersectingGeometries(void *item, void *userdata)
   return;
 }
 
-[[nodiscard]] intersection_t *querySTRTree(vectorGeometryList *areasOfInterest,
+[[nodiscard]] intersection_t *querySTRTree(vectorGeometryVector *areasOfInterest,
     GEOSSTRtree *rasterTree)
 {
   intersection_t *queryResults = NULL;
 
-  while (areasOfInterest != NULL) {
+  for (size_t i = 0; i < areasOfInterest->size; i++) {
     userdata_t userdata = {
-      .queryGeometry = GEOSPrepare(areasOfInterest->entry->geometry),
+      .queryGeometry = GEOSPrepare(areasOfInterest->entries[i].geometry),
       .intersectingCells = NULL,
       .intersectionCount = 0
     };
 
     if (userdata.queryGeometry == NULL) {
-      fprintf(stderr, "Failed to prepare geometry for FID %lld\n", areasOfInterest->entry->id);
-      areasOfInterest = areasOfInterest->next;
+      fprintf(stderr, "Failed to prepare geometry for FID %lld\n", areasOfInterest->entries[i].id);
       continue;
     }
 
-    GEOSSTRtree_query(rasterTree, areasOfInterest->entry->mbr, trackIntersectingGeometries,
+    GEOSSTRtree_query(rasterTree, areasOfInterest->entries[i].mbr, trackIntersectingGeometries,
                       (void *) &userdata);
 
     GEOSPreparedGeom_destroy(userdata.queryGeometry);
 
     if (userdata.intersectingCells == NULL) {
-      fprintf(stderr, "No intersections found for geometry with FID %lld.\n", areasOfInterest->entry->id);
-      areasOfInterest = areasOfInterest->next;
+      fprintf(stderr, "No intersections found for geometry with FID %lld.\n", areasOfInterest->entries[i].id);
       continue;
     }
 
@@ -390,14 +388,13 @@ void trackIntersectingGeometries(void *item, void *userdata)
     if (node == NULL) {
       perror("malloc");
       freeCellGeometryList(userdata.intersectingCells);
-      areasOfInterest = areasOfInterest->next;
       continue;
     }
 
     /// NOTE: no ownership of areasOfInterest->entry->OGRGeometry is taken,
     ///       owner of `areaOfInterest` is responsible to free object!
-    node->reference = areasOfInterest->entry->OGRGeometry;
-    node->referenceFID = areasOfInterest->entry->id;
+    node->reference = areasOfInterest->entries[i].OGRGeometry;
+    node->referenceFID = areasOfInterest->entries[i].id;
     node->intersectionCount = userdata.intersectionCount;
     node->intersectingCells = userdata.intersectingCells;
     node->next = NULL;
@@ -408,8 +405,6 @@ void trackIntersectingGeometries(void *item, void *userdata)
       node->next = queryResults;
       queryResults = node;
     }
-
-    areasOfInterest = areasOfInterest->next;
   }
 
   return queryResults;

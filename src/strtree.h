@@ -97,11 +97,11 @@ void trackIntersectingGeometries(void *item, void *userdata);
  *
  * @note After the function returns, the caller owns the returned object and musst free it after use.
  *
- * @param areasOfInterest List of "overlay" geometries used to query STRTree.
+ * @param areasOfInterest Vector of "overlay" geometries used to query STRTree.
  * @param rasterTree STRTree of vectorized raster cells.
  * @return intersection_t* Reference to list connecting "overlay" geometries to intersecting vectorized raster cells.
  */
-[[nodiscard]] intersection_t *querySTRTree(vectorGeometryList *areasOfInterest,
+[[nodiscard]] intersection_t *querySTRTree(vectorGeometryVector *areasOfInterest,
     GEOSSTRtree *rasterTree);
 
 /**
