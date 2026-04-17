@@ -134,19 +134,19 @@ int reorderToBandInterleavedByPixel(struct rawData *data);
  *
  * @param intersections Vector containing AOI features and all vectorized raster cells that intersect a given feature.
  * @param rasterWkt CRS in WKT representation of raster dataset.
- * @return mean_t* Reference to list containing centroids of AOI geometries and associated water column value, NULL on error.
+ * @return mean_t* Reference to vector containing centroids of AOI geometries and associated water column value, NULL on error.
  */
-[[nodiscard]] mean_t *calculateAreaWeightedMean(intersectionVector *intersections,
+[[nodiscard]] meanVector *calculateAreaWeightedMean(intersectionVector *intersections,
     const char *rasterWkt);
 
 /**
  * @brief Write area weighted means to file in format usable by FORCE
  *
- * @param values List containing centroids of AOI geometries and associated water column value.
+ * @param values vector containing centroids of AOI geometries and associated water column value.
  * @param filePath Path to output file.
  * @return in 0 on success, 1 on error.
  */
-int writeWeightedMeans(mean_t *values, const char *filePath);
+int writeWeightedMeans(meanVector *values, const char *filePath);
 
 /**
  * @brief Compute corner coordinates of raster cell based on geo transformation

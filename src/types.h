@@ -69,6 +69,17 @@ typedef struct mean
   struct mean *next;
 } mean_t;
 
+struct m {
+  double x;
+  double y;
+  double value;
+};
+
+typedef struct {
+  struct m *entries;
+  size_t size;
+} meanVector;
+
 // from strtree
 struct vectorGeometry
 {
