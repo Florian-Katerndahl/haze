@@ -491,7 +491,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 #ifdef DEBUG
         OGRFeatureH feature = OGR_F_Create(OGR_L_GetLayerDefn(debugOutputLayer));
         
-        OGR_F_SetFieldInteger(feature, OGR_F_GetFieldIndex(feature, "parentFID"), intersections->referenceFID);
+        OGR_F_SetFieldInteger(feature, OGR_F_GetFieldIndex(feature, "parentFID"), intersections->entries[referenceIndex].referenceFID);
         OGR_F_SetFieldDouble(feature, OGR_F_GetFieldIndex(feature, "waterVapor"), values[i]);
         OGR_F_SetGeometry(feature, intersection);
 
@@ -530,7 +530,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       } else {
         fprintf(stderr, "Got unexpected geometry type: %s\n", OGR_G_GetGeometryName(intersection));
 #ifdef DEBUG
-        OGR_G_DumpReadable(intersections->reference, stdout, NULL);
+        OGR_G_DumpReadable(intersections->entries[referenceIndex].reference, stdout, NULL);
         OGR_G_DumpReadable(cellAsOGR, stdout, NULL);
         OGR_G_DumpReadable(intersection, stdout, NULL);
 #endif
