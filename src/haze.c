@@ -351,21 +351,82 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       return NULL;
     }
 
-    if (OGR_G_Centroid(intersections->entries[referenceIndex].reference, centroid) == OGRERR_FAILURE) {
-      fprintf(stderr, "Failed to calculate centroid\n");
-      GEOSWKBWriter_destroy(wkbWriter);
-      OSRDestroySpatialReference(spatialRef);
-      freeWeightedMeans(means);
-      OGR_G_DestroyGeometry(centroid);
+    /// TODO: use something like a `--footprint` flag to activate this path: options->footprint && ...
+    /// TODO: how to handle curvepolygons/geometries? -> deprecate their usage? OGR_G_GetGeometryCount only returns valid values for polygon and multipolygon
+    ///       and it doesn't make sense to allow other geometry types if I can only handle those here
+    if (wkbFlatten(OGR_G_GetGeometryType(intersections->entries[referenceIndex].reference)) == wkbMultiPolygon) {
+      // adapt approach from sf (https://r-spatial.github.io/sf/reference/st_shift_longitude.html) where all points whose
+      // longitude coordinate is < 0 are shifted by +360°; though no clue about their implementation
+      OGRGeometryH shiftedGeometry = OGR_G_Clone(intersections->entries[referenceIndex].reference);
+
+      int numberOfRings = OGR_G_GetGeometryCount(shiftedGeometry);
+
+      for (int ring = 0; ring < OGR_G_GetGeometryCount(shiftedGeometry); ring++) {
+        OGRGeometryH ringGeometry = OGR_G_GetGeometryRef(shiftedGeometry, ring);
+        int numberOfPoints = OGR_G_GetPointCount(ringGeometry);
+      }
+      // read docs when I can assign to what...
+      // OGR_G_GetGeometryRef() index of the geometry to fetch, between 0 and getNumGeometries() - 1
+      // possibly a OGR_G_Clone? Though, I do that above already... But must be done for modification
+      // OGR_G_GetPointCount()
+      // OGR_G_GetPointsZM() <- get all points; would OGR_G_GetPointsXY be enough with Y set to NULL? I only care about x values
+      // shift all x points < 0 by +360
+      // OGR_G_SetPointsZM() <- set all points
+      // merge
+
+
+      if (!OGR_G_IsValid(shiftedGeometry)) {
+        fprintf(stderr, "Failed to shift multipolygon in longitude direction\n");
+        GEOSWKBWriter_destroy(wkbWriter);
+        OSRDestroySpatialReference(spatialRef);
+        freeWeightedMeans(means);
+        OGR_G_DestroyGeometry(shiftedGeometry);
+        OGR_G_DestroyGeometry(centroid);
 #ifdef DEBUG
-      GDALClose(debugOutputDataset);
-      /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
-      unlink(debugOutputPath);
-      free((char*) debugOutputPath);
+        GDALClose(debugOutputDataset);
+        /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
+        unlink(debugOutputPath);
+        free((char*) debugOutputPath);
 #endif
-      return NULL;
+      }
+
+      if (OGR_G_Centroid(shiftedGeometry, centroid) == OGRERR_FAILURE) {
+        fprintf(stderr, "Failed to calculate centroid\n");
+        GEOSWKBWriter_destroy(wkbWriter);
+        OSRDestroySpatialReference(spatialRef);
+        freeWeightedMeans(means);
+        OGR_G_DestroyGeometry(shiftedGeometry);
+        OGR_G_DestroyGeometry(centroid);
+#ifdef DEBUG
+        GDALClose(debugOutputDataset);
+        /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
+        unlink(debugOutputPath);
+        free((char*) debugOutputPath);
+#endif
+        return NULL;
+      }
+    } else {
+      if (OGR_G_Centroid(intersections->entries[referenceIndex].reference, centroid) == OGRERR_FAILURE) {
+        fprintf(stderr, "Failed to calculate centroid\n");
+        GEOSWKBWriter_destroy(wkbWriter);
+        OSRDestroySpatialReference(spatialRef);
+        freeWeightedMeans(means);
+        OGR_G_DestroyGeometry(centroid);
+#ifdef DEBUG
+        GDALClose(debugOutputDataset);
+        /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
+        unlink(debugOutputPath);
+        free((char*) debugOutputPath);
+#endif
+        return NULL;
+      }
     }
 
+    OGRGeometryH pos = OGR_G_PointOnSurface(intersections->entries[referenceIndex].reference);
+    OGR_G_DumpReadable(centroid, stdout, NULL);
+    OGR_G_DumpReadable(pos, stdout, NULL);
+    OGR_G_DestroyGeometry(pos);
+    
     double referenceArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(
                              intersections->entries[referenceIndex].reference) : OGR_G_Area(
                              intersections->entries[referenceIndex].reference);
