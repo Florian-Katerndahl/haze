@@ -534,7 +534,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 
     if (geometriesAreFootprints
         && wkbFlatten(OGR_G_GetGeometryType(intersections->entries[referenceIndex].reference)) ==
-        wkbMultiPolygon) {
+        wkbMultiPolygon
+        && OGR_G_GetGeometryCount(intersections->entries[referenceIndex].reference) > 1) {
       OGRGeometryH shiftedPolygon = mergeFootprintSplitAtDateline(
                                       intersections->entries[referenceIndex].reference);
 
