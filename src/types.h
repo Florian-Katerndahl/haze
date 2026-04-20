@@ -69,13 +69,15 @@ typedef struct mean
   struct mean *next;
 } mean_t;
 
-struct m {
+struct m
+{
   double x;
   double y;
   double value;
 };
 
-typedef struct {
+typedef struct
+{
   struct m *entries;
   size_t size;
 } meanVector;
@@ -95,7 +97,8 @@ typedef struct vectorGeometryList
   struct vectorGeometryList *next;
 } vectorGeometryList;
 
-typedef struct vectorGeometryVector {
+typedef struct vectorGeometryVector
+{
   struct vectorGeometry *entries;
   size_t size;
 } vectorGeometryVector;
@@ -121,14 +124,16 @@ typedef struct intersection
   struct intersection *next;
 } intersection_t;
 
-struct i {
+struct i
+{
   OGRGeometryH reference;
   GIntBig referenceFID;
   cellGeometryList *intersectingCells;
   size_t intersectionCount;
 };
 
-typedef struct {
+typedef struct
+{
   struct i *entries;
   size_t size;
 } intersectionVector;

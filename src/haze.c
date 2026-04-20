@@ -206,7 +206,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         originBandOffset = band * data->columns * data->rows;
         targetBandOffset = band;
         temporaryArray[targetBandOffset + targetXOffset + targetYOffset] = data->data[originYOffset +
-            originXOffset + originBandOffset];
+          originXOffset + originBandOffset];
       }
     }
   }
@@ -252,7 +252,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       OGRGeometryH subRing = OGR_G_GetGeometryRef(subPolygon, ringCountIdx);
 
       int numberOfPoints = OGR_G_GetPointCount(subRing);
-      
+
       /// NOTE: If I understand the docs correctly, this must always be a wkbLinearRing
       OGRGeometryH shiftedSubRing = OGR_G_CreateGeometry(wkbLinearRing);
 
@@ -267,8 +267,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       double *xPoints = NULL;
       double *yPoints = NULL;
       double *zPoints = NULL;
-      double *mPoints = NULL;     
-      
+      double *mPoints = NULL;
+
       size_t xStride = sizeof(double);
       size_t yStride = sizeof(double);
       size_t zStride = 0;
@@ -323,7 +323,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         return NULL;
       }
 
-      if (OGR_G_GetPointsZM(subRing, xPoints, xStride, yPoints, yStride, zPoints, zStride, mPoints, mStride) != numberOfPoints) {
+      if (OGR_G_GetPointsZM(subRing, xPoints, xStride, yPoints, yStride, zPoints, zStride, mPoints,
+                            mStride) != numberOfPoints) {
         fprintf(stderr, "Failed to read all x coordinates from sub-ring of multi-polygon\n");
         free(xPoints);
         free(yPoints);
@@ -335,11 +336,13 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       }
 
       for (int idx = 0; idx < numberOfPoints; idx++) {
-        if (xPoints[idx] >= 0.0) continue;
+        if (xPoints[idx] >= 0.0)
+          continue;
         xPoints[idx] += 360.0;
       }
 
-      OGR_G_SetPointsZM(shiftedSubRing, numberOfPoints, xPoints, xStride, yPoints, yStride, zPoints, zStride, mPoints, mStride);
+      OGR_G_SetPointsZM(shiftedSubRing, numberOfPoints, xPoints, xStride, yPoints, yStride, zPoints,
+                        zStride, mPoints, mStride);
 
       if (OGR_G_AddGeometry(shiftedSubPolygon, shiftedSubRing) != OGRERR_NONE) {
         fprintf(stderr, "Failed to add linear ring geometry to shifted sub polygon\n");
@@ -351,7 +354,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         OGR_G_DestroyGeometry(shiftedMultiPolygon);
         return NULL;
       }
-      
+
       OGR_G_DestroyGeometry(shiftedSubRing);
 
       free(xPoints);
@@ -462,7 +465,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     return NULL;
   }
 
-  GDALDatasetH debugOutputDataset = GDALCreate(debugOutputDriver, debugOutputPath, 0, 0, 0, GDT_Unknown, NULL);
+  GDALDatasetH debugOutputDataset = GDALCreate(debugOutputDriver, debugOutputPath, 0, 0, 0,
+                                    GDT_Unknown, NULL);
   if (debugOutputDataset == NULL) {
     fprintf(stderr, "Failed to create output dataset %s. Aborting.\n", debugOutputPath);
     /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
@@ -471,7 +475,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     return NULL;
   }
 
-  OGRLayerH debugOutputLayer = GDALDatasetCreateLayer(debugOutputDataset, debugOutputLayerName, spatialRef, wkbMultiPolygon, NULL);
+  OGRLayerH debugOutputLayer = GDALDatasetCreateLayer(debugOutputDataset, debugOutputLayerName,
+                               spatialRef, wkbMultiPolygon, NULL);
   if (debugOutputLayer == NULL) {
     fprintf(stderr, "Failed to create output layer. Aborting\n");
     GDALClose(debugOutputDataset);
@@ -527,8 +532,11 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       return NULL;
     }
 
-    if (geometriesAreFootprints && wkbFlatten(OGR_G_GetGeometryType(intersections->entries[referenceIndex].reference)) == wkbMultiPolygon) {
-      OGRGeometryH shiftedPolygon = mergeFootprintSplitAtDateline(intersections->entries[referenceIndex].reference);
+    if (geometriesAreFootprints
+        && wkbFlatten(OGR_G_GetGeometryType(intersections->entries[referenceIndex].reference)) ==
+        wkbMultiPolygon) {
+      OGRGeometryH shiftedPolygon = mergeFootprintSplitAtDateline(
+                                      intersections->entries[referenceIndex].reference);
 
       if (shiftedPolygon == NULL) {
         fprintf(stderr, "Failed to merge split multipolygon into polygon\n");
@@ -580,7 +588,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         return NULL;
       }
     }
-    
+
     double referenceArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(
                              intersections->entries[referenceIndex].reference) : OGR_G_Area(
                              intersections->entries[referenceIndex].reference);
@@ -679,7 +687,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         return NULL;
       }
 
-      OGRGeometryH intersection = OGR_G_Intersection(intersections->entries[referenceIndex].reference, cellAsOGR);
+      OGRGeometryH intersection = OGR_G_Intersection(intersections->entries[referenceIndex].reference,
+                                  cellAsOGR);
       if (intersection == NULL) {
         fprintf(stderr, "Failed to create intersection-polygon: %s\n", CPLGetLastErrorMsg());
         GEOSWKBWriter_destroy(wkbWriter);
@@ -702,11 +711,13 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       // Intersection is missing its SRS, even though both input geometries have it
       OGR_G_AssignSpatialReference(intersection, spatialRef);
 
-      if (OGR_G_GetGeometryType(intersection) == wkbPolygon || OGR_G_GetGeometryType(intersection) == wkbMultiPolygon) {
+      if (OGR_G_GetGeometryType(intersection) == wkbPolygon
+          || OGR_G_GetGeometryType(intersection) == wkbMultiPolygon) {
 #ifdef DEBUG
         OGRFeatureH feature = OGR_F_Create(OGR_L_GetLayerDefn(debugOutputLayer));
-        
-        OGR_F_SetFieldInteger(feature, OGR_F_GetFieldIndex(feature, "parentFID"), intersections->entries[referenceIndex].referenceFID);
+
+        OGR_F_SetFieldInteger(feature, OGR_F_GetFieldIndex(feature, "parentFID"),
+                              intersections->entries[referenceIndex].referenceFID);
         OGR_F_SetFieldDouble(feature, OGR_F_GetFieldIndex(feature, "waterVapor"), values[i]);
         OGR_F_SetGeometry(feature, intersection);
 
@@ -725,7 +736,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
           free((char*) debugOutputPath);
           return NULL;
         }
-        
+
         OGR_F_Destroy(feature);
 #endif
         double intersectingArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(
@@ -758,7 +769,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       OGR_G_DestroyGeometry(cellAsOGR);
     }
 
-    means->entries[referenceIndex].value = calculateWeightedAverage(values, weights, intersections->entries[referenceIndex].intersectionCount);
+    means->entries[referenceIndex].value = calculateWeightedAverage(values, weights,
+                                           intersections->entries[referenceIndex].intersectionCount);
     means->entries[referenceIndex].x = OGR_G_GetX(centroid, 0);
     means->entries[referenceIndex].y = OGR_G_GetY(centroid, 0);
 
@@ -1001,8 +1013,9 @@ int process(option_t *options)
   // WKT of ERA5 is assumed to be set to WGS84 and won't change over time; former information from:
   // https://confluence.ecmwf.int/display/CKB/ERA5%3A+data+documentation#heading-SpatialreferencesystemsandEarthmodel and
   // https://gis.stackexchange.com/a/380251
-  vectorGeometryVector *areasOfInterest = buildGEOSGeometriesFromFile(options->areaOfInterest, options->aoiName,
-                  SRS_WKT_WGS84_LAT_LONG);
+  vectorGeometryVector *areasOfInterest = buildGEOSGeometriesFromFile(options->areaOfInterest,
+                                          options->aoiName,
+                                          SRS_WKT_WGS84_LAT_LONG);
 
   if (areasOfInterest == NULL) {
     fprintf(stderr, "Failed to process area of interest\n");
@@ -1112,7 +1125,8 @@ int process(option_t *options)
       // 3. b) query a WKT/dataset for property
       // 4. calculate area-weighted average
       // 5. get centroid of polygon
-      meanVector *weightedMeans = calculateAreaWeightedMean(intersections, SRS_WKT_WGS84_LAT_LONG, options->footprint);
+      meanVector *weightedMeans = calculateAreaWeightedMean(intersections, SRS_WKT_WGS84_LAT_LONG,
+                                  options->footprint);
       if (weightedMeans == NULL) {
         fprintf(stderr, "Failed to calculate weighted means\n");
         freeAverageData(&average);

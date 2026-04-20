@@ -112,7 +112,8 @@ CRS_TYPE getCRSType(const char *Wkt);
  *        likely `false`.
  * @return OGRCoordinateTransformationH A new transformation object, NULL on error.
  */
-OGRCoordinateTransformationH transformationFromWKTs(char *from, char *to, bool inputUsesCompliantOrdering);
+OGRCoordinateTransformationH transformationFromWKTs(char *from, char *to,
+    bool inputUsesCompliantOrdering);
 
 /** @} */ // end of group
 #endif // GDAL_OPS_H

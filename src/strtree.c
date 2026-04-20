@@ -62,7 +62,8 @@
   vectorGeometryVector *geometries = malloc(sizeof(vectorGeometryVector));
 
   if (geometries == NULL) {
-    fprintf(stderr, "Failed to allocate memory for vector of GEOS geometries generated from AOI file\n");
+    fprintf(stderr,
+            "Failed to allocate memory for vector of GEOS geometries generated from AOI file\n");
     return NULL;
   }
 
@@ -87,7 +88,7 @@
 
     default:
       fprintf(stderr, "Layer has unsupported geometry type. "
-              "Allowed types are: Polygon and Multipolygon.\n");
+                      "Allowed types are: Polygon and Multipolygon.\n");
       closeGDALDataset(vectorDataset);
       return NULL;
   }
@@ -182,7 +183,8 @@
     geometries->entries[featureIndex].mbr = boundingBoxOfOGRToGEOS(geom);
     geometries->entries[featureIndex].id = OGR_F_GetFID(feature);
     geometries->entries[featureIndex].OGRGeometry = geom;
-    if (geometries->entries[featureIndex].geometry == NULL || geometries->entries[featureIndex].mbr == NULL) {
+    if (geometries->entries[featureIndex].geometry == NULL
+        || geometries->entries[featureIndex].mbr == NULL) {
       fprintf(stderr, "Failed to convert OGR geometry to GEOS\n");
       GEOSGeom_destroy(geometries->entries[featureIndex].geometry);
       GEOSGeom_destroy(geometries->entries[featureIndex].mbr);
@@ -382,7 +384,8 @@ void trackIntersectingGeometries(void *item, void *userdata)
     GEOSPreparedGeom_destroy(userdata.queryGeometry);
 
     if (userdata.intersectingCells == NULL) {
-      fprintf(stderr, "No intersections found for geometry with FID %lld.\n", areasOfInterest->entries[i].id);
+      fprintf(stderr, "No intersections found for geometry with FID %lld.\n",
+              areasOfInterest->entries[i].id);
       continue;
     }
 
@@ -399,9 +402,10 @@ void trackIntersectingGeometries(void *item, void *userdata)
   // forcefully reallocate/shrink array if not all AOI geometries intersected with raster/STRTree
   if (queryResults->size - queryResultsEntries > 0) {
     struct i *tmp = reallocarray(queryResults->entries, queryResultsEntries, sizeof(struct i));
-    
+
     if (tmp == NULL) {
-      fprintf(stderr, "Failed to reallocate array of STRTree query results. Continuing with larger array, shadowing additional entries\n");
+      fprintf(stderr,
+              "Failed to reallocate array of STRTree query results. Continuing with larger array, shadowing additional entries\n");
       queryResults->size = queryResultsEntries;
     } else {
       queryResults->entries = tmp;
