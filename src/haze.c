@@ -1137,7 +1137,7 @@ int process(option_t *options)
         break;
       }
 
-      char *textOutputFilePath = constructFilePath("%s/%.4d-%.2d-%.2d.txt", options->outputDirectory,
+      char *textOutputFilePath = constructFilePath("%s/WVP_%.4d-%.2d-%.2d.txt", options->outputDirectory,
                                  currentYear, currentMonth, day);
 
       if (textOutputFilePath == NULL) {
