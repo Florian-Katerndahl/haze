@@ -354,7 +354,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     /// TODO: use something like a `--footprint` flag to activate this path: options->footprint && ...
     /// TODO: how to handle curvepolygons/geometries? -> deprecate their usage? OGR_G_GetGeometryCount only returns valid values for polygon and multipolygon
     ///       and it doesn't make sense to allow other geometry types if I can only handle those here
-    if (wkbFlatten(OGR_G_GetGeometryType(intersections->entries[referenceIndex].reference)) == wkbMultiPolygon) {
+    if (false && wkbFlatten(OGR_G_GetGeometryType(intersections->entries[referenceIndex].reference)) == wkbMultiPolygon) {
       // adapt approach from sf (https://r-spatial.github.io/sf/reference/st_shift_longitude.html) where all points whose
       // longitude coordinate is < 0 are shifted by +360°; though no clue about their implementation
       OGRGeometryH shiftedGeometry = OGR_G_Clone(intersections->entries[referenceIndex].reference);
