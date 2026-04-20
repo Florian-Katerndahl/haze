@@ -110,6 +110,23 @@ int averagePILRawDataWithSizeOffset(const struct rawData *data, struct averagedD
 int reorderToBandInterleavedByPixel(struct rawData *data);
 
 /**
+ * @brief Shift and merge a Multipolygon split at the dateline
+ *
+ * @details If input geometries represent satellite scene footprints and are split at the
+ *          the dateline, the centroid computation using `OGR_G_Centroid` returns a wrong
+ *          result because the returned point is not guarantueed to lie within the geometry.
+ *          To mitigate this issue, a similar approach is implemented to `sf::st_shift_longitude`
+ *          (https://r-spatial.github.io/sf/reference/st_shift_longitude.html)
+ *          from the `sf` package for R by shifting all vertices whose longitudinal value
+ *          is < 0° by +360° and computing the unsion of the new sub-geometries to
+ *          obtain a "normal" polygon.
+ *
+ * @param splitFootprint Const reference to geometry object.
+ * @return Reference to newly created, merged geometry (extending beyond +180°), NULL on error.
+ */
+[[nodiscard]] OGRGeometryH mergeFootprintSplitAtDateline(const OGRGeometryH splitFootprint);
+
+/**
  * @brief Compute area weighted mean for features of AOI dataset
  *
  * @details This functions iterates over all features in `intersections`, computes their centroid
