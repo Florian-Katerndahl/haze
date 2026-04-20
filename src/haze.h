@@ -155,7 +155,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data);
  * @return mean_t* Reference to vector containing centroids of AOI geometries and associated water column value, NULL on error.
  */
 [[nodiscard]] meanVector *calculateAreaWeightedMean(intersectionVector *intersections,
-    const char *rasterWkt, bool geometriesAreFootprints);
+    const char *rasterWkt, const bool geometriesAreFootprints);
 
 /**
  * @brief Write area weighted means to file in format usable by FORCE

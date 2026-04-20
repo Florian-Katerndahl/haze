@@ -398,7 +398,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 }
 
 [[nodiscard]] meanVector *calculateAreaWeightedMean(intersectionVector *intersections,
-    const char *rasterWkt, bool geometriesAreFootprints)
+    const char *rasterWkt, const bool geometriesAreFootprints)
 {
   meanVector *means = malloc(sizeof(meanVector));
 
