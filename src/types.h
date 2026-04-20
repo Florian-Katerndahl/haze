@@ -208,6 +208,7 @@ typedef struct options
   char *authenticationToken;
   bool download;
   bool process;
+  bool footprint;
 } option_t;
 
 /**

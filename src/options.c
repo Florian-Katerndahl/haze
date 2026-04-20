@@ -34,6 +34,8 @@ void printHelp(void)
   printf("\nOptional keyword arguments valid for download subprogram:\n");
   printf("\t-g|--global: Request product worldwide instead of using an AOI dataset.\n");
   printf("\t-d|--daily:  Group product requests by day instead of month.\n");
+  printf("\nOptional keyword arguments valid for processing subprogram:\n");
+  printf("\t--footprint: If specified, multipolygons are considered footprint geometries and those cut at the dateline are merged to a polygon to compute centroid.\n");
   printf("Mandatory keyword arguments valid for download subprogram (either scalar vlaue, start:stop or comma seperated list. In the first case, endpoints are inclusive.):\n");
   printf("\t--year:  Years for which data should be downloaded.\n");
   printf("\t--month: Months for which data should be downloaded.\n");
@@ -66,6 +68,7 @@ void printHelp(void)
   userOptions->authenticationToken = NULL;
   userOptions->download = false;
   userOptions->process = false;
+  userOptions->footprint = false;
 
   static struct option long_options[] = {
     {"help", no_argument, NULL, 'h'},
@@ -77,6 +80,7 @@ void printHelp(void)
     {"global", no_argument, NULL, 'g'},
     {"layer", required_argument, NULL, 'l'},
     {"daily", no_argument, NULL, 'd'},
+    {"footprint", no_argument, NULL, 'f'},
     {0, 0, 0, 0}
   };
 
@@ -126,6 +130,9 @@ void printHelp(void)
         break;
       case 'd':
         userOptions->downloadByDay = true;
+        break;
+      case 'f':
+        userOptions->footprint = true;
         break;
       case '?':
         [[fallthrough]];

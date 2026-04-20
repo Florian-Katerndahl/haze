@@ -71,10 +71,11 @@ haze process <optional keyword arguments> <mandatory keyword arguments> aoi outd
 | `--help`        | `-h`             | Print help and exit.                                                                                                                | no        |
 | `--layer`       | `-l`             | Layer to open from AOI dataset.                                                                                                     | no        |
 | `--logfile`     |                | Path to logfile storing successful downloads and processing statuses                                                                | yes       |
+| `--footprint`   |                | If specified, multipolygons are considered footprint geometries and those cut at the dateline are merged to a polygon to compute centroid.                                          | no        |
 | `aoi`           |                | File path to OGR-readble file containing one or more polygons for which to extract data. Either `layer` or the first layer is read. | yes       |
 | `outdir`        |                | Directory to which files are saved.                                                                                                 | yes       |
 
-Processing data is based on the supplied log file and subsequent executions do not reprocess data (unless the debug build is used). Compared to data download, there are tighter restrictions on the geometry types usable because of the underlying GEOS implementation to prepare geometries for intersection testing (wkbPolygon, wkbMultiPolygon, wkbMultiSurface, wkbSurface, wkbPolyhedralSurface, wkbTIN, wkbTriangle). Again, input geometries are reprojected to EPSG:4326, if needed. When processing data, an AOI file must be given.
+Processing data is based on the supplied log file and subsequent executions do not reprocess data (unless the debug build is used). Compared to data download, there are tighter restrictions on the geometry types usable, only wkbPolygon and wkbMultiPolygon are allowed. Again, input geometries are reprojected to EPSG:4326, if needed. When processing data, an AOI file must be given.
 
 The snipped below would process the data downloaded in the previous step for Europe:
 

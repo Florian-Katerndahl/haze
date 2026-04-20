@@ -219,7 +219,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 }
 
 [[nodiscard]] meanVector *calculateAreaWeightedMean(intersectionVector *intersections,
-    const char *rasterWkt)
+    const char *rasterWkt, bool geometriesAreFootprints)
 {
   meanVector *means = malloc(sizeof(meanVector));
 
@@ -351,51 +351,289 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       return NULL;
     }
 
-    /// TODO: use something like a `--footprint` flag to activate this path: options->footprint && ...
-    /// TODO: how to handle curvepolygons/geometries? -> deprecate their usage? OGR_G_GetGeometryCount only returns valid values for polygon and multipolygon
-    ///       and it doesn't make sense to allow other geometry types if I can only handle those here
-    if (false && wkbFlatten(OGR_G_GetGeometryType(intersections->entries[referenceIndex].reference)) == wkbMultiPolygon) {
+    if (geometriesAreFootprints && wkbFlatten(OGR_G_GetGeometryType(intersections->entries[referenceIndex].reference)) == wkbMultiPolygon) {
       // adapt approach from sf (https://r-spatial.github.io/sf/reference/st_shift_longitude.html) where all points whose
       // longitude coordinate is < 0 are shifted by +360°; though no clue about their implementation
-      OGRGeometryH shiftedGeometry = OGR_G_Clone(intersections->entries[referenceIndex].reference);
+      OGRGeometryH shiftedMultiPolygon = OGR_G_CreateGeometry(OGR_G_GetGeometryType(intersections->entries[referenceIndex].reference));
 
-      int numberOfRings = OGR_G_GetGeometryCount(shiftedGeometry);
-
-      for (int ring = 0; ring < OGR_G_GetGeometryCount(shiftedGeometry); ring++) {
-        OGRGeometryH ringGeometry = OGR_G_GetGeometryRef(shiftedGeometry, ring);
-        int numberOfPoints = OGR_G_GetPointCount(ringGeometry);
-      }
-      // read docs when I can assign to what...
-      // OGR_G_GetGeometryRef() index of the geometry to fetch, between 0 and getNumGeometries() - 1
-      // possibly a OGR_G_Clone? Though, I do that above already... But must be done for modification
-      // OGR_G_GetPointCount()
-      // OGR_G_GetPointsZM() <- get all points; would OGR_G_GetPointsXY be enough with Y set to NULL? I only care about x values
-      // shift all x points < 0 by +360
-      // OGR_G_SetPointsZM() <- set all points
-      // merge
-
-
-      if (!OGR_G_IsValid(shiftedGeometry)) {
-        fprintf(stderr, "Failed to shift multipolygon in longitude direction\n");
+      if (shiftedMultiPolygon == NULL) {
+        fprintf(stderr, "Failed to create new geometry to shift\n");
+        OGR_G_DestroyGeometry(centroid);
         GEOSWKBWriter_destroy(wkbWriter);
         OSRDestroySpatialReference(spatialRef);
         freeWeightedMeans(means);
-        OGR_G_DestroyGeometry(shiftedGeometry);
-        OGR_G_DestroyGeometry(centroid);
 #ifdef DEBUG
         GDALClose(debugOutputDataset);
         /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
         unlink(debugOutputPath);
         free((char*) debugOutputPath);
 #endif
+      return NULL;
       }
 
-      if (OGR_G_Centroid(shiftedGeometry, centroid) == OGRERR_FAILURE) {
+      int numberOfSubPolygons = OGR_G_GetGeometryCount(intersections->entries[referenceIndex].reference);
+
+      for (int subPolygonIdx = 0; subPolygonIdx < numberOfSubPolygons; subPolygonIdx++) {
+        OGRGeometryH subPolygon = OGR_G_GetGeometryRef(intersections->entries[referenceIndex].reference, subPolygonIdx);
+
+        if (subPolygon == NULL) {
+          fprintf(stderr, "Failed to clone sub-ring\n");
+          OGR_G_DestroyGeometry(shiftedMultiPolygon);
+          OGR_G_DestroyGeometry(centroid);
+          GEOSWKBWriter_destroy(wkbWriter);
+          OSRDestroySpatialReference(spatialRef);
+          freeWeightedMeans(means);
+#ifdef DEBUG
+          GDALClose(debugOutputDataset);
+          /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
+          unlink(debugOutputPath);
+          free((char*) debugOutputPath);
+#endif
+          return NULL;
+        }
+
+        OGRGeometryH shiftedSubPolygon = OGR_G_CreateGeometry(OGR_G_GetGeometryType(subPolygon));
+
+        if (shiftedSubPolygon == NULL) {
+          fprintf(stderr, "Failed to create new geometry for shifted sub-polygon\n");
+          OGR_G_DestroyGeometry(shiftedMultiPolygon);
+          OGR_G_DestroyGeometry(centroid);
+          GEOSWKBWriter_destroy(wkbWriter);
+          OSRDestroySpatialReference(spatialRef);
+          freeWeightedMeans(means);
+#ifdef DEBUG
+          GDALClose(debugOutputDataset);
+          /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
+          unlink(debugOutputPath);
+          free((char*) debugOutputPath);
+#endif
+          return NULL;
+        }
+
+        int numberOfRings = OGR_G_GetGeometryCount(subPolygon);
+
+        for (int ringCountIdx = 0; ringCountIdx < numberOfRings; ringCountIdx++) {
+          OGRGeometryH subRing = OGR_G_GetGeometryRef(subPolygon, ringCountIdx);
+
+          int numberOfPoints = OGR_G_GetPointCount(subRing);
+          
+          /// NOTE: If I understand the docs correctly, this must always be a wkbLinearRing
+          OGRGeometryH shiftedSubRing = OGR_G_CreateGeometry(wkbLinearRing);
+
+          if (shiftedSubRing == NULL) {
+            /// TODO: message and cleanup
+            fprintf(stderr, "Failed to create linear ring for shifted sub-ring of sub-polygon\n");
+            OGR_G_DestroyGeometry(shiftedSubPolygon);
+            OGR_G_DestroyGeometry(shiftedMultiPolygon);
+          OGR_G_DestroyGeometry(centroid);
+          GEOSWKBWriter_destroy(wkbWriter);
+          OSRDestroySpatialReference(spatialRef);
+          freeWeightedMeans(means);
+#ifdef DEBUG
+          GDALClose(debugOutputDataset);
+          /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
+          unlink(debugOutputPath);
+          free((char*) debugOutputPath);
+#endif
+          return NULL;
+          }
+
+          double *xPoints = NULL;
+          double *yPoints = NULL;
+          double *zPoints = NULL;
+          double *mPoints = NULL;     
+          
+          size_t xStride = sizeof(double);
+          size_t yStride = sizeof(double);
+          size_t zStride = 0;
+          size_t mStride = 0;
+
+          bool is3D = wkbHasZ(OGR_G_GetGeometryType(subRing));
+          bool isMeasured = wkbHasM(OGR_G_GetGeometryType(subRing));
+
+          xPoints = malloc(numberOfPoints * sizeof(double));
+          yPoints = malloc(numberOfPoints * sizeof(double));
+
+          if (is3D) {
+            zPoints = malloc(numberOfPoints * sizeof(double));
+            zStride = sizeof(double);
+          }
+
+          if (isMeasured) {
+            mPoints = malloc(numberOfPoints * sizeof(double));
+            mStride = sizeof(double);
+          }
+
+          if (xPoints == NULL || yPoints == NULL) {
+            fprintf(stderr, "Failed to allocate memory for x and y coorindates of multi-polygon sub-ring\n");
+            free(xPoints);
+            free(yPoints);
+            free(zPoints);
+            free(mPoints);
+            OGR_G_DestroyGeometry(shiftedSubPolygon);
+            OGR_G_DestroyGeometry(shiftedMultiPolygon);
+          OGR_G_DestroyGeometry(centroid);
+          GEOSWKBWriter_destroy(wkbWriter);
+          OSRDestroySpatialReference(spatialRef);
+          freeWeightedMeans(means);
+#ifdef DEBUG
+          GDALClose(debugOutputDataset);
+          /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
+          unlink(debugOutputPath);
+          free((char*) debugOutputPath);
+#endif
+          return NULL;
+          }
+
+          if (is3D && zPoints == NULL) {
+            fprintf(stderr, "Failed to allocate memory for z coorindates of multi-polygon sub-ring\n");
+            free(xPoints);
+            free(yPoints);
+            free(zPoints);
+            free(mPoints);
+            OGR_G_DestroyGeometry(shiftedSubPolygon);
+            OGR_G_DestroyGeometry(shiftedMultiPolygon);
+          OGR_G_DestroyGeometry(centroid);
+          GEOSWKBWriter_destroy(wkbWriter);
+          OSRDestroySpatialReference(spatialRef);
+          freeWeightedMeans(means);
+#ifdef DEBUG
+          GDALClose(debugOutputDataset);
+          /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
+          unlink(debugOutputPath);
+          free((char*) debugOutputPath);
+#endif
+          return NULL;
+          }
+
+          if (isMeasured && mPoints == NULL) {
+            fprintf(stderr, "Failed to allocate memory for m coorindates of multi-polygon sub-ring\n");
+            free(xPoints);
+            free(yPoints);
+            free(zPoints);
+            free(mPoints);
+            OGR_G_DestroyGeometry(shiftedSubPolygon);
+            OGR_G_DestroyGeometry(shiftedMultiPolygon);
+          OGR_G_DestroyGeometry(centroid);
+          GEOSWKBWriter_destroy(wkbWriter);
+          OSRDestroySpatialReference(spatialRef);
+          freeWeightedMeans(means);
+#ifdef DEBUG
+          GDALClose(debugOutputDataset);
+          /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
+          unlink(debugOutputPath);
+          free((char*) debugOutputPath);
+#endif
+          return NULL;
+          }
+
+          if (OGR_G_GetPointsZM(subRing, xPoints, xStride, yPoints, yStride, zPoints, zStride, mPoints, mStride) != numberOfPoints) {
+            fprintf(stderr, "Failed to read all x coordinates from sub-ring of multi-polygon\n");
+            free(xPoints);
+            free(yPoints);
+            free(zPoints);
+            free(mPoints);
+            OGR_G_DestroyGeometry(shiftedSubPolygon);
+            OGR_G_DestroyGeometry(shiftedMultiPolygon);
+          OGR_G_DestroyGeometry(centroid);
+          GEOSWKBWriter_destroy(wkbWriter);
+          OSRDestroySpatialReference(spatialRef);
+          freeWeightedMeans(means);
+#ifdef DEBUG
+          GDALClose(debugOutputDataset);
+          /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
+          unlink(debugOutputPath);
+          free((char*) debugOutputPath);
+#endif
+          return NULL;
+          }
+
+          for (int idx = 0; idx < numberOfPoints; idx++) {
+            if (xPoints[idx] >= 0.0) continue;
+            xPoints[idx] += 360.0;
+          }
+
+          OGR_G_SetPointsZM(shiftedSubRing, numberOfPoints, xPoints, xStride, yPoints, yStride, zPoints, zStride, mPoints, mStride);
+
+          if (OGR_G_AddGeometry(shiftedSubPolygon, shiftedSubRing) != OGRERR_NONE) {
+            fprintf(stderr, "Failed to add linear ring geometry to shifted sub polygon\n");
+            free(xPoints);
+            free(yPoints);
+            free(zPoints);
+            free(mPoints);
+            OGR_G_DestroyGeometry(shiftedSubPolygon);
+            OGR_G_DestroyGeometry(shiftedMultiPolygon);
+          OGR_G_DestroyGeometry(centroid);
+          GEOSWKBWriter_destroy(wkbWriter);
+          OSRDestroySpatialReference(spatialRef);
+          freeWeightedMeans(means);
+#ifdef DEBUG
+          GDALClose(debugOutputDataset);
+          /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
+          unlink(debugOutputPath);
+          free((char*) debugOutputPath);
+#endif
+          return NULL;
+          }
+          
+          OGR_G_DestroyGeometry(shiftedSubRing);
+
+          free(xPoints);
+          free(yPoints);
+          free(zPoints);
+          free(mPoints);
+        }
+
+        if (OGR_G_AddGeometry(shiftedMultiPolygon, shiftedSubPolygon) != OGRERR_NONE) {
+          fprintf(stderr, "Failed to add ring geometry to shifted polygon");
+           OGR_G_DestroyGeometry(shiftedMultiPolygon);
+          OGR_G_DestroyGeometry(centroid);
+          GEOSWKBWriter_destroy(wkbWriter);
+          OSRDestroySpatialReference(spatialRef);
+          freeWeightedMeans(means);
+#ifdef DEBUG
+          GDALClose(debugOutputDataset);
+          /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
+          unlink(debugOutputPath);
+          free((char*) debugOutputPath);
+#endif
+          return NULL;
+        }
+
+        OGR_G_DestroyGeometry(shiftedSubPolygon);
+      }
+
+      // because shift is without offset, nodes intersect which is not allowed
+      OGRGeometryH validShiftedMultiPolygon = OGR_G_MakeValid(shiftedMultiPolygon);
+
+      OGRGeometryH shiftedAndMerged = OGR_G_UnaryUnion(shiftedMultiPolygon);
+
+      if (shiftedAndMerged == NULL) {
+        fprintf(stderr, "Failed to create unary union of shifted geometry\n");
+         OGR_G_DestroyGeometry(shiftedMultiPolygon);
+          OGR_G_DestroyGeometry(centroid);
+          GEOSWKBWriter_destroy(wkbWriter);
+          OSRDestroySpatialReference(spatialRef);
+          freeWeightedMeans(means);
+#ifdef DEBUG
+          GDALClose(debugOutputDataset);
+          /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
+          unlink(debugOutputPath);
+          free((char*) debugOutputPath);
+#endif
+          return NULL;
+      }
+
+      OGR_G_DestroyGeometry(shiftedMultiPolygon);
+
+      OGR_G_DestroyGeometry(validShiftedMultiPolygon);
+
+      if (OGR_G_Centroid(shiftedAndMerged, centroid) == OGRERR_FAILURE) {
         fprintf(stderr, "Failed to calculate centroid\n");
+        OGR_G_DestroyGeometry(centroid);
         GEOSWKBWriter_destroy(wkbWriter);
         OSRDestroySpatialReference(spatialRef);
         freeWeightedMeans(means);
-        OGR_G_DestroyGeometry(shiftedGeometry);
         OGR_G_DestroyGeometry(centroid);
 #ifdef DEBUG
         GDALClose(debugOutputDataset);
@@ -405,6 +643,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 #endif
         return NULL;
       }
+
+      OGR_G_DestroyGeometry(shiftedAndMerged);
     } else {
       if (OGR_G_Centroid(intersections->entries[referenceIndex].reference, centroid) == OGRERR_FAILURE) {
         fprintf(stderr, "Failed to calculate centroid\n");
@@ -421,11 +661,6 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         return NULL;
       }
     }
-
-    OGRGeometryH pos = OGR_G_PointOnSurface(intersections->entries[referenceIndex].reference);
-    OGR_G_DumpReadable(centroid, stdout, NULL);
-    OGR_G_DumpReadable(pos, stdout, NULL);
-    OGR_G_DestroyGeometry(pos);
     
     double referenceArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(
                              intersections->entries[referenceIndex].reference) : OGR_G_Area(
@@ -958,7 +1193,7 @@ int process(option_t *options)
       // 3. b) query a WKT/dataset for property
       // 4. calculate area-weighted average
       // 5. get centroid of polygon
-      meanVector *weightedMeans = calculateAreaWeightedMean(intersections, SRS_WKT_WGS84_LAT_LONG);
+      meanVector *weightedMeans = calculateAreaWeightedMean(intersections, SRS_WKT_WGS84_LAT_LONG, options->footprint);
       if (weightedMeans == NULL) {
         fprintf(stderr, "Failed to calculate weighted means\n");
         freeAverageData(&average);

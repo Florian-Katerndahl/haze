@@ -78,27 +78,16 @@
     return NULL;
   }
 
-  switch (OGR_L_GetGeomType(layer)) {
+  switch (wkbFlatten(OGR_L_GetGeomType(layer))) {
     // allowed geometry types
     case wkbPolygon:
       [[fallthrough]];
     case wkbMultiPolygon:
-      [[fallthrough]];
-    case wkbMultiSurface:
-      [[fallthrough]];
-    case wkbSurface:
-      [[fallthrough]];
-    case wkbPolyhedralSurface:
-      [[fallthrough]];
-    case wkbTIN:
-      [[fallthrough]];
-    case wkbTriangle:
       break;
 
     default:
       fprintf(stderr, "Layer has unsupported geometry type. "
-              "Allowed types are: Polygon, Multipolygon, Multisurface, "
-              "Surface, Polyhedralsurface, TIN and triangle.\n");
+              "Allowed types are: Polygon and Multipolygon.\n");
       closeGDALDataset(vectorDataset);
       return NULL;
   }

@@ -134,10 +134,11 @@ int reorderToBandInterleavedByPixel(struct rawData *data);
  *
  * @param intersections Vector containing AOI features and all vectorized raster cells that intersect a given feature.
  * @param rasterWkt CRS in WKT representation of raster dataset.
+ * @param geometriesAreFootprints Boolean indicating if geometries represent footprints and should be merged if cut at dateline.
  * @return mean_t* Reference to vector containing centroids of AOI geometries and associated water column value, NULL on error.
  */
 [[nodiscard]] meanVector *calculateAreaWeightedMean(intersectionVector *intersections,
-    const char *rasterWkt);
+    const char *rasterWkt, bool geometriesAreFootprints);
 
 /**
  * @brief Write area weighted means to file in format usable by FORCE
