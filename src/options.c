@@ -162,10 +162,9 @@ void printHelp(void)
   positionalArguments--;
   optind++;
 
-  if (positionalArguments == 1 && (userOptions->global && userOptions->download
-                                   || userOptions->process)) {
+  if (positionalArguments == 1 && (userOptions->global && userOptions->download)) {
     userOptions->outputDirectory = argv[optind];
-  } else if (positionalArguments == 2 && (!userOptions->global && userOptions->download
+  } else if (positionalArguments == 2 && ((!userOptions->global && userOptions->download)
                                           || userOptions->process)) {
     userOptions->areaOfInterest = argv[optind];
     optind++;
@@ -176,13 +175,29 @@ void printHelp(void)
     return NULL;
   }
 
-  bool areaOfInterestExists = fileExists(userOptions->areaOfInterest);
-  bool areaOfInterestReadable = fileReadable(userOptions->areaOfInterest);
+  char *dupedLogFile = strdup(userOptions->logFile);
+  if (dupedLogFile == NULL) {
+    fprintf(stderr, "Failed to duplicate log file path\n");
+    freeOption(userOptions);
+    return NULL;
+  }
+
+  bool areaOfInterestExists = false;
+  bool areaOfInterestReadable = false;
   bool outputDirectoryExists = fileExists(userOptions->outputDirectory);
   bool outputDirectoryWritable = fileWritable(userOptions->outputDirectory);
   bool logFileExists = fileExists(userOptions->logFile);
   bool logFileReadable = fileReadable(userOptions->logFile);
   bool logFileWritable = fileWritable(userOptions->logFile);
+  // this check is needed when a log-file is to be freshly created!
+  bool logFileParentDirWritable = fileWritable(dirname(dupedLogFile));
+
+  free(dupedLogFile);
+
+  if (userOptions->areaOfInterest) {
+    areaOfInterestExists = fileExists(userOptions->areaOfInterest);
+    areaOfInterestReadable = fileReadable(userOptions->areaOfInterest);
+  }
 
   if ((!userOptions->global || userOptions->process) && !areaOfInterestExists) {
     fprintf(stderr, "AOI file '%s' does not exist\n\n", userOptions->areaOfInterest);
@@ -208,13 +223,13 @@ void printHelp(void)
     return NULL;
   }
 
-  if (!logFileExists) {
-    fprintf(stderr, "Logfile '%s' does not exist\n\n", userOptions->logFile);
+  if ((!logFileExists && userOptions->process) || (!logFileParentDirWritable && userOptions->download)) {
+    fprintf(stderr, "Logfile '%s' does not exist or cannot be created\n\n", userOptions->logFile);
     freeOption(userOptions);
     return NULL;
   }
 
-  if (!(logFileReadable || logFileWritable)) {
+  if (logFileExists && !(logFileReadable || logFileWritable)) {
     fprintf(stderr, "Logfile '%s' is not readable and writable\n\n", userOptions->logFile);
     freeOption(userOptions);
     return NULL;
