@@ -15,6 +15,8 @@
 
 #include <gdal/ogr_core.h>
 
+#define PIXEL_SIZE 0.25
+
 /**
  * @brief Compute the minimum bounding rectangle of the first or a specified layer and transform to EPSG:4326, if needed.
  *        All OGR-readable files and geometries are allowed.

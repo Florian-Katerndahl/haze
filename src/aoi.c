@@ -193,6 +193,12 @@
     closeGDALDataset(aoi);
     return NULL;
   }
+
+  mbr->MaxX = MIN(mbr->MaxX + PIXEL_SIZE, 360.0);
+  mbr->MinX = MAX(mbr->MinX - PIXEL_SIZE, -360.0);
+  mbr->MaxY = MIN(mbr->MaxY + PIXEL_SIZE, 90.0);
+  mbr->MinY = MAX(mbr->MinY - PIXEL_SIZE, -90.0);
+
   return mbr;
 }
 
