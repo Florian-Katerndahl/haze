@@ -25,12 +25,11 @@ void printHelp(void)
   printf("haze - Integrate reprocessed ERA5 single level data into FORCE for atmospheric correction\n");
   printf("Usage: haze <subprogram> <options>\n");
   printf("Where <subprogram> is either 'download' to download data from CDS or 'process' to process downloaded files\n");
-  printf("<options> is of the form: [-h|--help] [-g|--global] [-l|--layer] [-d|--daily] --year --month --day --hour --logfile aoi outdir\n");
+  printf("<options> is of the form: [-h|--help] [-g|--global] [-l|--layer] [-d|--daily] --year --month --day --hour [aoi] logfile outdir\n");
   printf("\nGlobal optional keyword arguments (valid for both subprograms):\n");
   printf("\t-h|--help:  Print help and exit.\n");
   printf("\t-l|--layer: Layer to open from AOI dataset.\n");
   printf("Global mandatory keyword arguments:\n");
-  printf("\t--logfile: Path to logfile storing successful downloads and processing statuses.\n");
   printf("\nOptional keyword arguments valid for download subprogram:\n");
   printf("\t-g|--global: Request product worldwide instead of using an AOI dataset.\n");
   printf("\t-d|--daily:  Group product requests by day instead of month.\n");
@@ -41,9 +40,11 @@ void printHelp(void)
   printf("\t--month: Months for which data should be downloaded.\n");
   printf("\t--day:   Days for which data should be downloaded.\n");
   printf("\t--hour:  Hours for which data should be downloaded (zero-based).\n");
+  printf("Optional positional arguments:\n");
+  printf("\taoi:     File path to OGR-readble file containing one or more polygons for which to extract data. Either `layer` or the first layer is read. Mandatory for processing and non-global downloads.\n");
   printf("Mandatory positional arguments:\n");
-  printf("\taoi:    File path to OGR-readble file containing one or more polygons for which to extract data. Either `layer` or the first layer is read. Mandatory for processing.\n");
-  printf("\toutdir: Directory into which output data products and CSVs are written.\n");
+  printf("\tlogfile: Path to logfile storing successful downloads and processing statuses.\n");
+  printf("\toutdir:  Directory into which output data products and CSVs are written.\n");
 }
 
 [[nodiscard]] option_t *parseOptions(int argc, char *argv[])
@@ -76,7 +77,6 @@ void printHelp(void)
     {"month", required_argument, NULL, 'm'},
     {"day", required_argument, NULL, 69},
     {"hour", required_argument, NULL, 't'},
-    {"logfile", required_argument, NULL, 67},
     {"global", no_argument, NULL, 'g'},
     {"layer", required_argument, NULL, 'l'},
     {"daily", no_argument, NULL, 'd'},
@@ -119,9 +119,6 @@ void printHelp(void)
           return NULL;
         }
         break;
-      case 67:
-        userOptions->logFile = optarg;
-        break;
       case 'g':
         userOptions->global = true;
         break;
@@ -144,7 +141,7 @@ void printHelp(void)
 
   int positionalArguments = argc - optind;
 
-  if (positionalArguments == 0 || positionalArguments > 3) {
+  if (positionalArguments == 0 || positionalArguments > 4) {
     fprintf(stderr, "Encountered wrong number of positional arguments\n\n");
     freeOption(userOptions);
     return NULL;
@@ -162,15 +159,23 @@ void printHelp(void)
   positionalArguments--;
   optind++;
 
-  if (positionalArguments == 1 && (userOptions->global && userOptions->download)) {
+  if (positionalArguments == 2 && (userOptions->global && userOptions->download)) {
+    userOptions->logFile = argv[optind];
+    optind++;
     userOptions->outputDirectory = argv[optind];
-  } else if (positionalArguments == 2 && ((!userOptions->global && userOptions->download)
+  } else if (positionalArguments == 3 && ((!userOptions->global && userOptions->download)
                                           || userOptions->process)) {
     userOptions->areaOfInterest = argv[optind];
     optind++;
+    userOptions->logFile = argv[optind];
+    optind++;
     userOptions->outputDirectory = argv[optind];
   } else {
-    fprintf(stderr, "Encountered wrong number of positional arguments\n\n");
+    fprintf(stderr, "Encountered wrong number of positional arguments: ");
+    for (int i = positionalArguments; i > 0; i--, optind++) {
+      printf("%s ", argv[optind]);
+    }
+    printf("\n\n");
     freeOption(userOptions);
     return NULL;
   }

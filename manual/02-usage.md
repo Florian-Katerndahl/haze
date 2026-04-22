@@ -16,14 +16,13 @@ To download data, the user needs an CDS account and follow the instructions to c
 The download subprogram takes multiple keyword and positional arguments as detailed int the table below. Keyword arguments can be ordered arbitrarily while positional arguments cannot. A general program execution would take the form below when requesting local data, for global data requests, the `aoi` parameter must be excluded.
 
 ```
-haze download <optional keyword arguments> <mandatory keyword arguments> aoi outdir
+haze download <optional keyword arguments> <mandatory keyword arguments> [aoi] logfile outdir
 ```
 
 | Long Argument | Short Argument | Description                                                                                                                         | Mandatory                     |
 |---------------|----------------|-------------------------------------------------------------------------------------------------------------------------------------|-------------------------------|
 | `--help`        | `-h`             | Print help and exit.                                                                                                                | no                            |
 | `--layer`       | `-l`             | Layer to open from AOI dataset.                                                                                                     | no                            |
-| `--logfile`     |                | Path to logfile storing successful downloads and processing. statuses                                                                | yes                           |
 | `--global`      | `-g`             | Request product worldwide instead of using an AOI dataset.                                                                          | no                            |
 | `--daily`       | `-d`             | Group product requests by day instead of month.                                                                                     | no                            |
 | `--year`        |                | Years for which data should be downloaded.                                                                                          | yes                           |
@@ -31,6 +30,7 @@ haze download <optional keyword arguments> <mandatory keyword arguments> aoi out
 | `--day`         |                | Days for which data should be downloaded.                                                                                           | yes                           |
 | `--hour`        |                | Hours for which data should be downloaded (zero-based).                                                                             | yes                           |
 | `aoi`           |                | File path to OGR-readble file containing one or more polygons for which to extract data. Either `layer` or the first layer is read. | if `--global` flag is not set |
+| `logfile`       |                | Path to logfile storing successful downloads and processing. statuses                                                                | yes                           |
 | `outdir`        |                | Directory into which output data products and CSVs are written.                                                                                                 | yes                           |
 
 Generally, the user neeeds to supply a file containing an area of interest whose bounding box is calculated before posting a request. This contained geometries do no need to be supplied in EPGS:4326 and are reprojected on the fly, if needed. All geometry types supported by GDAL/OGR are allowed, as long as the input layer's bound geometry can be calculated. You can specify which layer to use via the `--layer` argument, if this is omitted the first layer is used by default. When downloading data globally, it's advised to not use an AOI and set the `--global` flag instead.
@@ -46,7 +46,7 @@ All time fields can be given in various formats:
 An examplanatory program call to download data of global coverage for the 12th of Feburary, April and June for the years 2000 to 2020 between 0 o'clock and 23 o'clock (i.e. for every hour). The data is grouped by day and stored in the directory data-dir.
 
 ```bash
-haze download --global --daily --year 2000:2020 --month 2,4,6 --day 12 --hour 0:23 --logfile data-dir/logfile data-dir/
+haze download --global --daily --year 2000:2020 --month 2,4,6 --day 12 --hour 0:23 data-dir/logfile data-dir/
 ```
 
 ## Processing of ERA-5 Data
@@ -63,7 +63,7 @@ haze download --global --daily --year 2000:2020 --month 2,4,6 --day 12 --hour 0:
 The process subprogram takes multiple keyword and positional arguments as detailed int the table below. Keyword arguments can be ordered arbitrarily while positional arguments cannot. A general program execution would take the form below.
 
 ```
-haze process <optional keyword arguments> <mandatory keyword arguments> aoi outdir
+haze process <optional keyword arguments> <mandatory keyword arguments> aoi logfile outdir
 ```
 
 | Long Argument | Short Argument | Description                                                                                                                         | Mandatory |
@@ -73,6 +73,7 @@ haze process <optional keyword arguments> <mandatory keyword arguments> aoi outd
 | `--logfile`     |                | Path to logfile storing successful downloads and processing statuses                                                                | yes       |
 | `--footprint`   |                | If specified, multipolygons are considered footprint geometries and those cut at the dateline are merged to a polygon to compute centroid.                                          | no        |
 | `aoi`           |                | File path to OGR-readble file containing one or more polygons for which to extract data. Either `layer` or the first layer is read. | yes       |
+| `logfile`       |                | Path to logfile storing successful downloads and processing. statuses                                                                | yes                           |
 | `outdir`        |                | Directory to which files are saved.                                                                                                 | yes       |
 
 Processing data is based on the supplied log file and subsequent executions do not reprocess data (unless the debug build is used). Compared to data download, there are tighter restrictions on the geometry types usable, only wkbPolygon and wkbMultiPolygon are allowed. Again, input geometries are reprojected to EPSG:4326, if needed. When processing data, an AOI file must be given.
@@ -80,7 +81,7 @@ Processing data is based on the supplied log file and subsequent executions do n
 The snipped below would process the data downloaded in the previous step for Europe:
 
 ```bash
-haze process --logfile data-dir/logfile --layer europe aoi/world.gpkg data-dir/
+haze process --layer europe aoi/world.gpkg data-dir/logfile data-dir/
 ```
 
 ### Debug Build
