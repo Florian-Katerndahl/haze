@@ -1,6 +1,7 @@
 #include "api.h"
 #include "types.h"
 #include "paths.h"
+#include "date-check.h"
 #include <curl/easy.h>
 #include <gdal/ogr_core.h>
 #include <jansson.h>
