@@ -241,7 +241,7 @@ cleanup:
     return 1;
   }
 
-  size_t requestedDatasets = 0;
+  size_t requestedDatasets = 1;
   size_t monthlyDatasetsToRequest = options->yearsElements * options->monthsElements;
   size_t dailyDatasetsToRequest = monthlyDatasetsToRequest * options->daysElements;
 
@@ -294,7 +294,7 @@ cleanup:
 
           free(outputPath);
 
-          printf("Successfully processed download request %ld/%ld\n", requestedDatasets, dailyDatasetsToRequest);
+          fprintf(stderr, "Successfully processed download request %ld/%ld\n", requestedDatasets, dailyDatasetsToRequest);
           requestedDatasets++;
         }
       }
@@ -338,7 +338,7 @@ cleanup:
 
         free(outputPath);
 
-        printf("Successfully processed download request %ld/%ld\n", requestedDatasets, monthlyDatasetsToRequest);
+        fprintf(stderr, "Successfully processed download request %ld/%ld\n", requestedDatasets, monthlyDatasetsToRequest);
         requestedDatasets++;
       }
     }

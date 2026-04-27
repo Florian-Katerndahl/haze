@@ -1184,7 +1184,7 @@ int process(option_t *options)
       } else {
         free(ptr->status);
         ptr->status = msg;
-        printf("Processsed file %s\n", ptr->string);
+        fprintf(stderr, "Processsed file %s\n", ptr->string);
       }
 #endif
     } else {
