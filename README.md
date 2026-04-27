@@ -1,4 +1,4 @@
-# HAZE
+# haze
 
 haze aims to be a drop-in replacement for water vapor processing of ERA-5 datasets to be used with FORCE. haze offers capabilities to download and process those datasets in different steps by accepting arbitrary vector geometries (to a certain degree) and calculating the area-weighted mean of intersecting raster cells.
 
@@ -16,36 +16,22 @@ sudo apt install libgdal-dev libcurl4-openssl-dev libgeos-dev libjansson-dev mak
 
 For other systems, please refer to the respective package repositories. To build the project, create a directory named `build/` and either call `make debug` for the debug build or `make haze` for the release build.
 
+### Using Containers (Docker, Singularity, ...)
+
 Additionally, haze is available as a pre-build Docker image with different tags:
 
-- `edge`: Latest commit on development branch. Newest features/fixes but this version may be unstable.
-- `edge-debug`: Latest commit on development branch. Newest features/fixes but this version may be unstable. Additionally, uses the debug build target.
-- `latest`: Alias for newest release, only build from main branch. **It's recommended to use a specific release version instead!**
-- `latest-debug`: Alias for newest release, only build from main branch. Additionally, uses the debug build target.  **It's recommended to use a specific release version instead!**
-- `x.y.z`: Specific release, only build from main branch.
-- `x.y.z-debug`: Specific release, only build from main branch. Additionally, uses the debug build target.
+| Tag            |                                          Description                                         |                                             Note                                             |
+|----------------|:--------------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------:|
+| `edge`         | Latest commit on development branch. Newest features/fixes but this version may be unstable. |                                                                                              |
+| `edge-debug`   | Latest commit on development branch. Newest features/fixes but this version may be unstable. |                                 Uses the debug build target.                                 |
+| `latest`       |                    Alias for newest release, only build from main branch.                    |                **It's recommended to use a specific release version instead!**               |
+| `latest-debug` |                    Alias for newest release, only build from main branch.                    | **It's recommended to use a specific release version instead!** Uses the debug build target. |
+| `x.y.z`        |                        Specific release, only build from main branch.                        |                                                                                              |
+| `x.y.z-debug`  |                        Specific release, only build from main branch.                        |                                 Uses the debug build target.                                 |
 
 ## Usage
 
-haze offers two subprograms, one for downloading data from ECMWF's Climate Data Space and one for processing downloaded data. Please refer to the [online documentation](https://www.katerndahl.net/haze/index.html) or the raw documentation in `manual/` for detailed descriptions on how to use haze.
-
-The snippet below downloads data of global coverage for the 12th of Feburary, April and June for the years 2000 to 2020 between 0 o'clock and 23 o'clock (i.e. for every hour). The data is grouped by day and stored in the directory `data-dir`.
-
-```bash
-haze download --global --daily --year 2000:2020 --month 2,4,6 --day 12 --hour 0:23 --logfile data-dir/logfile data-dir/
-```
-
-Alternatively, only a subset of the data can be downloaded by specifying an AOI.
-
-```bash
-haze download --year 2005 --month 1:12 --day 1:31 --hour 12 --logfile data-dir/logfile --layer europe aoi/world.gpkg data-dir/
-```
-
-The user can specify a different vector database for processing than for downloading, the `.cdsapirc` is not needed for processing.
-
-```bash
-haze process --logfile data-dir/logfile --layer europe aoi/world.gpkg data-dir/
-```
+haze offers two subprograms, one for downloading data from ECMWF's Climate Data Space and one for processing downloaded data. Please refer to the [online documentation](https://www.katerndahl.net/haze/index.html), the raw documentation in `manual/` or the help message printed when supplying `-h/--help` on the command line for detailed descriptions on how to use haze.
 
 ## Features
 
