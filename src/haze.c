@@ -1037,7 +1037,7 @@ int process(option_t *options)
     GDALDatasetH ds = openRasterDataset(ptr->string);
 
     if (ds == NULL)
-      return -1;
+      continue;
 
     const int nLayers = GDALGetRasterCount(ds);
 
