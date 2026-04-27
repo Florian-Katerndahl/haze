@@ -253,23 +253,5 @@ int backFillOptions(option_t *options, GDALDatasetH dataset);
 
 int process(option_t *options);
 
-/**
- * @brief Test if given combination of year, month and day is a valid date.
- *
- * @details This function tests whether a combination of year, month and date does represent
- *          a valid date by checking if the year is a value greater or equal to 0 the month
- *          is in the interval [1, 12] and the day is in the range from 1 to the corresponding
- *          number of maximum days per month (leap year adjusted).
- *
- * @note Not all intricacies of date checking are considered.
- *
- * @param year Value denoting year.
- * @param month Value denoting month.
- * @param day Value denoting day.
- * @return true Return true if input tuple represents a valid year.
- * @return false Return false if input tuple does not represent a valid year.
- */
-bool isValidDate(int year, int month, int day);
-
 /** @} */ // end of group
 #endif // HAZE_H
