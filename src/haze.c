@@ -1184,10 +1184,11 @@ int process(option_t *options)
       } else {
         free(ptr->status);
         ptr->status = msg;
+        printf("Processsed file %s\n", ptr->string);
       }
 #endif
     } else {
-      fprintf(stderr, "Encountered errors while processing %s\n", ptr->string);
+      fprintf(stderr, "Encountered errors while processing %s. Not marking dataset as processed.\n", ptr->string);
     }
   }
 

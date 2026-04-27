@@ -241,6 +241,10 @@ cleanup:
     return 1;
   }
 
+  size_t requestedDatasets = 0;
+  size_t monthlyDatasetsToRequest = options->yearsElements * options->monthsElements;
+  size_t dailyDatasetsToRequest = monthlyDatasetsToRequest * options->daysElements;
+
   if (options->downloadByDay) {
     for (size_t yearIdx = 0; yearIdx < options->yearsElements; yearIdx++) {
       for (size_t monthIdx = 0; monthIdx < options->monthsElements; monthIdx++) {
@@ -249,11 +253,18 @@ cleanup:
           int month = options->months[monthIdx];
           int day = options->days[dayIdx];
 
+          if (!isValidDate(year, month, day)) {
+            fprintf(stderr, "Skipping prodcut request for invalid date: %.4d-%.2d-%.2d. (request %ld/%ld)\n", year, month, day, requestedDatasets, dailyDatasetsToRequest);
+            requestedDatasets++;
+            continue;
+          }
+
           char *outputPath = constructFilePath("%s/%.4d-%.2d-%.2d.grib", options->outputDirectory, year,
                                                month, day);
 
           if (outputPath == NULL) {
-            fprintf(stderr, "Failed to construct local file path\n");
+            fprintf(stderr, "Failed to construct local file path (request %ld/%ld)\n", requestedDatasets, dailyDatasetsToRequest);
+            requestedDatasets++;
             continue;
           }
 
@@ -263,16 +274,18 @@ cleanup:
 
           if (handleDownloadChain(handle, options, aoi, outputPath, requestYears, requestMonths, requestDays,
                                   options->hours, 1, 1, 1, options->hoursElements, maxAttempts)) {
-            fprintf(stderr, "Failed to download data for %.4d-%.2d-%.2d", year, month, day);
+            fprintf(stderr, "Failed to download data for %.4d-%.2d-%.2d (request %ld/%ld)\n", year, month, day, requestedDatasets, dailyDatasetsToRequest);
             unlink(outputPath); // no information at what stage the download failed
             free(outputPath);
+            requestedDatasets++;
             continue;
           }
 
           if (fprintf(logFile, "%s\tDOWNLOADED\n", outputPath) < 0) {
-            fprintf(stderr, "Failed to add downloaded file to log file. Deleting file and continuing.\n");
+            fprintf(stderr, "Failed to add downloaded file to log file. Deleting file and continuing. (request %ld/%ld)\n", requestedDatasets, dailyDatasetsToRequest);
             unlink(outputPath);
             free(outputPath);
+            requestedDatasets++;
             continue;
           }
 
@@ -280,6 +293,9 @@ cleanup:
           fflush(logFile);
 
           free(outputPath);
+
+          printf("Successfully processed download request %ld/%ld\n", requestedDatasets, dailyDatasetsToRequest);
+          requestedDatasets++;
         }
       }
     }
@@ -292,7 +308,8 @@ cleanup:
         char *outputPath = constructFilePath("%s/%.4d-%.2d.grib", options->outputDirectory, year, month);
 
         if (outputPath == NULL) {
-          fprintf(stderr, "Failed to construct local file path\n");
+          fprintf(stderr, "Failed to construct local file path (request %ld/%ld)\n", requestedDatasets, monthlyDatasetsToRequest);
+          requestedDatasets++;
           continue;
         }
 
@@ -301,16 +318,18 @@ cleanup:
 
         if (handleDownloadChain(handle, options, aoi, outputPath, requestYears, requestMonths,
                                 options->days, options->hours, 1, 1, options->daysElements, options->hoursElements, maxAttempts)) {
-          fprintf(stderr, "Failed to download data for %.4d-%.2d", year, month);
+          fprintf(stderr, "Failed to download data for %.4d-%.2d (request %ld/%ld)\n", year, month, requestedDatasets, monthlyDatasetsToRequest);
           unlink(outputPath); // no information at what stage the download failed
           free(outputPath);
+          requestedDatasets++;
           continue;
         }
 
         if (fprintf(logFile, "%s\tDOWNLOADED\n", outputPath) < 0) {
-          fprintf(stderr, "Failed to add downloaded file to log file. Deleting file and continuing.\n");
+          fprintf(stderr, "Failed to add downloaded file to log file. Deleting file and continuing. (request %ld/%ld)\n", requestedDatasets, monthlyDatasetsToRequest);
           unlink(outputPath);
           free(outputPath);
+          requestedDatasets++;
           continue;
         }
 
@@ -318,6 +337,9 @@ cleanup:
         fflush(logFile);
 
         free(outputPath);
+
+        printf("Successfully processed download request %ld/%ld\n", requestedDatasets, monthlyDatasetsToRequest);
+        requestedDatasets++;
       }
     }
   }
