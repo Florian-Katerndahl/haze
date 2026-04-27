@@ -60,14 +60,14 @@ tree data-dir/
 
 ## Processing Data to Water Vapor Database
 
-We use the WRS-2 footprints downloaded and extracted above as our processing reference. Since the file only contains one layer, we can omit the `--layer` argument and let haze choose the first layer itself. The tables are stored in a different directory compared to the raw data.
+We use the WRS-2 footprints downloaded and extracted above as our processing reference. Since the file only contains one layer, we can omit the `--layer` argument and let haze choose the first layer itself. The tables are stored in a different directory compared to the raw data. Also note the use of the `--footprint` flag which indicates, that the supplied geometries represent footprints (of satellite scenes, in this case). This is important to correcly compute the center coordinate for those geometries, that cross the antimeridian and are split around it.
 
 ```bash
 mkdir table-dir
 
 docker run --rm -u $(id -u):$(id -g) -v $PWD:/home/ubuntu \
   floriankaterndahl/haze:0.0.8 \
-  process /home/ubuntu/aoi/subset.gpkg \
+  process --footprint /home/ubuntu/aoi/subset.gpkg \
   /home/ubuntu/data-dir/wvpdb.log /home/ubuntu/table-dir
 ```
 
