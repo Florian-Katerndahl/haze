@@ -752,7 +752,9 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 
         weights[i] = intersectingArea / referenceArea;
       } else if (OGR_G_GetGeometryType(intersection) == wkbPoint) {
+#ifdef DEBUG
         fprintf(stderr, "Intersection resulted in point geometry. Setting both value and weight to 0.\n");
+#endif
         values[i] = 0.0;
         weights[i] = 0.0;
       } else {
