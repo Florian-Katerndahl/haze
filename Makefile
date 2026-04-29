@@ -27,8 +27,8 @@ haze: main.c $(OBJECT_PATHS)
 docs: Doxyfile manual/*.md src/*.h
 	doxygen Doxyfile
 
-$(OBJECT_PATHS): build/%.o: src/%.c
-	$(CC) $(DEFINES) $(CFLAGS) $^ -c -o $@
+$(OBJECT_PATHS): build/%.o: src/%.c src/%.h
+	$(CC) $(DEFINES) $(CFLAGS) $< -c -o $@
 
 .PHONY: clean
 clean:
