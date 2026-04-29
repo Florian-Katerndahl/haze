@@ -392,6 +392,7 @@ void trackIntersectingGeometries(void *item, void *userdata)
     /// NOTE: no ownership of areasOfInterest->entry->OGRGeometry is taken,
     ///       owner of `areaOfInterest` is responsible to free object!
     queryResults->entries[queryResultsEntries].reference = areasOfInterest->entries[i].OGRGeometry;
+    queryResults->entries[queryResultsEntries].referenceASGEOS = areasOfInterest->entries[i].geometry;
     queryResults->entries[queryResultsEntries].referenceFID = areasOfInterest->entries[i].id;
     queryResults->entries[queryResultsEntries].intersectionCount = userdata.intersectionCount;
     queryResults->entries[queryResultsEntries].intersectingCells = userdata.intersectingCells;

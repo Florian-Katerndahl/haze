@@ -656,9 +656,21 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     for (size_t i = 0; i < intersections->entries[referenceIndex].intersectionCount; i++) {
       values[i] = temp->entry->value; // shit, here I do copy data again...
 
-      OGRGeometryH cellAsOGR;
+      OGRGeometryH cellAsOGR, intersection;
 
-      const unsigned char *geometryAsWkb = GEOSWKBWriter_write(wkbWriter, temp->entry->geometry,
+      /// FIXME: This geometry needs to be freed on error and at the end of this loop
+      /// FIXME: Does this work with 3d geometries? GDAL supports those via SFCGAL; though according to the documentation only OGR_G_Distance3D
+      ///        depends on sfcgal coming from the C-API; C++ API lists Polyhedral surfaces which I don't allow anyway; what about wkbPolygon25D
+      /// TODO: check if docstring needs updates!
+      GEOSGeometry *intersectionAsGEOS = GEOSIntersection(intersections->entries[referenceIndex].referenceASGEOS, temp->entry->geometry);
+
+      if (intersectionAsGEOS == NULL) {
+        /// TODO: cleanup
+        return NULL;
+      }
+
+      /// TODO: rename to intersectionAsWkb
+      const unsigned char *geometryAsWkb = GEOSWKBWriter_write(wkbWriter, intersectionAsGEOS,
                                            &wkbSize);
       if (geometryAsWkb == NULL) {
         fprintf(stderr, "Failed to export geometry as WKB\n");
@@ -677,8 +689,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         return NULL;
       }
 
-      if (OGR_G_CreateFromWkb(geometryAsWkb, spatialRef, &cellAsOGR, wkbSize) != OGRERR_NONE
-          || cellAsOGR == NULL) {
+      if (OGR_G_CreateFromWkb(geometryAsWkb, spatialRef, &intersection, wkbSize) != OGRERR_NONE
+          || intersection == NULL) {
         fprintf(stderr, "Failed to import WKB to OGR: %s\n", CPLGetLastErrorMsg());
         GEOSWKBWriter_destroy(wkbWriter);
         OSRDestroySpatialReference(spatialRef);
@@ -696,30 +708,6 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 #endif
         return NULL;
       }
-
-      OGRGeometryH intersection = OGR_G_Intersection(intersections->entries[referenceIndex].reference,
-                                  cellAsOGR);
-      if (intersection == NULL) {
-        fprintf(stderr, "Failed to create intersection-polygon: %s\n", CPLGetLastErrorMsg());
-        GEOSWKBWriter_destroy(wkbWriter);
-        OSRDestroySpatialReference(spatialRef);
-        freeWeightedMeans(means);
-        OGR_G_DestroyGeometry(centroid);
-        OGR_G_DestroyGeometry(cellAsOGR);
-        free(values);
-        free(weights);
-        GEOSFree((void *) geometryAsWkb);
-#ifdef DEBUG
-        GDALClose(debugOutputDataset);
-        /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
-        unlink(debugOutputPath);
-        free((char*) debugOutputPath);
-#endif
-        return NULL;
-      }
-
-      // Intersection is missing its SRS, even though both input geometries have it
-      OGR_G_AssignSpatialReference(intersection, spatialRef);
 
       if (OGR_G_GetGeometryType(intersection) == wkbPolygon
           || OGR_G_GetGeometryType(intersection) == wkbMultiPolygon) {
@@ -783,8 +771,9 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       temp = temp->next;
 
       GEOSFree((void *) geometryAsWkb);
-      OGR_G_DestroyGeometry(intersection);
-      OGR_G_DestroyGeometry(cellAsOGR);
+      //OGR_G_DestroyGeometry(intersection);
+      //OGR_G_DestroyGeometry(cellAsOGR);
+      GEOSGeom_destroy(intersection);
     }
 
     means->entries[referenceIndex].value = calculateWeightedAverage(values, weights,

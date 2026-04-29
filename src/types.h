@@ -127,6 +127,7 @@ typedef struct intersection
 struct i
 {
   OGRGeometryH reference;
+  const GEOSGeometry *referenceASGEOS;
   GIntBig referenceFID;
   cellGeometryList *intersectingCells;
   size_t intersectionCount;
