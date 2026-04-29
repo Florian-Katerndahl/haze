@@ -7,6 +7,7 @@
 #include "math-utils.h"
 #include "strtree.h"
 #include "date-check.h"
+#include "area.h"
 #include <dirent.h>
 #include <bits/posix2_lim.h>
 #include <geos_c.h>
@@ -399,7 +400,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 }
 
 [[nodiscard]] meanVector *calculateAreaWeightedMean(intersectionVector *intersections,
-    const char *rasterWkt, const bool geometriesAreFootprints)
+    const char *rasterWkt, const bool geometriesAreFootprints, const bool useFastGeodesicAreaCalculation)
 {
   meanVector *means = malloc(sizeof(meanVector));
 
@@ -591,10 +592,17 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       }
     }
 
-    double referenceArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(
-                             intersections->entries[referenceIndex].reference) : OGR_G_Area(
-                             intersections->entries[referenceIndex].reference);
-    if (referenceArea == -1) {
+    double referenceArea;
+
+    if (useFastGeodesicAreaCalculation) {
+      referenceArea = fastGeodesicArea(intersections->entries[referenceIndex].reference, spatialRef);
+    } else {
+      referenceArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(
+                      intersections->entries[referenceIndex].reference) : OGR_G_Area(
+                      intersections->entries[referenceIndex].reference);
+    }
+
+    if (referenceArea == -1.0) {
       fprintf(stderr, "Failed to calculate reference area\n");
       GEOSWKBWriter_destroy(wkbWriter);
       OSRDestroySpatialReference(spatialRef);
@@ -741,8 +749,14 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 
         OGR_F_Destroy(feature);
 #endif
-        double intersectingArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(
-                                    intersection);
+        double intersectingArea;
+
+        if (useFastGeodesicAreaCalculation) {
+          intersectingArea = fastGeodesicArea(intersection, spatialRef);
+        } else {
+          intersectingArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(
+                             intersection);
+        }
 
         if (isnan(intersectingArea) || isnan(referenceArea) || intersectingArea < 0.0
             || referenceArea < 0.0) {
@@ -1128,7 +1142,7 @@ int process(option_t *options)
       // 4. calculate area-weighted average
       // 5. get centroid of polygon
       meanVector *weightedMeans = calculateAreaWeightedMean(intersections, SRS_WKT_WGS84_LAT_LONG,
-                                  options->footprint);
+                                  options->footprint, true);
       if (weightedMeans == NULL) {
         fprintf(stderr, "Failed to calculate weighted means\n");
         freeAverageData(&average);

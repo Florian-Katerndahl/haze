@@ -6,12 +6,12 @@ A detailed documentation, including installation and usage information, can curr
 
 ## Installation
 
-To install haze locally, you need to have the development files installed for GDAL (at least version 3.9.0), cURL, GEOS and jansson in addition to make. On Ubuntu based systems, these can be installed via apt:
+To install haze locally, you need to have the development files installed for GDAL (at least version 3.9.0), PROJ, cURL, GEOS and jansson in addition to make. On Ubuntu based systems, these can be installed via apt:
 
 ```bash
-sudo apt install libgdal-dev libcurl4-gnutls-dev libgeos-dev libjansson-dev make
+sudo apt install libgdal-dev libproj-dev libcurl4-gnutls-dev libgeos-dev libjansson-dev make
 # or
-sudo apt install libgdal-dev libcurl4-openssl-dev libgeos-dev libjansson-dev make
+sudo apt install libgdal-dev libproj-dev libcurl4-openssl-dev libgeos-dev libjansson-dev make
 ```
 
 For other systems, please refer to the respective package repositories. To build the project, create a directory named `build/` and either call `make debug` for the debug build or `make haze` for the release build.
@@ -54,5 +54,6 @@ Additionally, haze heavily relies on the libraries listed below, without which i
 
 - [cURL](https://curl.se/)
 - [GDAL/OGR](https://gdal.org/)
+- [PROJ](https://proj.org/en/stable/)
 - [GEOS computational geometry library](https://libgeos.org/)
 - [Jansson](https://github.com/akheron/jansson)

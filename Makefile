@@ -7,9 +7,10 @@ LINKFLAGS=$(shell pkg-config --cflags --libs jansson)
 LINKFLAGS+=$(shell pkg-config --cflags --libs libcurl)
 LINKFLAGS+=$(shell pkg-config --cflags --libs gdal)
 LINKFLAGS+=$(shell pkg-config --cflags --libs geos)
+LINKFLAGS+=$(shell pkg-config --cflags --libs proj)
 LINKFLAGS+=-lm
 
-OBJECTS := paths.o fscheck.o aoi.o haze.o types.o gdal-ops.o math-utils.o options.o api.o strtree.o date-check.o
+OBJECTS := paths.o fscheck.o aoi.o haze.o types.o gdal-ops.o math-utils.o options.o api.o strtree.o date-check.o area.o
 OBJECT_PATHS := $(foreach obj,$(OBJECTS),build/$(obj))
 
 .PHONY: all
