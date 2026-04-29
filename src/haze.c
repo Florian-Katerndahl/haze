@@ -771,9 +771,9 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       temp = temp->next;
 
       GEOSFree((void *) geometryAsWkb);
-      //OGR_G_DestroyGeometry(intersection);
+      OGR_G_DestroyGeometry(intersection);
       //OGR_G_DestroyGeometry(cellAsOGR);
-      GEOSGeom_destroy(intersection);
+      GEOSGeom_destroy(intersectionAsGEOS);
     }
 
     means->entries[referenceIndex].value = calculateWeightedAverage(values, weights,
