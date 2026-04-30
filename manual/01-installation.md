@@ -4,12 +4,12 @@ haze can be installed locally and is distributed via Docker Hub.
 
 ## Native Compilation
 
-Installing haze locally requires the installation of make as well as the development files of GDAL (at least version 3.9.0), GEOS, cURL and jansson. These can be easily installed via your system's package manager such as `apt`. Please refer to your package manager's documentation if using a system not based on Ubuntu.
+Installing haze locally requires the installation of make as well as the development files of GDAL (at least version 3.9.0), GEOS, PROJ, cURL and jansson. These can be easily installed via your system's package manager such as `apt`. Please refer to your package manager's documentation if using a system not based on Ubuntu.
 
 ```bash
-sudo apt install libgdal-dev libcurl4-gnutls-dev libgeos-dev libjansson-dev make
+sudo apt install libgdal-dev libcurl4-gnutls-dev libgeos-dev libproj-dev libjansson-dev make
 # or
-sudo apt install libgdal-dev libcurl4-openssl-dev libgeos-dev libjansson-dev make
+sudo apt install libgdal-dev libcurl4-openssl-dev libgeos-dev libproj-dev libjansson-dev make
 ```
 
 After cloning the repository and changing into the newly created directory, create a folder named `build`.
