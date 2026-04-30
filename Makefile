@@ -21,6 +21,9 @@ debug: CFLAGS+=-ggdb
 debug: override OPTIMIZATION=-O0
 debug: haze
 
+install: haze
+	mv haze /usr/local/bin
+
 haze: main.c $(OBJECT_PATHS)
 	$(CC) $(DEFINES) $(CFLAGS) $^ $(LINKFLAGS) -o $@
 

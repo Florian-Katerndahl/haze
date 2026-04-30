@@ -19,7 +19,7 @@ WORKDIR /home/haze
 RUN sed -i -e "s#gdal/##" src/*.c src/*.h main.c && \
     mkdir build/ && \
     make -j haze && \
-    mv haze /usr/bin/ && \
+    make install && \
     make clean
 
 USER ubuntu
