@@ -110,9 +110,11 @@ double fastGeodesicArea(const OGRGeometryH geometry, const OGRSpatialReferenceH 
 
   geod_init(&g, semiMajor, inverseFlattening != 0 ? 1.0 / inverseFlattening : 0.0);
 
-  if (wkbFlatten(OGR_G_GetGeometryType(geometry)) == wkbPolygon) {
+  if (OGR_G_GetGeometryType(geometry) == wkbPolygon
+      || OGR_G_GetGeometryType(geometry) == wkbPolygon25D) {
     return fastPolygonialGeodesicArea(geometry, &g);
-  } else if (wkbFlatten(OGR_G_GetGeometryType(geometry)) == wkbMultiPolygon) {
+  } else if (OGR_G_GetGeometryType(geometry) == wkbMultiPolygon
+             || OGR_G_GetGeometryType(geometry) == wkbMultiPolygon25D) {
     return fastMultipolygonialGeodesicArea(geometry, &g);
   }
 
