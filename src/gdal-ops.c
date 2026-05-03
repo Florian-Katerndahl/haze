@@ -2,10 +2,14 @@
 #include "types.h"
 #include "fscheck.h"
 #include <gdal/gdal.h>
+#include <gdal/ogr_api.h>
 #include <gdal/ogr_core.h>
 #include <gdal/ogr_srs_api.h>
 #include <gdal/cpl_string.h>
+#include <geos_c.h>
+#include <stddef.h>
 #include <stdio.h>
+#include <unistd.h>
 
 [[nodiscard]] GDALDatasetH openRasterDataset(const char *filePath)
 {
@@ -184,4 +188,68 @@ OGRCoordinateTransformationH transformationFromWKTs(char *from, char *to,
   OSRDestroySpatialReference(sourceReferenceSystem);
 
   return transform;
+}
+
+[[nodiscard]] GEOSGeometry *OGRToGEOS(const OGRGeometryH geom)
+{
+  if (geom == NULL) {
+    return NULL;
+  }
+
+  GEOSWKBReader *reader = GEOSWKBReader_create();
+  if (reader == NULL) {
+    fprintf(stderr, "Failed to create GEOS WKB reader\n");
+    return NULL;
+  }
+
+  unsigned char *OGRWkb = calloc(OGR_G_WkbSize(geom), sizeof(unsigned char));
+  if (OGRWkb == NULL) {
+    perror("calloc");
+    GEOSWKBReader_destroy(reader);
+    return NULL;
+  }
+
+  OGR_G_ExportToIsoWkb(geom, wkbNDR, OGRWkb); // returns OGRERR_NONE in all cases
+
+  GEOSGeometry *returnGeometry = GEOSWKBReader_read(reader, OGRWkb, OGR_G_WkbSize(geom));
+
+  free(OGRWkb);
+  GEOSWKBReader_destroy(reader);
+
+  return returnGeometry;
+}
+
+[[nodiscard]] OGRGeometryH OGRFromGEOS(const GEOSGeometry *geom)
+{
+  if (geom == NULL) {
+    return NULL;
+  }
+
+  GEOSWKBWriter *writer = GEOSWKBWriter_create();
+  if (writer == NULL) {
+    fprintf(stderr, "Failed to create GEOS WKB writer\n");
+    return NULL;
+  }
+
+  size_t wkbSize = 0;
+  unsigned char *GEOSWkb = GEOSWKBWriter_write(writer, geom, &wkbSize);
+  if (GEOSWkb == NULL) {
+    fprintf(stderr, "Failed to export GEOS geometry to WKB\n");
+    GEOSWKBWriter_destroy(writer);
+    return NULL;
+  }
+
+  OGRGeometryH returnGeometry;
+  if (OGR_G_CreateFromWkbEx(GEOSWkb, NULL, &returnGeometry, wkbSize) != OGRERR_NONE
+      || returnGeometry == NULL || OGR_G_WkbSizeEx(returnGeometry) != wkbSize) {
+    fprintf(stderr, "Failed to import WKB into GDAL\n");
+    GEOSFree(GEOSWkb);
+    GEOSWKBWriter_destroy(writer);
+    return NULL;
+  }
+
+  GEOSFree(GEOSWkb);
+  GEOSWKBWriter_destroy(writer);
+
+  return returnGeometry;
 }

@@ -409,33 +409,3 @@ void trackIntersectingGeometries(void *item, void *userdata)
 
   return returnGeometry;
 }
-
-[[nodiscard]] GEOSGeometry *OGRToGEOS(const OGRGeometryH geom)
-{
-  if (geom == NULL) {
-    return NULL;
-  }
-
-  /// FIXME: hoist reader out of loop/function!
-  GEOSWKBReader *reader = GEOSWKBReader_create();
-  if (reader == NULL) {
-    fprintf(stderr, "Failed to create GEOS WKB reader\n");
-    return NULL;
-  }
-
-  unsigned char *OGRWkb = calloc(OGR_G_WkbSize(geom), sizeof(unsigned char));
-  if (OGRWkb == NULL) {
-    perror("calloc");
-    GEOSWKBReader_destroy(reader);
-    return NULL;
-  }
-
-  OGR_G_ExportToIsoWkb(geom, wkbNDR, OGRWkb); // returns OGRERR_NONE in all cases
-
-  GEOSGeometry *returnGeometry = GEOSWKBReader_read(reader, OGRWkb, OGR_G_WkbSize(geom));
-
-  free(OGRWkb);
-  GEOSWKBReader_destroy(reader);
-
-  return returnGeometry;
-}

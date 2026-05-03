@@ -104,20 +104,5 @@ void trackIntersectingGeometries(void *item, void *userdata);
  */
 [[nodiscard]] GEOSGeometry *boundingBoxOfOGRToGEOS(const OGRGeometryH geom);
 
-/**
- * @brief Convert an OGR geometry to a GEOS geometry
- *
- * @details This function creates a temporary GEOS WKB-reader and converts the input OGR geometry
- *          to a corresponding GEOS geometry by ex-/importing via the WKB interfaces.
- *
- * @note The C++-API of GDAL offers a direct interface to export OGR geometries to GEOS. Since
- *       GDAL's C-API does not offer such functionality, this workaround is needed.
- * @note After the function returns, the caller owns the returned `GEOSGeometry` object and must free/destroy it after use.
- *
- * @param geom OGR geometry to convert.
- * @return GEOSGeometry* Converted geometry, NULL on error.
- */
-[[nodiscard]] GEOSGeometry *OGRToGEOS(const OGRGeometryH geom);
-
 /** @} */ // end of group
 #endif // STRTREE_H
