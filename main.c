@@ -3,6 +3,7 @@
 #include "src/options.h"
 #include "src/types.h"
 #include "src/haze.h"
+#include "src/geos-ops.h"
 #include <stdio.h>
 #include <stddef.h>
 #include <geos_c.h>
@@ -13,22 +14,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-/* fucntion from GEOS documentation */
-// TODO: gibt es einen Grund, warum die Funktion `static` ist? Sonst kann ich die ja auch einfach in eine eigene translation Uni packen.
-// VIEL WICHTIGER: aktuell ist das einfach nur `printf`!
-static void geos_msg_handler(const char* fmt, ...)
-{
-    va_list ap;
-    va_start(ap, fmt);
-    vprintf (fmt, ap);
-    va_end(ap);
-}
-
 int main(int argc, char *argv[])
 {
     int exitCode = EXIT_SUCCESS;
     /* SETUP EXTERNAL LIBRARIES */
-    initGEOS(geos_msg_handler, geos_msg_handler);
+    initGEOS(geosMessagesToStderr, geosMessagesToStderr);
     GDALAllRegister();
     curl_global_init(CURL_GLOBAL_ALL);
 
