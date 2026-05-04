@@ -528,35 +528,46 @@ void forceNoTrailingSlash(const option_t *options)
   return;
 }
 
-/// TODO: needs to be updated with new fields
 void printOptions(const option_t *options)
 {
-  printf("YEAR: ");
-  for (size_t i = 0; i < options->yearsElements; i++) {
-    printf("%d ", options->years[i]);
-  }
+  if (options->download) {
+    printf("YEAR: ");
+    for (size_t i = 0; i < options->yearsElements; i++) {
+      printf("%d ", options->years[i]);
+    }
 
-  printf("\nMONTH: ");
-  for (size_t i = 0; i < options->monthsElements; i++) {
-    printf("%d ", options->months[i]);
-  }
+    printf("\nMONTH: ");
+    for (size_t i = 0; i < options->monthsElements; i++) {
+      printf("%d ", options->months[i]);
+    }
 
-  printf("\nDAY: ");
-  for (size_t i = 0; i < options->daysElements; i++) {
-    printf("%d ", options->days[i]);
-  }
+    printf("\nDAY: ");
+    for (size_t i = 0; i < options->daysElements; i++) {
+      printf("%d ", options->days[i]);
+    }
 
-  printf("\nHOUR: ");
-  for (size_t i = 0; i < options->hoursElements; i++) {
-    printf("%d ", options->hours[i]);
+    printf("\nHOUR: ");
+    for (size_t i = 0; i < options->hoursElements; i++) {
+      printf("%d ", options->hours[i]);
+    }
+    printf("\n");
+
+    printf("Global download: %d\n", options->global);
+
+    printf("Save daily files: %d\n", options->downloadByDay);
   }
-  printf("\n");
 
   printf("Log file: '%s'\n", options->logFile);
 
-  printf("Auth token: '%s'\n", options->authenticationToken);
+  if (options->download) {
+    printf("Auth token: '%s'\n", options->authenticationToken);
+  }
 
   printf("aoi file: %s\n", options->areaOfInterest);
+
+  if (options->process) {
+    printf("Geometries represent footprints: %d\n", options->footprint);
+  }
 
   printf("out directory: %s\n", options->outputDirectory);
 }
