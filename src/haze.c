@@ -414,8 +414,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 
   if (means->entries == NULL) {
     fprintf(stderr, "Failed to allocate memory for array of mean values\n");
-    /// TODO: proper cleanup for meanVector
-    free(means);
+    freeWeightedMeans(means);
     return NULL;
   }
 
