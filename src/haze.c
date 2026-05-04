@@ -534,9 +534,10 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       return NULL;
     }
 
+    OGRwkbGeometryType referenceGeometryType = OGR_G_GetGeometryType(intersections->entries[referenceIndex].reference);
+
     if (geometriesAreFootprints
-        && wkbFlatten(OGR_G_GetGeometryType(intersections->entries[referenceIndex].reference)) ==
-        wkbMultiPolygon
+        && (referenceGeometryType == wkbMultiPolygon || referenceGeometryType == wkbMultiPolygon25D)
         && OGR_G_GetGeometryCount(intersections->entries[referenceIndex].reference) > 1) {
       OGRGeometryH shiftedPolygon = mergeFootprintSplitAtDateline(
                                       intersections->entries[referenceIndex].reference);
@@ -709,8 +710,12 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         return NULL;
       }
 
-      if (OGR_G_GetGeometryType(intersection) == wkbPolygon
-          || OGR_G_GetGeometryType(intersection) == wkbMultiPolygon) {
+      OGRwkbGeometryType intersectionType = OGR_G_GetGeometryType(intersection);
+
+      if (intersectionType == wkbPolygon
+          || intersectionType == wkbPolygon25D
+          || intersectionType == wkbMultiPolygon
+          || intersectionType == wkbMultiPolygon25D) {
 #ifdef DEBUG
         OGRFeatureH feature = OGR_F_Create(OGR_L_GetLayerDefn(debugOutputLayer));
 
@@ -753,7 +758,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         }
 
         weights[i] = intersectingArea / referenceArea;
-      } else if (OGR_G_GetGeometryType(intersection) == wkbPoint) {
+      } else if (intersectionType == wkbPoint || intersectionType == wkbPoint25D) {
 #ifdef DEBUG
         fprintf(stderr, "Intersection resulted in point geometry. Setting both value and weight to 0.\n");
 #endif

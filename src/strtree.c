@@ -79,11 +79,15 @@
     return NULL;
   }
 
-  switch (wkbFlatten(OGR_L_GetGeomType(layer))) {
+  switch (OGR_L_GetGeomType(layer)) {
     // allowed geometry types
     case wkbPolygon:
       [[fallthrough]];
+    case wkbPolygon25D:
+      [[fallthrough]];
     case wkbMultiPolygon:
+      [[fallthrough]];
+    case wkbMultiPolygon25D:
       break;
 
     default:
