@@ -95,6 +95,20 @@ int getRasterMetadata(GDALDatasetH raster, struct geoTransform *geoTransformatio
 CRS_TYPE getCRSType(const char *Wkt);
 
 /**
+ * @brief Return the dataset/layer CRS as WKT
+ *
+ * @details This function works on raster and vector datasets. It extracts the the projection
+ *          of the dataset and returns a new reference to its WKT representation.
+ *
+ * @note After the function returns, the caller owns the returned `char *` object and must free/destroy it after use with `CPLFree`.
+ *
+ * @param dataset GDAL dataset object to query for CRS infromation.
+ * @param layerName Layer name to query. Only honored for vector datasets.
+ * @return char* Pointer to WKT string, NULL on error
+ */
+[[nodiscard]] char *extractCRSAsWKT(GDALDatasetH dataset, const char *layerName);
+
+/**
  * @brief Create a coordinate transformation between to CRS's
  *
  * @details This function creates `OGRSpatialReferenceH` objects from the supplied WKT representations.

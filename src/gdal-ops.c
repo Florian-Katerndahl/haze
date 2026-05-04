@@ -4,6 +4,7 @@
 #include <gdal/gdal.h>
 #include <gdal/ogr_core.h>
 #include <gdal/ogr_srs_api.h>
+#include <gdal/cpl_string.h>
 #include <stdio.h>
 
 [[nodiscard]] GDALDatasetH openRasterDataset(const char *filePath)
@@ -96,6 +97,40 @@ CRS_TYPE getCRSType(const char *Wkt)
   OSRDestroySpatialReference(spatialRef);
 
   return geographic == true ? CRS_GEOGRAPHIC : CRS_PROJECTED;
+}
+
+[[nodiscard]] char *extractCRSAsWKT(GDALDatasetH dataset, const char *layerName)
+{
+  GDALDriverH driver = GDALGetDatasetDriver(dataset);
+  char **driverMetadata = GDALGetMetadata(driver, NULL);
+  char *tempRef;
+  if (CSLFetchBoolean(driverMetadata, GDAL_DCAP_RASTER, FALSE)) {
+    // raster dataset
+    tempRef = (char *) GDALGetProjectionRef(dataset);
+    if (tempRef == NULL) {
+      fprintf(stderr, "Failed to get dataset CRS: %s", CPLGetLastErrorMsg());
+      return NULL;
+    }
+    return CPLStrdup(tempRef);
+  } else {
+    OGRLayerH layer;
+    if (layerName == NULL) {
+      layer = OGR_DS_GetLayer(dataset, 0);
+    } else {
+      layer = OGR_DS_GetLayerByName(dataset, layerName);
+    }
+    if (layer == NULL) {
+      fprintf(stderr, "Failed to get dataset layer: %s", CPLGetLastErrorMsg());
+      return NULL;
+    }
+    OGRSpatialReferenceH ref = OGR_L_GetSpatialRef(layer);
+    if (ref == NULL) {
+      fprintf(stderr, "Failed to get layer CRS: %s", CPLGetLastErrorMsg());
+      return NULL;
+    }
+    OSRExportToWkt(ref, &tempRef);
+    return tempRef;
+  }
 }
 
 OGRCoordinateTransformationH transformationFromWKTs(char *from, char *to,

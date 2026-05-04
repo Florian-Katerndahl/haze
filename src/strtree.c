@@ -20,41 +20,6 @@
 #include <time.h>
 #include <unistd.h>
 
-/// TODO: move to gdal-ops
-[[nodiscard]] char *extractCRSAsWKT(GDALDatasetH dataset, const char *layerName)
-{
-  GDALDriverH driver = GDALGetDatasetDriver(dataset);
-  char **driverMetadata = GDALGetMetadata(driver, NULL);
-  char *tempRef;
-  if (CSLFetchBoolean(driverMetadata, GDAL_DCAP_RASTER, FALSE)) {
-    // raster dataset
-    tempRef = (char *) GDALGetProjectionRef(dataset);
-    if (tempRef == NULL) {
-      fprintf(stderr, "Failed to get dataset CRS: %s", CPLGetLastErrorMsg());
-      return NULL;
-    }
-    return CPLStrdup(tempRef);
-  } else {
-    OGRLayerH layer;
-    if (layerName == NULL) {
-      layer = OGR_DS_GetLayer(dataset, 0);
-    } else {
-      layer = OGR_DS_GetLayerByName(dataset, layerName);
-    }
-    if (layer == NULL) {
-      fprintf(stderr, "Failed to get dataset layer: %s", CPLGetLastErrorMsg());
-      return NULL;
-    }
-    OGRSpatialReferenceH ref = OGR_L_GetSpatialRef(layer);
-    if (ref == NULL) {
-      fprintf(stderr, "Failed to get layer CRS: %s", CPLGetLastErrorMsg());
-      return NULL;
-    }
-    OSRExportToWkt(ref, &tempRef);
-    return tempRef;
-  }
-}
-
 [[nodiscard]] vectorGeometryVector *buildGEOSGeometriesFromFile(const char *filePath,
     const char *layerName,
     const char *inputReferenceSystem)

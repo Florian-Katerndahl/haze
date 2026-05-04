@@ -25,20 +25,6 @@
 #define TREE_NODE_CAP 100
 
 /**
- * @brief Return the dataset/layer CRS as WKT
- *
- * @details This function works on raster and vector datasets. It extracts the the projection
- *          of the dataset and returns a new reference to its WKT representation.
- *
- * @note After the function returns, the caller owns the returned `char *` object and must free/destroy it after use with `CPLFree`.
- *
- * @param dataset GDAL dataset object to query for CRS infromation.
- * @param layerName Layer name to query. Only honored for vector datasets.
- * @return char* Pointer to WKT string, NULL on error
- */
-[[nodiscard]] char *extractCRSAsWKT(GDALDatasetH dataset, const char *layerName);
-
-/**
  * @brief Create a vector of GEOS geometries from an OGR-readable vector dataset
  *
  * @details This functions opens an OGR-readable vector dataset and extracts a single layer from it.
