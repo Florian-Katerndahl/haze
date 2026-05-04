@@ -259,7 +259,6 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       OGRGeometryH shiftedSubRing = OGR_G_CreateGeometry(wkbLinearRing);
 
       if (shiftedSubRing == NULL) {
-        /// TODO: message and cleanup
         fprintf(stderr, "Failed to create linear ring for shifted sub-ring of sub-polygon\n");
         OGR_G_DestroyGeometry(shiftedSubPolygon);
         OGR_G_DestroyGeometry(shiftedMultiPolygon);
