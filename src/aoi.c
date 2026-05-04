@@ -130,8 +130,6 @@
     double maxFirstOut = 0;
     double maxSecondOut = 0;
 
-    /// TODO: make sure that X and Y indeed relate to the coordinate tuple (X, Y) where the
-    ///       axis order then tells what each X and Y mean; given the notes above, it seems so
     if (orientation == OAO_North || orientation == OAO_South) {
       // first axis is northing/southing
       minFirstIn = mbr->MinY;
