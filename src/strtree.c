@@ -174,7 +174,14 @@
 
     if (featureIndex > geometries->size) {
       fprintf(stderr, "Encountered more iterations than features exist\n");
-      /// TODO: cleanup
+      freeVectorGeometryList(geometries);
+      OGR_G_DestroyGeometry(geom);
+      OGR_F_Destroy(feature); // current feature as loop is not finished
+      CSLDestroy(transformerAddonOptions);
+      OGR_GeomTransformer_Destroy(transformer);
+      OCTDestroyCoordinateTransformation(transformation);
+      CPLFree((void *) layerWKT);
+      closeGDALDataset(vectorDataset);
       return NULL;
     }
   }
