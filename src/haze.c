@@ -657,24 +657,32 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     for (size_t i = 0; i < intersections->entries[referenceIndex].intersectionCount; i++) {
       values[i] = temp->entry->value; // shit, here I do copy data again...
 
-      OGRGeometryH cellAsOGR, intersection;
+      OGRGeometryH intersection;
 
-      /// FIXME: This geometry needs to be freed on error and at the end of this loop
-      /// FIXME: Does this work with 3d geometries? GDAL supports those via SFCGAL; though according to the documentation only OGR_G_Distance3D
-      ///        depends on sfcgal coming from the C-API; C++ API lists Polyhedral surfaces which I don't allow anyway; what about wkbPolygon25D
-      /// TODO: check if docstring needs updates!
       GEOSGeometry *intersectionAsGEOS = GEOSIntersection(intersections->entries[referenceIndex].referenceASGEOS, temp->entry->geometry);
 
       if (intersectionAsGEOS == NULL) {
-        /// TODO: cleanup
+        fprintf(stderr, "Failed to compute intersection geometry\n");
+        GEOSWKBWriter_destroy(wkbWriter);
+        freeWeightedMeans(means);
+        OGR_G_DestroyGeometry(centroid);
+        free(values);
+        free(weights);
+#ifdef DEBUG
+        GDALClose(debugOutputDataset);
+        /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
+        unlink(debugOutputPath);
+        free((char*) debugOutputPath);
+#endif
         return NULL;
       }
 
-      /// TODO: rename to intersectionAsWkb
-      const unsigned char *geometryAsWkb = GEOSWKBWriter_write(wkbWriter, intersectionAsGEOS,
+      /// TODO: use OGRFromGEOS instead!
+      const unsigned char *intersectionAsWkb = GEOSWKBWriter_write(wkbWriter, intersectionAsGEOS,
                                            &wkbSize);
-      if (geometryAsWkb == NULL) {
+      if (intersectionAsWkb == NULL) {
         fprintf(stderr, "Failed to export geometry as WKB\n");
+        GEOSGeom_destroy(intersectionAsGEOS);
         GEOSWKBWriter_destroy(wkbWriter);
         OSRDestroySpatialReference(spatialRef);
         freeWeightedMeans(means);
@@ -690,17 +698,18 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         return NULL;
       }
 
-      if (OGR_G_CreateFromWkb(geometryAsWkb, spatialRef, &intersection, wkbSize) != OGRERR_NONE
+      if (OGR_G_CreateFromWkb(intersectionAsWkb, spatialRef, &intersection, wkbSize) != OGRERR_NONE
           || intersection == NULL) {
         fprintf(stderr, "Failed to import WKB to OGR: %s\n", CPLGetLastErrorMsg());
+        GEOSGeom_destroy(intersectionAsGEOS);
         GEOSWKBWriter_destroy(wkbWriter);
         OSRDestroySpatialReference(spatialRef);
         freeWeightedMeans(means);
         OGR_G_DestroyGeometry(centroid);
-        OGR_G_DestroyGeometry(cellAsOGR);
+        OGR_G_DestroyGeometry(intersection);
         free(values);
         free(weights);
-        GEOSFree((void *) geometryAsWkb);
+        GEOSFree((void *) intersectionAsWkb);
 #ifdef DEBUG
         GDALClose(debugOutputDataset);
         /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
@@ -708,6 +717,42 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         free((char*) debugOutputPath);
 #endif
         return NULL;
+      }
+
+      /// NOTE: probably not the nicest but connecting all if-statements seems ugly as well;
+      ///       This way, geometry errors are handled first
+      if (!OGR_G_IsValid(intersection)) {
+#ifdef DEBUG
+        fprintf(stderr, "Intersection resulted in invalid geometry. Setting both value and weight to 0.\n");
+#endif
+        values[i] = 0.0;
+        weights[i] = 0.0;
+
+        temp = temp->next;
+
+        GEOSFree((void *) intersectionAsWkb);
+        OGR_G_DestroyGeometry(intersection);
+        GEOSGeom_destroy(intersectionAsGEOS);
+
+        continue;
+      }
+
+      /// NOTE: probably not the nicest but connecting all if-statements seems ugly as well;
+      ///       This way, geometry errors are handled first
+      if (OGR_G_IsEmpty(intersection)) {
+#ifdef DEBUG
+        fprintf(stderr, "Intersection resulted in empty geometry. Setting both value and weight to 0.\n");
+#endif
+        values[i] = 0.0;
+        weights[i] = 0.0;
+
+        temp = temp->next;
+
+        GEOSFree((void *) intersectionAsWkb);
+        OGR_G_DestroyGeometry(intersection);
+        GEOSGeom_destroy(intersectionAsGEOS);
+
+        continue;
       }
 
       OGRwkbGeometryType intersectionType = OGR_G_GetGeometryType(intersection);
@@ -725,14 +770,15 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         OGR_F_SetGeometry(feature, intersection);
 
         if (OGR_L_CreateFeature(debugOutputLayer, feature) != OGRERR_NONE) {
+          GEOSGeom_destroy(intersectionAsGEOS);
           GEOSWKBWriter_destroy(wkbWriter);
           OSRDestroySpatialReference(spatialRef);
           freeWeightedMeans(means);
           OGR_G_DestroyGeometry(centroid);
-          OGR_G_DestroyGeometry(cellAsOGR);
+          OGR_G_DestroyGeometry(intersection);
           free(values);
           free(weights);
-          GEOSFree((void *) geometryAsWkb);
+          GEOSFree((void *) intersectionAsWkb);
           GDALClose(debugOutputDataset);
           /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
           unlink(debugOutputPath);
@@ -775,9 +821,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 
       temp = temp->next;
 
-      GEOSFree((void *) geometryAsWkb);
+      GEOSFree((void *) intersectionAsWkb);
       OGR_G_DestroyGeometry(intersection);
-      //OGR_G_DestroyGeometry(cellAsOGR);
       GEOSGeom_destroy(intersectionAsGEOS);
     }
 

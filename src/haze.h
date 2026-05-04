@@ -140,6 +140,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data);
  *          A weight equal to the fractional cover of the intersecting geometry to the AOI feature is
  *          computed and used to calculate an area weighted arithmetic mean.
  *
+ * @warning Only use with wkbPolygon, wkbPolygon25D, wkbMultiPolygon, wkbMultiPolygon25D.
+ *
  * @note With GDAL >= 3.9.0, area calculation of geographic coordinates is correct. Otherwise,
  *       planar geometries are assumed.
  *
