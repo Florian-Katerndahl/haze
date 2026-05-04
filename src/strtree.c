@@ -85,7 +85,8 @@
 
   if (geometries->entries == NULL) {
     fprintf(stderr, "Failed to allocate memory for array of vector geometries\n");
-    free(geometries); /// TODO: dedicated function to free vectorGeometryVector later on?
+    freeVectorGeometryList(geometries);
+    free(geometries);
     closeGDALDataset(vectorDataset);
     return NULL;
   }
@@ -100,6 +101,7 @@
     if (transformation == NULL) {
       fprintf(stderr, "Failed to create transformation between CRS's: %s", CPLGetLastErrorMsg());
       CPLFree((void *) layerWKT);
+      freeVectorGeometryList(geometries);
       closeGDALDataset(vectorDataset);
       return NULL;
     }
@@ -109,6 +111,7 @@
                                    "WRAPDATELINE=YES")) == NULL) {
       fprintf(stderr, "Failed to create CRS transformer options\n");
       OCTDestroyCoordinateTransformation(transformation);
+      freeVectorGeometryList(geometries);
       CPLFree((void *) layerWKT);
       closeGDALDataset(vectorDataset);
       return NULL;
@@ -120,6 +123,7 @@
       fprintf(stderr, "Failed to create coordinate transformer object\n");
       CSLDestroy(transformerAddonOptions);
       OCTDestroyCoordinateTransformation(transformation);
+      freeVectorGeometryList(geometries);
       CPLFree((void *) layerWKT);
       closeGDALDataset(vectorDataset);
       return NULL;
@@ -155,8 +159,6 @@
     if (geometries->entries[featureIndex].geometry == NULL
         || geometries->entries[featureIndex].mbr == NULL) {
       fprintf(stderr, "Failed to convert OGR geometry to GEOS\n");
-      GEOSGeom_destroy(geometries->entries[featureIndex].geometry);
-      GEOSGeom_destroy(geometries->entries[featureIndex].mbr);
       freeVectorGeometryList(geometries);
       OGR_G_DestroyGeometry(geom);
       OGR_F_Destroy(feature); // current feature as loop is not finished
