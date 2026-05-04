@@ -1153,10 +1153,21 @@ int process(option_t *options)
       cellGeometryList *rasterCellsAsGEOS = NULL;
 
       GEOSSTRtree *rasterTree = buildSTRTreefromRaster(&average, &transform, &rasterCellsAsGEOS);
-      if (rasterTree == NULL || rasterCellsAsGEOS == NULL) {
+
+      if (rasterCellsAsGEOS == NULL) {
         fprintf(stderr, "Failed to construct STRTree from raster file %s", ptr->string);
-        /// TODO: cleanup
-        continue;
+        freeAverageData(&average);
+        GEOSSTRtree_destroy(rasterTree);
+        someErrors = true;
+        break;
+      }
+
+      if (rasterTree == NULL) {
+        fprintf(stderr, "Failed to construct STRTree from raster file %s", ptr->string);
+        freeAverageData(&average);
+        freeCellGeometryList(rasterCellsAsGEOS);
+        someErrors = true;
+        break;
       }
 
       // a function to query the tree constructed by buildSTRTreefromRaster which somehow gets me for each polygon in areasOfInterest
