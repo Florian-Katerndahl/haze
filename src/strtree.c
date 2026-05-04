@@ -339,8 +339,7 @@ void trackIntersectingGeometries(void *item, void *userdata)
 
   if (queryResults->entries == NULL) {
     fprintf(stderr, "Failed to allocate memory for array of STRTRee query results\n");
-    /// TODO: implement proper cleanup for intersectionVector
-    free(queryResults);
+    freeIntersections(queryResults);
     return NULL;
   }
 
