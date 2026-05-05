@@ -333,16 +333,15 @@ int parseList(int *arr, size_t capacity, size_t *elements, char *argString)
     return 1;
   }
 
-  int val;
-  const char *token;
-
   for (size_t i = 0; i < capacity; i++, argString = NULL) {
-    token = strtok(argString, ",");
+    const char *token = strtok(argString, ",");
     if (token == NULL) {
       break;
     }
 
-    if ((val = convertPositiveIntegerSafely(token)) == -1) {
+    int val = convertPositiveIntegerSafely(token);
+
+    if (val == -1) {
       return 1;
     }
 
@@ -420,7 +419,7 @@ int getAuthentication(char **authenticationToken, const char *filePath)
 
 int getAuthenticationFromEnvironment(char **authenticationToken)
 {
-  char *environmentToken = getenv("ADSAUTH");
+  const char *environmentToken = getenv("ADSAUTH");
 
   if (environmentToken == NULL)
     return 1;
