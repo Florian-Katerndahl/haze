@@ -219,7 +219,7 @@ OGRCoordinateTransformationH transformationFromWKTs(char *from, char *to,
   return returnGeometry;
 }
 
-[[nodiscard]] OGRGeometryH OGRFromGEOS(const GEOSGeometry *geom)
+[[nodiscard]] OGRGeometryH OGRFromGEOS(const GEOSGeometry *geom, OGRSpatialReferenceH crs)
 {
   if (geom == NULL) {
     return NULL;
@@ -240,7 +240,7 @@ OGRCoordinateTransformationH transformationFromWKTs(char *from, char *to,
   }
 
   OGRGeometryH returnGeometry;
-  if (OGR_G_CreateFromWkbEx(GEOSWkb, NULL, &returnGeometry, wkbSize) != OGRERR_NONE
+  if (OGR_G_CreateFromWkbEx(GEOSWkb, crs, &returnGeometry, wkbSize) != OGRERR_NONE
       || returnGeometry == NULL || OGR_G_WkbSizeEx(returnGeometry) != wkbSize) {
     fprintf(stderr, "Failed to import WKB into GDAL\n");
     GEOSFree(GEOSWkb);

@@ -15,6 +15,7 @@
 
 #include "types.h"
 #include <gdal/gdal.h>
+#include <gdal/ogr_api.h>
 #include <sys/cdefs.h>
 
 /**
@@ -159,9 +160,10 @@ OGRCoordinateTransformationH transformationFromWKTs(char *from, char *to,
  * @warning This function is not reentrant or thread-safe!
  *
  * @param geom GEOS geometry to convert.
+ * @param crs Spatial reference object to assign to geometry, can be NULL.
  * @return OGRGeometryH Converted geometry, NULL on error.
  */
-[[nodiscard]] OGRGeometryH OGRFromGEOS(const GEOSGeometry *geom);
+[[nodiscard]] OGRGeometryH OGRFromGEOS(const GEOSGeometry *geom, OGRSpatialReferenceH crs);
 
 /** @} */ // end of group
 #endif // GDAL_OPS_H
