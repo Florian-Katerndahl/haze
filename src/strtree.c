@@ -106,9 +106,8 @@
       return NULL;
     }
 
-    /// FIXME: Not sure anymore if wrapdateline makes sense. If splitting is done the same for downlading and processing, ok. Otherwise: split at both or at none
     if ((transformerAddonOptions = CSLAddStringMayFail(transformerAddonOptions,
-                                   "WRAPDATELINE=YES")) == NULL) {
+                                   "WRAPDATELINE=NO")) == NULL) {
       fprintf(stderr, "Failed to create CRS transformer options\n");
       OCTDestroyCoordinateTransformation(transformation);
       freeVectorGeometryList(geometries);
