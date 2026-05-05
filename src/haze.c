@@ -436,14 +436,6 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     return NULL;
   }
 
-  size_t wkbSize;
-  GEOSWKBWriter *wkbWriter = GEOSWKBWriter_create();
-  if (wkbWriter == NULL) {
-    fprintf(stderr, "Failed to create WKB writer\n");
-    freeWeightedMeans(means);
-    return NULL;
-  }
-
 #ifdef DEBUG
   char pwd[PATH_MAX];
   if (getcwd(pwd, sizeof(pwd)) == NULL) {
@@ -520,7 +512,6 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     OGRGeometryH centroid = OGR_G_CreateGeometry(wkbPoint);
     if (centroid == NULL) {
       fprintf(stderr, "Failed to create empty centroid\n");
-      GEOSWKBWriter_destroy(wkbWriter);
       OSRDestroySpatialReference(spatialRef);
       freeWeightedMeans(means);
 #ifdef DEBUG
@@ -543,7 +534,6 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       if (shiftedPolygon == NULL) {
         fprintf(stderr, "Failed to merge split multipolygon into polygon\n");
         OGR_G_DestroyGeometry(centroid);
-        GEOSWKBWriter_destroy(wkbWriter);
         OSRDestroySpatialReference(spatialRef);
         freeWeightedMeans(means);
         OGR_G_DestroyGeometry(centroid);
@@ -560,7 +550,6 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         fprintf(stderr, "Failed to calculate centroid\n");
         OGR_G_DestroyGeometry(shiftedPolygon);
         OGR_G_DestroyGeometry(centroid);
-        GEOSWKBWriter_destroy(wkbWriter);
         OSRDestroySpatialReference(spatialRef);
         freeWeightedMeans(means);
         OGR_G_DestroyGeometry(centroid);
@@ -577,7 +566,6 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     } else {
       if (OGR_G_Centroid(intersections->entries[referenceIndex].reference, centroid) == OGRERR_FAILURE) {
         fprintf(stderr, "Failed to calculate centroid\n");
-        GEOSWKBWriter_destroy(wkbWriter);
         OSRDestroySpatialReference(spatialRef);
         freeWeightedMeans(means);
         OGR_G_DestroyGeometry(centroid);
@@ -603,7 +591,6 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 
     if (referenceArea == -1.0) {
       fprintf(stderr, "Failed to calculate reference area\n");
-      GEOSWKBWriter_destroy(wkbWriter);
       OSRDestroySpatialReference(spatialRef);
       freeWeightedMeans(means);
       OGR_G_DestroyGeometry(centroid);
@@ -619,7 +606,6 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     double *values = calloc(intersections->entries[referenceIndex].intersectionCount, sizeof(double));
     if (values == NULL) {
       perror("calloc");
-      GEOSWKBWriter_destroy(wkbWriter);
       OSRDestroySpatialReference(spatialRef);
       freeWeightedMeans(means);
       OGR_G_DestroyGeometry(centroid);
@@ -635,7 +621,6 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     double *weights = calloc(intersections->entries[referenceIndex].intersectionCount, sizeof(double));
     if (weights == NULL) {
       perror("calloc");
-      GEOSWKBWriter_destroy(wkbWriter);
       OSRDestroySpatialReference(spatialRef);
       freeWeightedMeans(means);
       OGR_G_DestroyGeometry(centroid);
@@ -655,13 +640,10 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     for (size_t i = 0; i < intersections->entries[referenceIndex].intersectionCount; i++) {
       values[i] = temp->entry->value; // shit, here I do copy data again...
 
-      OGRGeometryH intersection;
-
       GEOSGeometry *intersectionAsGEOS = GEOSIntersection(intersections->entries[referenceIndex].referenceASGEOS, temp->entry->geometry);
 
       if (intersectionAsGEOS == NULL) {
         fprintf(stderr, "Failed to compute intersection geometry\n");
-        GEOSWKBWriter_destroy(wkbWriter);
         freeWeightedMeans(means);
         OGR_G_DestroyGeometry(centroid);
         free(values);
@@ -675,51 +657,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         return NULL;
       }
 
-      /// TODO: use OGRFromGEOS instead!
-      const unsigned char *intersectionAsWkb = GEOSWKBWriter_write(wkbWriter, intersectionAsGEOS,
-                                           &wkbSize);
-      if (intersectionAsWkb == NULL) {
-        fprintf(stderr, "Failed to export geometry as WKB\n");
-        GEOSGeom_destroy(intersectionAsGEOS);
-        GEOSWKBWriter_destroy(wkbWriter);
-        OSRDestroySpatialReference(spatialRef);
-        freeWeightedMeans(means);
-        OGR_G_DestroyGeometry(centroid);
-        free(values);
-        free(weights);
-#ifdef DEBUG
-        GDALClose(debugOutputDataset);
-        /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
-        unlink(debugOutputPath);
-        free((char*) debugOutputPath);
-#endif
-        return NULL;
-      }
-
-      if (OGR_G_CreateFromWkb(intersectionAsWkb, spatialRef, &intersection, wkbSize) != OGRERR_NONE
-          || intersection == NULL) {
-        fprintf(stderr, "Failed to import WKB to OGR: %s\n", CPLGetLastErrorMsg());
-        GEOSGeom_destroy(intersectionAsGEOS);
-        GEOSWKBWriter_destroy(wkbWriter);
-        OSRDestroySpatialReference(spatialRef);
-        freeWeightedMeans(means);
-        OGR_G_DestroyGeometry(centroid);
-        OGR_G_DestroyGeometry(intersection);
-        free(values);
-        free(weights);
-        GEOSFree((void *) intersectionAsWkb);
-#ifdef DEBUG
-        GDALClose(debugOutputDataset);
-        /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
-        unlink(debugOutputPath);
-        free((char*) debugOutputPath);
-#endif
-        return NULL;
-      }
-
-      /// NOTE: probably not the nicest but connecting all if-statements seems ugly as well;
-      ///       This way, geometry errors are handled first
-      if (!OGR_G_IsValid(intersection)) {
+      if (!GEOSisValid(intersectionAsGEOS)) {
 #ifdef DEBUG
         fprintf(stderr, "Intersection resulted in invalid geometry. Setting both value and weight to 0.\n");
 #endif
@@ -728,16 +666,12 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 
         temp = temp->next;
 
-        GEOSFree((void *) intersectionAsWkb);
-        OGR_G_DestroyGeometry(intersection);
         GEOSGeom_destroy(intersectionAsGEOS);
 
         continue;
       }
 
-      /// NOTE: probably not the nicest but connecting all if-statements seems ugly as well;
-      ///       This way, geometry errors are handled first
-      if (OGR_G_IsEmpty(intersection)) {
+      if (GEOSisEmpty(intersectionAsGEOS)) {
 #ifdef DEBUG
         fprintf(stderr, "Intersection resulted in empty geometry. Setting both value and weight to 0.\n");
 #endif
@@ -746,11 +680,28 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 
         temp = temp->next;
 
-        GEOSFree((void *) intersectionAsWkb);
-        OGR_G_DestroyGeometry(intersection);
         GEOSGeom_destroy(intersectionAsGEOS);
 
         continue;
+      }
+
+      OGRGeometryH intersection = OGRFromGEOS(intersectionAsGEOS, spatialRef);
+
+      GEOSGeom_destroy(intersectionAsGEOS);
+
+      if (intersection == NULL) {
+        fprintf(stderr, "Failed to convert GEOS geometry to OGR\n");
+        freeWeightedMeans(means);
+        OGR_G_DestroyGeometry(centroid);
+        free(values);
+        free(weights);
+#ifdef DEBUG
+        GDALClose(debugOutputDataset);
+        /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
+        unlink(debugOutputPath);
+        free((char*) debugOutputPath);
+#endif
+        return NULL;
       }
 
       OGRwkbGeometryType intersectionType = OGR_G_GetGeometryType(intersection);
@@ -768,7 +719,6 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         OGR_F_SetGeometry(feature, intersection);
 
         if (OGR_L_CreateFeature(debugOutputLayer, feature) != OGRERR_NONE) {
-          GEOSGeom_destroy(intersectionAsGEOS);
           GEOSWKBWriter_destroy(wkbWriter);
           OSRDestroySpatialReference(spatialRef);
           freeWeightedMeans(means);
@@ -819,9 +769,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 
       temp = temp->next;
 
-      GEOSFree((void *) intersectionAsWkb);
       OGR_G_DestroyGeometry(intersection);
-      GEOSGeom_destroy(intersectionAsGEOS);
     }
 
     means->entries[referenceIndex].value = calculateWeightedAverage(values, weights,
@@ -847,7 +795,6 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
   free((char*) debugOutputPath);
 #endif
 
-  GEOSWKBWriter_destroy(wkbWriter);
   OSRDestroySpatialReference(spatialRef);
 
   return means;
