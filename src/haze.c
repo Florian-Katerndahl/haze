@@ -715,14 +715,12 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         OGR_F_SetGeometry(feature, intersection);
 
         if (OGR_L_CreateFeature(debugOutputLayer, feature) != OGRERR_NONE) {
-          GEOSWKBWriter_destroy(wkbWriter);
           OSRDestroySpatialReference(spatialRef);
           freeWeightedMeans(means);
           OGR_G_DestroyGeometry(centroid);
           OGR_G_DestroyGeometry(intersection);
           free(values);
           free(weights);
-          GEOSFree((void *) intersectionAsWkb);
           GDALClose(debugOutputDataset);
           /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
           unlink(debugOutputPath);
@@ -756,11 +754,6 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         weights[i] = 0.0;
       } else {
         fprintf(stderr, "Got unexpected geometry type: %s\n", OGR_G_GetGeometryName(intersection));
-#ifdef DEBUG
-        OGR_G_DumpReadable(intersections->entries[referenceIndex].reference, stdout, NULL);
-        OGR_G_DumpReadable(cellAsOGR, stdout, NULL);
-        OGR_G_DumpReadable(intersection, stdout, NULL);
-#endif
       }
 
       temp = temp->next;
