@@ -27,10 +27,9 @@ void freeCellGeometry(struct cellGeometry *node)
 
 void freeCellGeometryList(cellGeometryList *list)
 {
-  cellGeometryList *node;
   while (list != NULL) {
     freeCellGeometry(list->entry);
-    node = list;
+    cellGeometryList *node = list;
     list = list->next;
     free(node);
   }

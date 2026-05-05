@@ -222,7 +222,7 @@ typedef struct options
  *
  * @param option Object to free
  */
-void freeOption(option_t *option);
+void freeOption(option_t *options);
 
 // API communication etc
 typedef struct curlString
