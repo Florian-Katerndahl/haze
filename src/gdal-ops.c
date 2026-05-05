@@ -13,7 +13,12 @@
 
 [[nodiscard]] GDALDatasetH openRasterDataset(const char *filePath)
 {
-  if (filePath == NULL || fileReadable(filePath) == false) {
+  if (filePath == NULL) {
+    fprintf(stderr, "File path is NULL\n");
+    return NULL;
+  }
+
+  if (fileReadable(filePath) == false) {
     fprintf(stderr, "ERROR: filePath cannot be NULL or file is not readable ('%s')\n", filePath);
     return NULL;
   }
@@ -45,7 +50,12 @@ GDALRasterBandH openRasterBand(GDALDatasetH raster, int index)
 
 [[nodiscard]] GDALDatasetH openVectorDataset(const char *filePath)
 {
-  if (filePath == NULL || fileReadable(filePath) == false) {
+  if (filePath == NULL) {
+    fprintf(stderr, "File path is NULL\n");
+    return NULL;
+  }
+
+  if (fileReadable(filePath) == false) {
     fprintf(stderr, "ERROR: filePath cannot be NULL or file is not readable ('%s')\n", filePath);
     return NULL;
   }
