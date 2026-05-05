@@ -640,6 +640,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 
       if (intersectionAsGEOS == NULL) {
         fprintf(stderr, "Failed to compute intersection geometry\n");
+        OSRDestroySpatialReference(spatialRef);
         freeWeightedMeans(means);
         OGR_G_DestroyGeometry(centroid);
         free(values);
@@ -687,6 +688,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 
       if (intersection == NULL) {
         fprintf(stderr, "Failed to convert GEOS geometry to OGR\n");
+        OSRDestroySpatialReference(spatialRef);
         freeWeightedMeans(means);
         OGR_G_DestroyGeometry(centroid);
         free(values);
@@ -742,7 +744,12 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         if (isnan(intersectingArea) || isnan(referenceArea) || intersectingArea < 0.0
             || referenceArea < 0.0) {
           fprintf(stderr, "Area of intersecting geometry or area of reference is invalid\n");
-          /// FIXME: cleanup
+          OGR_G_DestroyGeometry(intersection);
+          OSRDestroySpatialReference(spatialRef);
+          freeWeightedMeans(means);
+          OGR_G_DestroyGeometry(centroid);
+          free(values);
+          free(weights);
         }
 
         weights[i] = intersectingArea / referenceArea;
@@ -952,18 +959,18 @@ int backFillOptions(option_t *options, GDALDatasetH dataset)
     GDALRasterBandH band = openRasterBand(dataset, i);
 
     if (band == NULL) {
-      /// FIXME: ERROR HANDLING
+      return 1;
     }
 
     const char *refTime = GDALGetMetadataItem(band, "GRIB_REF_TIME", NULL);
     if (refTime == NULL) {
-      /// FIXME: ERROR HANDLING
+      return 1;
     }
 
     memset(&time, 0, sizeof(time));
 
     if (strptime(refTime, "%s", &time) == NULL) {
-      /// FIXME: ERROR HANDLING
+      return 1;
     }
 
     options->years[0] = time.tm_year + 1900;
