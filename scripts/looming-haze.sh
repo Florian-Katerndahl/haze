@@ -45,19 +45,19 @@ fi
 
 # split orignal file into multiple smaller files
 cp "$ORIGINAL_LOGFILE" "$TEMPDIR"
-split -d -a 3 -n l/$MAX_JOBS --additional-suffix=.log "${TEMPDIR}/${BNAME}" "$TEMPDIR/"
+split -d -a 3 -n l/$MAX_JOBS --additional-suffix=.split-log "${TEMPDIR}/${BNAME}" "$TEMPDIR/"
 
 # collect partial files
-find "$TEMPDIR" -name "*.log" -fprint "${TEMPDIR}/globbed"
+find "$TEMPDIR" -name "*.split-log" -fprint "${TEMPDIR}/globbed"
 
 # call haze mulitple times using GNU parallel
 parallel --arg-file "${TEMPDIR}/globbed" -j $MAX_JOBS \
   --halt now,fail=1 --joblog "$PWD"/looming-haze-$(date "+%s").log --keep-order -- \
-  docker run --rm -u $(id -u):$(id -g) -v /data:/data -v /tmp:/tmp floriankaterndahl/haze:0.0.9-no-handrail process \
-  "$AOI" {} "$OUTPUT_DIRECTORY"
+  docker run --rm -u $(id -u):$(id -g) -v /data:/data -v /tmp:/tmp floriankaterndahl/haze:0.1.1 process \
+  --footprint "$AOI" {} "$OUTPUT_DIRECTORY"
 
 # combine files updated by haze
-cat "${TEMPDIR}"/*.log > "$ORIGINAL_LOGFILE"
+cat "${TEMPDIR}"/*.split-log > "$ORIGINAL_LOGFILE"
 
 # cleanup
 rm -r "$TEMPDIR"

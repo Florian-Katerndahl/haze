@@ -39,10 +39,12 @@ Before executing the script locally, you need to adapt a few key variables:
 #      `MAX_JOBS`, respectively.
 #   2. Adapt the mount options of the Docker command so haze has access to all data.
 #   3. Possibly adapt the version tag of haze's docker image to match the most recent one.
+#   4. Possbily adapt the `-a` paramter to split when executing with more than 999 CPUs.
 #
 # Further changes can become necessary depending on your setup!
 # 
 # Copyright: Florian Katerndahl <florian@katerndahl.com> 2026
+# License: GNU GPL v3
 
 set -e
 
@@ -64,22 +66,23 @@ fi
 
 # split orignal file into multiple smaller files
 cp "$ORIGINAL_LOGFILE" "$TEMPDIR"
-split -d -a 3 -n l/$MAX_JOBS --additional-suffix=.log "${TEMPDIR}/${BNAME}" "$TEMPDIR/"
+split -d -a 3 -n l/$MAX_JOBS --additional-suffix=.split-log "${TEMPDIR}/${BNAME}" "$TEMPDIR/"
 
 # collect partial files
-find "$TEMPDIR" -name "*.log" -fprint "${TEMPDIR}/globbed"
+find "$TEMPDIR" -name "*.split-log" -fprint "${TEMPDIR}/globbed"
 
 # call haze mulitple times using GNU parallel
 parallel --arg-file "${TEMPDIR}/globbed" -j $MAX_JOBS \
   --halt now,fail=1 --joblog "$PWD"/looming-haze-$(date "+%s").log --keep-order -- \
-  docker run --rm -u $(id -u):$(id -g) -v /data:/data -v /tmp:/tmp floriankaterndahl/haze:0.0.9-no-handrail process \
-  "$AOI" {} "$OUTPUT_DIRECTORY"
+  docker run --rm -u $(id -u):$(id -g) -v /data:/data -v /tmp:/tmp floriankaterndahl/haze:0.1.1 process \
+  --footprint "$AOI" {} "$OUTPUT_DIRECTORY"
 
 # combine files updated by haze
-cat "${TEMPDIR}"/*.log > "$ORIGINAL_LOGFILE"
+cat "${TEMPDIR}"/*.split-log > "$ORIGINAL_LOGFILE"
 
 # cleanup
 rm -r "$TEMPDIR"
+
 ```
 
 ## Citing GNU parallel
