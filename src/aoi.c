@@ -15,7 +15,12 @@
 // reprojecting as OGR_L_Get... honors axis mapping
 [[nodiscard]] OGREnvelope *boxFromPath(const char *filePath, const char *layerName)
 {
-  if (filePath == NULL || fileReadable(filePath) == false) {
+  if (filePath == NULL) {
+    fprintf(stderr, "File path argument is NULL\n");
+    return NULL;
+  }
+
+  if (fileReadable(filePath) == false) {
     fprintf(stderr, "ERROR: filePath cannot be NULL or file is not readable ('%s')\n", filePath);
     return NULL;
   }
