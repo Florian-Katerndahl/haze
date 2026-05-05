@@ -192,21 +192,15 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     return 1;
   }
 
-  size_t originXOffset;
-  size_t targetXOffset;
-  size_t originYOffset;
-  size_t targetYOffset;
-  size_t originBandOffset;
-  size_t targetBandOffset;
   for (size_t y = 0; y < data->rows; y++) {
-    originYOffset = y * data->columns;
-    targetYOffset = y * data->columns * data->bands;
+    size_t originYOffset = y * data->columns;
+    size_t targetYOffset = y * data->columns * data->bands;
     for (size_t x = 0; x < data->columns; x++) {
-      originXOffset = x;
-      targetXOffset = x * data->bands;
+      size_t originXOffset = x;
+      size_t targetXOffset = x * data->bands;
       for (size_t band = 0; band < data->bands; band++) {
-        originBandOffset = band * data->columns * data->rows;
-        targetBandOffset = band;
+        size_t originBandOffset = band * data->columns * data->rows;
+        size_t targetBandOffset = band;
         temporaryArray[targetBandOffset + targetXOffset + targetYOffset] = data->data[originYOffset +
           originXOffset + originBandOffset];
       }
@@ -420,6 +414,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
   OGRSpatialReferenceH spatialRef = OSRNewSpatialReference(rasterWkt);
   if (spatialRef == NULL) {
     fprintf(stderr, "Could not create new OGRSpatialReferenceH from WKT\n");
+    freeWeightedMeans(means);
     return NULL;
   }
 
@@ -433,6 +428,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 
   if (CRSType == CRS_UNKNOWN) {
     OSRDestroySpatialReference(spatialRef);
+    freeWeightedMeans(means);
     return NULL;
   }
 
@@ -856,8 +852,8 @@ stringList *parseLogFile(const char *filePath)
       lineptr[length - 1] = '\0';
     }
 
-    char *downloadedFile = strtok(lineptr, "\t");
-    char *status = strtok(NULL, "\t");
+    const char *downloadedFile = strtok(lineptr, "\t");
+    const char *status = strtok(NULL, "\t");
 
     if (downloadedFile == NULL || status == NULL) {
       fprintf(stderr, "Failed to parse line in log file\n");
@@ -1072,7 +1068,7 @@ int process(option_t *options)
          && (int) (processedDays * hoursPerDay) < nLayers; i++, processedDays++) {
       int day = options->days[i];
 #ifdef DEBUG
-      printf("%ld/%d\n", processedDays * hoursPerDay, nLayers);
+      printf("%lu/%u\n", processedDays * hoursPerDay, nLayers);
 #endif
 
       if (!isValidDate(currentYear, currentMonth, day)) {
@@ -1085,7 +1081,7 @@ int process(option_t *options)
       struct averagedData average = {0};
 
 #ifdef DEBUG
-      printf("Averaging bands %ld to %ld\n", processedDays * hoursPerDay,
+      printf("Averaging bands %lu to %lu\n", processedDays * hoursPerDay,
              processedDays * hoursPerDay + hoursPerDay);
 #endif
 
