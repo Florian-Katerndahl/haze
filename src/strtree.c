@@ -106,6 +106,11 @@
       return NULL;
     }
 
+    /// NOTE: Setting WRAPDATELINE=NO will result in invalid geometries when input geometries
+    ///       cross the antimeridian as they will be self-intersecting. Setting WRAPDATELINE=YES
+    ///       is possible but needs to be done in conjunction with changes in `src/aoi.c` to
+    ///       constrain AOIs to -180/180. Just changing one these two would result in parts of the
+    ///       geometry not intersecting with data it semantically should intersect with.
     if ((transformerAddonOptions = CSLAddStringMayFail(transformerAddonOptions,
                                    "WRAPDATELINE=NO")) == NULL) {
       fprintf(stderr, "Failed to create CRS transformer options\n");

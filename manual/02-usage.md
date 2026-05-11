@@ -76,7 +76,7 @@ haze process <optional keyword arguments> <mandatory keyword arguments> aoi logf
 | `logfile`       |                | Path to logfile storing successful downloads and processing. statuses                                                                | yes                           |
 | `outdir`        |                | Directory to which files are saved.                                                                                                 | yes       |
 
-Processing data is based on the supplied log file and subsequent executions do not reprocess data (unless the debug build is used). Compared to data download, there are tighter restrictions on the geometry types usable, only wkbPolygon and wkbMultiPolygon (and their respectice 2.5D variants) are allowed. Again, input geometries are reprojected to EPSG:4326, if needed. When processing data, an AOI file must be given.
+Processing data is based on the supplied log file and subsequent executions do not reprocess data (unless the debug build is used). Compared to data download, there are tighter restrictions on the geometry types usable, only wkbPolygon and wkbMultiPolygon (and their respectice 2.5D variants) are allowed. Again, input geometries are reprojected to EPSG:4326, if needed. This reprojection may result in invalid geometries (self-intersections) when features cross the antimeridian; because the download sub-program does not split the bounding box/adapt the download parameters to garantuee that data always lies in -180/+180, the processing sub-program doesn't offer this, technically, more correct way either. When processing data, an AOI file must be given.
 
 The snipped below would process the data downloaded in the previous step for Europe:
 
