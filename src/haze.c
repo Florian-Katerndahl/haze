@@ -809,11 +809,21 @@ int writeWeightedMeans(meanVector *values, const char *filePath)
   }
 
   for (size_t i = 0; i < values->size; i++) {
-    // unfeasable to compute number of characters beforehand, but we can check for errors
-    if (fprintf(outFile, "%.4lf %.4lf %f ERA\n", values->entries[i].x, values->entries[i].y,
-                (float) kgsqmTocow(values->entries[i].value)) < 0) {
-      fclose(outFile);
-      return 1;
+    /// NOTE: after checking the calling code, this path shouldn't be taken, but who knows;
+    //        throw it in for good measure
+    if (isnan(values->entries[i].value)) {
+      // unfeasable to compute number of characters beforehand, but we can check for errors
+      if (fprintf(outFile, "%.4lf %.4lf 9999 TBD\n", values->entries[i].x, values->entries[i].y) < 0) {
+        fclose(outFile);
+        return 1;
+      }
+    } else {
+      // unfeasable to compute number of characters beforehand, but we can check for errors
+      if (fprintf(outFile, "%.4lf %.4lf %f ERA\n", values->entries[i].x, values->entries[i].y,
+                  (float) kgsqmTocow(values->entries[i].value)) < 0) {
+        fclose(outFile);
+        return 1;
+      }
     }
   }
 
