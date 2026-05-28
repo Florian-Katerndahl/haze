@@ -46,6 +46,10 @@ Notable differences compared to the original water vapor implementation from FOR
 
 This project is licensed under the GPL v3. A copy of this license can be found at the root of this repository [here](./LICENSE).
 
+## Citation
+
+**Please refrain from using the CFF file directly or the citation export offered by GitHub!** Instead, use the DOI from the related publication on Zenodo, linking to a specific version tag that was used in your work.
+
 ## Acknowledgement
 
 haze was funded in part by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) – Project-ID 414984028 – SFB 1404 FONDA. 

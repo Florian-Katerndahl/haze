@@ -5,7 +5,9 @@ cff-version: 1.2.0
 title: haze
 message: >-
   If you use this software, please cite it using the
-  metadata from this file.
+  metadata from the related Zenodo publication, linking to
+  a specific version tag instead of this file or GitHub's
+  citation export.
 type: software
 authors:
   - given-names: Florian
