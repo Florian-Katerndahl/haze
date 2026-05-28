@@ -60,7 +60,7 @@ tree data-dir/
 
 ## Processing Data to Water Vapor Database
 
-We use the WRS-2 footprints downloaded and extracted above as our processing reference. Since the file only contains one layer, we can omit the `--layer` argument and let haze choose the first layer itself. The tables are stored in a different directory compared to the raw data. Also note the use of the `--footprint` flag which indicates, that the supplied geometries represent footprints (of satellite scenes, in this case). This is important to correcly compute the center coordinate for those geometries, that cross the antimeridian and are split around it.
+We use the WRS-2 footprints downloaded and extracted above as our processing reference. Since the file only contains one layer, we can omit the `--layer` argument and let haze choose the first layer itself. The tables are stored in a different directory compared to the raw data. Also note the use of the `--footprint` flag which indicates, that the supplied geometries represent footprints (of satellite scenes, in this case). This is important to correcly compute the center coordinate for those geometries, that cross the antimeridian and are split around it. Please also note, that **haze does not check whether the input AOI completely overlaps with the ERA-5 data** supplying the water vapor values; it's the responsibility of the user to make sure this is the case (or you know what you're doing).
 
 ```bash
 mkdir table-dir

@@ -76,7 +76,7 @@ haze process <optional keyword arguments> <mandatory keyword arguments> aoi logf
 | `logfile`       |                | Path to logfile storing successful downloads and processing. statuses                                                                | yes                           |
 | `outdir`        |                | Directory to which files are saved.                                                                                                 | yes       |
 
-Processing data is based on the supplied log file and subsequent executions do not reprocess data (unless the debug build is used). Compared to data download, there are tighter restrictions on the geometry types usable, only wkbPolygon and wkbMultiPolygon (and their respectice 2.5D variants) are allowed. Again, input geometries are reprojected to EPSG:4326, if needed. When processing data, an AOI file must be given.
+Processing data is based on the supplied log file and subsequent executions do not reprocess data (unless the debug build is used). Compared to data download, there are tighter restrictions on the geometry types usable, only wkbPolygon and wkbMultiPolygon (and their respectice 2.5D variants) are allowed. Again, input geometries are reprojected to EPSG:4326, if needed. When processing data, an AOI file must be given. Please also note, that **haze does not check whether the input AOI completely overlaps with the ERA-5 data** supplying the water vapor values; it's the responsibility of the user to make sure this is the case (or you know what you're doing).
 
 The snipped below would process the data downloaded in the previous step for Europe:
 
