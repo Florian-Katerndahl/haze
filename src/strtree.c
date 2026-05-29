@@ -152,7 +152,14 @@
 
       if (transformedGeometry == NULL) {
         fprintf(stderr, "Failed to transform geometry: %s\n", CPLGetLastErrorMsg());
-        continue;
+        freeVectorGeometryList(geometries);
+        OGR_F_Destroy(feature); // current feature as loop is not finished
+        CSLDestroy(transformerAddonOptions);
+        OGR_GeomTransformer_Destroy(transformer);
+        OCTDestroyCoordinateTransformation(transformation);
+        CPLFree((void *) layerWKT);
+        closeGDALDataset(vectorDataset);
+        return NULL;
       }
 
       geom = transformedGeometry;
