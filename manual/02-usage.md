@@ -70,7 +70,6 @@ haze process <optional keyword arguments> <mandatory keyword arguments> aoi logf
 |---------------|----------------|-------------------------------------------------------------------------------------------------------------------------------------|-----------|
 | `--help`        | `-h`             | Print help and exit.                                                                                                                | no        |
 | `--layer`       | `-l`             | Layer to open from AOI dataset.                                                                                                     | no        |
-| `--logfile`     |                | Path to logfile storing successful downloads and processing statuses                                                                | yes       |
 | `--footprint`   |                | If specified, multipolygons are considered footprint geometries and those cut at the dateline are merged to a polygon to compute centroid.                                          | no        |
 | `aoi`           |                | File path to OGR-readble file containing one or more polygons for which to extract data. Either `layer` or the first layer is read. | yes       |
 | `logfile`       |                | Path to logfile storing successful downloads and processing. statuses                                                                | yes                           |
