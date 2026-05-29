@@ -21,17 +21,17 @@ haze download <optional keyword arguments> <mandatory keyword arguments> [aoi] l
 
 | Long Argument | Short Argument | Description                                                                                                                         | Mandatory                     |
 |---------------|----------------|-------------------------------------------------------------------------------------------------------------------------------------|-------------------------------|
-| `--help`        | `-h`             | Print help and exit.                                                                                                                | no                            |
-| `--layer`       | `-l`             | Layer to open from AOI dataset.                                                                                                     | no                            |
-| `--global`      | `-g`             | Request product worldwide instead of using an AOI dataset.                                                                          | no                            |
-| `--daily`       | `-d`             | Group product requests by day instead of month.                                                                                     | no                            |
-| `--year`        |                | Years for which data should be downloaded.                                                                                          | yes                           |
-| `--month`       |                | Months for which data should be downloaded.                                                                                         | yes                           |
-| `--day`         |                | Days for which data should be downloaded.                                                                                           | yes                           |
-| `--hour`        |                | Hours for which data should be downloaded (zero-based).                                                                             | yes                           |
-| `aoi`           |                | File path to OGR-readble file containing one or more polygons for which to extract data. Either `layer` or the first layer is read. | if `--global` flag is not set |
-| `logfile`       |                | Path to logfile storing successful downloads and processing. statuses                                                                | yes                           |
-| `outdir`        |                | Directory into which output data products and CSVs are written.                                                                                                 | yes                           |
+| `--help`      | `-h`           | Print help and exit.                                                                                                                | no                            |
+| `--global`    | `-g`           | Request product worldwide instead of using an AOI dataset.                                                                          | no                            |
+| `--daily`     | `-d`           | Group product requests by day instead of month.                                                                                     | no                            |
+| `--year`      |                | Years for which data should be downloaded.                                                                                          | yes                           |
+| `--month`     |                | Months for which data should be downloaded.                                                                                         | yes                           |
+| `--day`       |                | Days for which data should be downloaded.                                                                                           | yes                           |
+| `--hour`      |                | Hours for which data should be downloaded (zero-based).                                                                             | yes                           |
+| `--layer`     | `-l`           | Layer to open from AOI dataset.                                                                                                     | no                            |
+| `aoi`         |                | File path to OGR-readble file containing one or more polygons for which to extract data. Either `layer` or the first layer is read. | if `--global` flag is not set |
+| `logfile`     |                | Path to logfile storing successful downloads and processing. statuses                                                               | yes                           |
+| `outdir`      |                | Directory into which output data products and CSVs are written.                                                                     | yes                           |
 
 Generally, the user neeeds to supply a file containing an area of interest whose bounding box is calculated before posting a request. This contained geometries do no need to be supplied in EPGS:4326 and are reprojected on the fly, if needed. All geometry types supported by GDAL/OGR are allowed, as long as the input layer's bound geometry can be calculated. You can specify which layer to use via the `--layer` argument, if this is omitted the first layer is used by default. When downloading data globally, it's advised to not use an AOI and set the `--global` flag instead.
 
@@ -66,14 +66,14 @@ The process subprogram takes multiple keyword and positional arguments as detail
 haze process <optional keyword arguments> <mandatory keyword arguments> aoi logfile outdir
 ```
 
-| Long Argument | Short Argument | Description                                                                                                                         | Mandatory |
-|---------------|----------------|-------------------------------------------------------------------------------------------------------------------------------------|-----------|
-| `--help`        | `-h`             | Print help and exit.                                                                                                                | no        |
-| `--layer`       | `-l`             | Layer to open from AOI dataset.                                                                                                     | no        |
-| `--wrap-on-edge`   |                | If specified, multipolygons are considered footprint geometries and those cut at the dateline are merged to a polygon to compute centroid.                                          | no        |
-| `aoi`           |                | File path to OGR-readble file containing one or more polygons for which to extract data. Either `layer` or the first layer is read. | yes       |
-| `logfile`       |                | Path to logfile storing successful downloads and processing. statuses                                                                | yes                           |
-| `outdir`        |                | Directory to which files are saved.                                                                                                 | yes       |
+| Long Argument    | Short Argument | Description                                                                                                                                | Mandatory |
+|------------------|----------------|--------------------------------------------------------------------------------------------------------------------------------------------|-----------|
+| `--help`         | `-h`           | Print help and exit.                                                                                                                       | no        |
+| `--wrap-on-edge` |                | If specified, multipolygons are considered footprint geometries and those cut at the dateline are merged to a polygon to compute centroid. | no        |
+| `--layer`        | `-l`           | Layer to open from AOI dataset.                                                                                                            | no        |
+| `aoi`            |                | File path to OGR-readble file containing one or more polygons for which to extract data. Either `layer` or the first layer is read.        | yes       |
+| `logfile`        |                | Path to logfile storing successful downloads and processing. statuses                                                                      | yes       |
+| `outdir`         |                | Directory to which files are saved.                                                                                                        | yes       |
 
 Processing data is based on the supplied log file and subsequent executions do not reprocess data (unless the debug build is used). Compared to data download, there are tighter restrictions on the geometry types usable, only wkbPolygon and wkbMultiPolygon (and their respectice 2.5D variants) are allowed. Again, input geometries are reprojected to EPSG:4326, if needed. This reprojection may result in invalid geometries (self-intersections) when features cross the antimeridian; because the download sub-program does not split the bounding box/adapt the download parameters to garantuee that data always lies in -180/+180, the processing sub-program doesn't offer this, technically, more correct way either. When processing data, an AOI file must be given. Please also note, that **haze does not check whether the input AOI completely overlaps with the ERA-5 data** supplying the water vapor values; it's the responsibility of the user to make sure this is the case (or you know what you're doing).
 
