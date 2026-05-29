@@ -75,7 +75,7 @@ find "$TEMPDIR" -name "*.split-log" -fprint "${TEMPDIR}/globbed"
 parallel --arg-file "${TEMPDIR}/globbed" -j $MAX_JOBS \
   --halt now,fail=1 --joblog "$PWD"/looming-haze-$(date "+%s").log --keep-order -- \
   docker run --rm -u $(id -u):$(id -g) -v /data:/data -v /tmp:/tmp floriankaterndahl/haze:0.1.1 process \
-  --footprint "$AOI" {} "$OUTPUT_DIRECTORY"
+  --wrap-on-edge "$AOI" {} "$OUTPUT_DIRECTORY"
 
 # combine files updated by haze
 cat "${TEMPDIR}"/*.split-log > "$ORIGINAL_LOGFILE"
