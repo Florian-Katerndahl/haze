@@ -819,8 +819,8 @@ int writeWeightedMeans(meanVector *values, const char *filePath)
       }
     } else {
       // unfeasable to compute number of characters beforehand, but we can check for errors
-      if (fprintf(outFile, "%.4lf %.4lf %f ERA\n", values->entries[i].x, values->entries[i].y,
-                  (float) kgsqmTocow(values->entries[i].value)) < 0) {
+      if (fprintf(outFile, "%.4lf %.4lf %.10lf ERA\n", values->entries[i].x, values->entries[i].y,
+                  kgsqmTocow(values->entries[i].value)) < 0) {
         fclose(outFile);
         return 1;
       }
@@ -1169,7 +1169,8 @@ int process(option_t *options)
 
       // 6. write tuple (centroid coordinates, average value, ERA5) to a file
       if (writeWeightedMeans(weightedMeans, textOutputFilePath) != 0) {
-        fprintf(stderr, "Encountered error while writing output table '%s'. Deleting partial file.\n", textOutputFilePath);
+        fprintf(stderr, "Encountered error while writing output table '%s'. Deleting partial file.\n",
+                textOutputFilePath);
         freeAverageData(&average);
         freeCellGeometryList(rasterCellsAsGEOS);
         GEOSSTRtree_destroy(rasterTree);
