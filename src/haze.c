@@ -393,7 +393,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 }
 
 [[nodiscard]] meanVector *calculateAreaWeightedMean(intersectionVector *intersections,
-    const char *rasterWkt, const bool geometriesAreFootprints, const bool useFastGeodesicAreaCalculation)
+    const char *rasterWkt, const bool geometriesAreFootprints,
+    const bool useFastGeodesicAreaCalculation)
 {
   meanVector *means = malloc(sizeof(meanVector));
 
@@ -519,7 +520,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       return NULL;
     }
 
-    OGRwkbGeometryType referenceGeometryType = OGR_G_GetGeometryType(intersections->entries[referenceIndex].reference);
+    OGRwkbGeometryType referenceGeometryType = OGR_G_GetGeometryType(
+        intersections->entries[referenceIndex].reference);
 
     if (geometriesAreFootprints
         && (referenceGeometryType == wkbMultiPolygon || referenceGeometryType == wkbMultiPolygon25D)
@@ -581,8 +583,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       referenceArea = fastGeodesicArea(intersections->entries[referenceIndex].reference, spatialRef);
     } else {
       referenceArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(
-                      intersections->entries[referenceIndex].reference) : OGR_G_Area(
-                      intersections->entries[referenceIndex].reference);
+                        intersections->entries[referenceIndex].reference) : OGR_G_Area(
+                        intersections->entries[referenceIndex].reference);
     }
 
     if (referenceArea == -1.0) {
@@ -636,7 +638,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     for (size_t i = 0; i < intersections->entries[referenceIndex].intersectionCount; i++) {
       values[i] = temp->entry->value; // shit, here I do copy data again...
 
-      GEOSGeometry *intersectionAsGEOS = GEOSIntersection(intersections->entries[referenceIndex].referenceASGEOS, temp->entry->geometry);
+      GEOSGeometry *intersectionAsGEOS = GEOSIntersection(
+                                           intersections->entries[referenceIndex].referenceASGEOS, temp->entry->geometry);
 
       if (intersectionAsGEOS == NULL) {
         fprintf(stderr, "Failed to compute intersection geometry\n");
@@ -738,7 +741,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
           intersectingArea = fastGeodesicArea(intersection, spatialRef);
         } else {
           intersectingArea = CRSType == CRS_GEOGRAPHIC ? OGR_G_GeodesicArea(intersection) : OGR_G_Area(
-                             intersection);
+                               intersection);
         }
 
         if (isnan(intersectingArea) || isnan(referenceArea) || intersectingArea < 0.0
@@ -810,7 +813,7 @@ int writeWeightedMeans(meanVector *values, const char *filePath)
 
   for (size_t i = 0; i < values->size; i++) {
     /// NOTE: after checking the calling code, this path shouldn't be taken, but who knows;
-    //        throw it in for good measure
+    // throw it in for good measure
     if (isnan(values->entries[i].value)) {
       // unfeasable to compute number of characters beforehand, but we can check for errors
       if (fprintf(outFile, "%.4lf %.4lf 9999 TBD\n", values->entries[i].x, values->entries[i].y) < 0) {
@@ -1206,7 +1209,8 @@ int process(option_t *options)
       }
 #endif
     } else {
-      fprintf(stderr, "Encountered errors while processing %s. Not marking dataset as processed.\n", ptr->string);
+      fprintf(stderr, "Encountered errors while processing %s. Not marking dataset as processed.\n",
+              ptr->string);
     }
   }
 
