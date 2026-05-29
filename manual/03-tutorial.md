@@ -41,7 +41,7 @@ mkdir data-dir
 
 docker run --rm -u $(id -u):$(id -g) -v $PWD:/home/ubuntu \
   -e ADSAUTH="123456789-abc-def-987654321" \
-  floriankaterndahl/haze:0.0.8 \
+  floriankaterndahl/haze:0.1.2 \
   download --global --year 2023 --month 1 --day 1:31 --hour 0:23 \
   /home/ubuntu/data-dir/wvpdb.log /home/ubuntu/data-dir
 ```
@@ -66,7 +66,7 @@ We use the WRS-2 footprints downloaded and extracted above as our processing ref
 mkdir table-dir
 
 docker run --rm -u $(id -u):$(id -g) -v $PWD:/home/ubuntu \
-  floriankaterndahl/haze:0.0.8 \
+  floriankaterndahl/haze:0.1.2 \
   process --wrap-on-edge /home/ubuntu/aoi/subset.gpkg \
   /home/ubuntu/data-dir/wvpdb.log /home/ubuntu/table-dir
 ```
