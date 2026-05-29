@@ -22,28 +22,30 @@
 
 void printHelp(void)
 {
-  printf("haze - Integrate reprocessed ERA5 single level data into FORCE for atmospheric correction\n");
+  printf("haze - Integrate reprocessed ERA5 single level data into FORCE for atmospheric correction\n\n");
   printf("Usage: haze <subprogram> <options>\n");
-  printf("Where <subprogram> is either 'download' to download data from CDS or 'process' to process downloaded files\n");
-  printf("<options> is of the form: [-h|--help] [-g|--global] [-l|--layer] [-d|--daily] --year --month --day --hour [aoi] logfile outdir\n");
-  printf("\nGlobal optional keyword arguments (valid for both subprograms):\n");
+  printf("\tWhere <subprogram> is either 'download' to download data from CDS or 'process' to process downloaded files\n");
+  printf("\tWhere <options> depends on the subprogram used:\n");
+  printf("\tSignature of 'download' subprogram: [-h|--help] [-g|--global] [-d|--daily] [-l|--layer] --year --month --day --hour [aoi] logfile outdir\n");
+  printf("\tSignature of 'process' subprogram:  [-h|--help] [--wrap-on-edge] [--use-precomputed-centroid] [-l|--layer] aoi logfile outdir\n");
+  printf("\nGlobal optional flags:\n");
   printf("\t-h|--help:  Print help and exit.\n");
-  printf("\t-l|--layer: Layer to open from AOI dataset.\n");
-  printf("Global mandatory keyword arguments:\n");
-  printf("\nOptional keyword arguments valid for download subprogram:\n");
+  printf("\nOptional flags valid for download subprogram:\n");
   printf("\t-g|--global: Request product worldwide instead of using an AOI dataset.\n");
   printf("\t-d|--daily:  Group product requests by day instead of month.\n");
-  printf("\nOptional keyword arguments valid for processing subprogram:\n");
+  printf("\nOptional flags valid for processing subprogram:\n");
   printf("\t--wrap-on-edge: If specified, multipolygons are considered footprint geometries and those cut at the dateline are merged to a polygon to compute centroid.\n");
   printf("\t--use-precomputed-centroid: If specified, read fields 'longitude' and 'latitude' which must be of type double from the input layer and use those for centroid coordinates in the output file instead of dynamically computed ones. Note that intersection is still performed on possibly transformed geometries. Setting this options together with '--wrap-on-edge' is not useful.\n");
-  printf("Mandatory keyword arguments valid for download subprogram (either scalar vlaue, start:stop or comma seperated list. In the first case, endpoints are inclusive.):\n");
+  printf("\nGlobal optional keyword arguments:\n");
+  printf("\t-l|--layer: Layer to open from AOI dataset.\n");
+  printf("\nMandatory keyword arguments valid for download subprogram (either scalar vlaue, start:stop or comma seperated list. In the first case, endpoints are inclusive.):\n");
   printf("\t--year:  Years for which data should be downloaded.\n");
   printf("\t--month: Months for which data should be downloaded.\n");
   printf("\t--day:   Days for which data should be downloaded.\n");
   printf("\t--hour:  Hours for which data should be downloaded (zero-based).\n");
-  printf("Optional positional arguments:\n");
+  printf("\nGlobal semi-optional positional arguments:\n");
   printf("\taoi:     File path to OGR-readble file containing one or more polygons for which to extract data. Either `layer` or the first layer is read. Mandatory for processing and non-global downloads.\n");
-  printf("Mandatory positional arguments:\n");
+  printf("\nGlobal mandatory positional arguments:\n");
   printf("\tlogfile: Path to logfile storing successful downloads and processing statuses.\n");
   printf("\toutdir:  Directory into which output data products and CSVs are written.\n");
 }
