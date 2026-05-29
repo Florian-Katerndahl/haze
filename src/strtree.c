@@ -83,7 +83,8 @@
   const bool needsReprojection = !EQUAL(inputReferenceSystem, layerWKT);
 
   geometries->entries = malloc(featureCount * sizeof(struct vectorGeometry));
-  geometries->size = featureCount;
+  geometries->capacity = featureCount;
+  geometries->size = 0;
 
   if (geometries->entries == NULL) {
     fprintf(stderr, "Failed to allocate memory for array of vector geometries\n");
@@ -136,8 +137,6 @@
     }
   }
 
-  size_t featureIndex = 0;
-
   OGR_FOR_EACH_FEATURE_BEGIN(feature, layer) {
     // take ownership of geometry both because it's possibly reprojected and inserted to linked list
     // with longer lifetime then the original feature layer
@@ -165,10 +164,10 @@
       geom = transformedGeometry;
     }
 
-    geometries->entries[featureIndex].geometry = OGRToGEOS(geom);
-    geometries->entries[featureIndex].mbr = boundingBoxOfOGRToGEOS(geom);
-    geometries->entries[featureIndex].OGRGeometry = geom;
-    geometries->entries[featureIndex].id = OGR_F_GetFID(feature);
+    geometries->entries[geometries->size].geometry = OGRToGEOS(geom);
+    geometries->entries[geometries->size].mbr = boundingBoxOfOGRToGEOS(geom);
+    geometries->entries[geometries->size].OGRGeometry = geom;
+    geometries->entries[geometries->size].id = OGR_F_GetFID(feature);
 
     if (readPrecomputedCentroid) {
       int longitudeFieldIndex = OGR_F_GetFieldIndex(feature, "longitude");
@@ -235,14 +234,14 @@
         return NULL;
       }
 
-      geometries->entries[featureIndex].precomutedLongitude = OGR_F_GetFieldAsDouble(feature,
+      geometries->entries[geometries->size].precomutedLongitude = OGR_F_GetFieldAsDouble(feature,
         longitudeFieldIndex);
-      geometries->entries[featureIndex].precomputedLatitude = OGR_F_GetFieldAsDouble(feature,
+      geometries->entries[geometries->size].precomputedLatitude = OGR_F_GetFieldAsDouble(feature,
         latitudeFieldIndex);
     }
 
-    if (geometries->entries[featureIndex].geometry == NULL
-        || geometries->entries[featureIndex].mbr == NULL) {
+    if (geometries->entries[geometries->size].geometry == NULL
+        || geometries->entries[geometries->size].mbr == NULL) {
       fprintf(stderr, "Failed to convert OGR geometry to GEOS\n");
       freeVectorGeometryList(geometries);
       OGR_G_DestroyGeometry(geom);
@@ -255,9 +254,9 @@
       return NULL;
     }
 
-    featureIndex++;
+    geometries->size++;
 
-    if (featureIndex > geometries->size) {
+    if (geometries->size > geometries->capacity) {
       fprintf(stderr, "Encountered more iterations than features exist\n");
       freeVectorGeometryList(geometries);
       OGR_G_DestroyGeometry(geom);
@@ -419,8 +418,8 @@ void trackIntersectingGeometries(void *item, void *userdata)
   }
 
   queryResults->entries = malloc(areasOfInterest->size * sizeof(struct i));
-  queryResults->size = areasOfInterest->size;
-  size_t queryResultsEntries = 0;
+  queryResults->capacity = areasOfInterest->size;
+  queryResults->size = 0;
 
   if (queryResults->entries == NULL) {
     fprintf(stderr, "Failed to allocate memory for array of STRTRee query results\n");
@@ -453,32 +452,18 @@ void trackIntersectingGeometries(void *item, void *userdata)
 
     /// NOTE: no ownership of areasOfInterest->entry->OGRGeometry is taken,
     ///       owner of `areaOfInterest` is responsible to free object!
-    queryResults->entries[queryResultsEntries].reference = areasOfInterest->entries[i].OGRGeometry;
-    queryResults->entries[queryResultsEntries].referenceASGEOS = areasOfInterest->entries[i].geometry;
-    queryResults->entries[queryResultsEntries].referenceFID = areasOfInterest->entries[i].id;
-    queryResults->entries[queryResultsEntries].intersectionCount = userdata.intersectionCount;
-    queryResults->entries[queryResultsEntries].intersectingCells = userdata.intersectingCells;
+    queryResults->entries[queryResults->size].reference = areasOfInterest->entries[i].OGRGeometry;
+    queryResults->entries[queryResults->size].referenceASGEOS = areasOfInterest->entries[i].geometry;
+    queryResults->entries[queryResults->size].referenceFID = areasOfInterest->entries[i].id;
+    queryResults->entries[queryResults->size].intersectionCount = userdata.intersectionCount;
+    queryResults->entries[queryResults->size].intersectingCells = userdata.intersectingCells;
 
     if (usePrecomputedCentroid) {
-      queryResults->entries[queryResultsEntries].precomutedLongitude = areasOfInterest->entries[i].precomutedLongitude;
-      queryResults->entries[queryResultsEntries].precomputedLatitude = areasOfInterest->entries[i].precomputedLatitude;
+      queryResults->entries[queryResults->size].precomutedLongitude = areasOfInterest->entries[i].precomutedLongitude;
+      queryResults->entries[queryResults->size].precomputedLatitude = areasOfInterest->entries[i].precomputedLatitude;
     }
 
-    queryResultsEntries++;
-  }
-
-  // forcefully reallocate/shrink array if not all AOI geometries intersected with raster/STRTree
-  if (queryResults->size - queryResultsEntries > 0) {
-    struct i *tmp = reallocarray(queryResults->entries, queryResultsEntries, sizeof(struct i));
-
-    if (tmp == NULL) {
-      fprintf(stderr,
-              "Failed to reallocate array of STRTree query results. Continuing with larger array, shadowing additional entries\n");
-      queryResults->size = queryResultsEntries;
-    } else {
-      queryResults->entries = tmp;
-      queryResults->size = queryResultsEntries;
-    }
+    queryResults->size++;
   }
 
   return queryResults;

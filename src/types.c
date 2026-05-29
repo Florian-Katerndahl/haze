@@ -12,6 +12,7 @@ void freeVectorGeometry(struct vectorGeometry *node)
 
 void freeVectorGeometryList(vectorGeometryVector *vector)
 {
+  // only filled elements must be freed
   for (size_t i = 0; i < vector->size; i++) {
     freeVectorGeometry(&vector->entries[i]);
   }
@@ -39,7 +40,9 @@ void freeIntersections(intersectionVector *vector)
 {
   cellGeometryList *cellNode;
 
-  for (size_t i = 0; i < vector->size; i++) {
+  // some elements may be shadowed, thus iterate
+  // up to capacity
+  for (size_t i = 0; i < vector->capacity; i++) {
     // NOTE: The elements within the nodes are owned by
     // the list created when constructing the tree!
     // Thus, I need to free the nodes but not their content!

@@ -80,6 +80,7 @@ typedef struct
 {
   struct m *entries;
   size_t size;
+  size_t capcity;
 } meanVector;
 
 // from strtree
@@ -103,6 +104,7 @@ typedef struct vectorGeometryVector
 {
   struct vectorGeometry *entries;
   size_t size;
+  size_t capacity;
 } vectorGeometryVector;
 
 struct cellGeometry
@@ -141,6 +143,7 @@ typedef struct
 {
   struct i *entries;
   size_t size;
+  size_t capacity;
 } intersectionVector;
 
 typedef struct userdata

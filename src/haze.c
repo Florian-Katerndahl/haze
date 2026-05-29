@@ -404,7 +404,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
   }
 
   means->entries = malloc(intersections->size * sizeof(struct m));
-  means->size = intersections->size;
+  means->capcity = means->size = intersections->size; // capcity == size for means but semantically, they're still different
 
   if (means->entries == NULL) {
     fprintf(stderr, "Failed to allocate memory for array of mean values\n");
