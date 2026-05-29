@@ -35,6 +35,7 @@ void printHelp(void)
   printf("\t-d|--daily:  Group product requests by day instead of month.\n");
   printf("\nOptional keyword arguments valid for processing subprogram:\n");
   printf("\t--wrap-on-edge: If specified, multipolygons are considered footprint geometries and those cut at the dateline are merged to a polygon to compute centroid.\n");
+  printf("\t--use-precomputed-centroid: If specified, read fields 'longitude' and 'latitude' which must be of type double from the input layer and use those for centroid coordinates in the output file instead of dynamically computed ones. Note that intersection is still performed on possibly transformed geometries. Setting this options together with '--wrap-on-edge' is not useful.\n");
   printf("Mandatory keyword arguments valid for download subprogram (either scalar vlaue, start:stop or comma seperated list. In the first case, endpoints are inclusive.):\n");
   printf("\t--year:  Years for which data should be downloaded.\n");
   printf("\t--month: Months for which data should be downloaded.\n");
@@ -70,6 +71,7 @@ void printHelp(void)
   userOptions->download = false;
   userOptions->process = false;
   userOptions->footprint = false;
+  userOptions->usePrecomputedCentroid = false;
 
   static struct option long_options[] = {
     {"help", no_argument, NULL, 'h'},
@@ -81,6 +83,7 @@ void printHelp(void)
     {"layer", required_argument, NULL, 'l'},
     {"daily", no_argument, NULL, 'd'},
     {"wrap-on-edge", no_argument, NULL, 'f'},
+    {"use-precomputed-centroid", no_argument, NULL, 67},
     {0, 0, 0, 0}
   };
 
@@ -130,6 +133,9 @@ void printHelp(void)
         break;
       case 'f':
         userOptions->footprint = true;
+        break;
+      case 67:
+        userOptions->usePrecomputedCentroid = true;
         break;
       case '?':
         [[fallthrough]];

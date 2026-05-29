@@ -157,10 +157,11 @@ int reorderToBandInterleavedByPixel(struct rawData *data);
  * @param useFastGeodesicAreaCalculation Use fast implementations for geodesic area calculation. Should only be used when sure
  *        that input geometries are already in a CRS that directly allows geodesic caclulations.
  *        See fastGeodesicArea() for further details on the imposed limitations.
+ * @param usePrecomputedCentroid Set centroid coordinates previously read from input AOI instead of those computed during execution.
  * @return mean_t* Reference to vector containing centroids of AOI geometries and associated water column value, NULL on error.
  */
 [[nodiscard]] meanVector *calculateAreaWeightedMean(intersectionVector *intersections,
-    const char *rasterWkt, const bool geometriesAreFootprints, const bool useFastGeodesicAreaCalculation);
+    const char *rasterWkt, const bool geometriesAreFootprints, const bool useFastGeodesicAreaCalculation, bool usePrecomputedCentroid);
 
 /**
  * @brief Write area weighted means to file in format usable by FORCE

@@ -40,11 +40,14 @@
  * @param filePath Path to vector dataset.
  * @param layerName Layer to extract. If NULL, the first layer will be used.
  * @param inputReferenceSystem Target CRS in WKT representation.
+ * @param readPrecomputedCentroid Read the double fields "longitude" and "latitude" from the feature for later
+ *        substitution of dynamically computed centroids.
  * @return vectorGeometryVector* Reference to vector of GEOS geometries, NULL on error.
  */
 [[nodiscard]] vectorGeometryVector *buildGEOSGeometriesFromFile(const char *filePath,
     const char *layerName,
-    const char *inputReferenceSystem);
+    const char *inputReferenceSystem,
+    bool readPrecomputedCentroid);
 
 /**
  * @brief Build a STRTree of vectorized raster cells and their values
@@ -89,10 +92,11 @@ void trackIntersectingGeometries(void *item, void *userdata);
  *
  * @param areasOfInterest Vector of "overlay" geometries used to query STRTree.
  * @param rasterTree STRTree of vectorized raster cells.
+ * @param usePrecomputedCentroid Pass on precomputed centroid previously read from input AOI file.
  * @return intersectionVector* Reference to vector connecting "overlay" geometries to intersecting vectorized raster cells.
  */
 [[nodiscard]] intersectionVector *querySTRTree(vectorGeometryVector *areasOfInterest,
-    GEOSSTRtree *rasterTree);
+    GEOSSTRtree *rasterTree, bool usePrecomputedCentroid);
 
 /**
  * @brief Convert the MBR of an OGR geometry to a GEOS geometry

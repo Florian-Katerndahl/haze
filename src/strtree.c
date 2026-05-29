@@ -8,6 +8,7 @@
 #include <gdal/cpl_port.h>
 #include <gdal/cpl_string.h>
 #include <gdal/gdal.h>
+#include <gdal/gdal_fwd.h>
 #include <gdal/ogr_api.h>
 #include <gdal/ogr_core.h>
 #include <gdal/ogr_srs_api.h>
@@ -22,7 +23,8 @@
 
 [[nodiscard]] vectorGeometryVector *buildGEOSGeometriesFromFile(const char *filePath,
     const char *layerName,
-    const char *inputReferenceSystem)
+    const char *inputReferenceSystem,
+    bool readPrecomputedCentroid)
 {
   vectorGeometryVector *geometries = malloc(sizeof(vectorGeometryVector));
 
@@ -158,8 +160,80 @@
 
     geometries->entries[featureIndex].geometry = OGRToGEOS(geom);
     geometries->entries[featureIndex].mbr = boundingBoxOfOGRToGEOS(geom);
-    geometries->entries[featureIndex].id = OGR_F_GetFID(feature);
     geometries->entries[featureIndex].OGRGeometry = geom;
+    geometries->entries[featureIndex].id = OGR_F_GetFID(feature);
+
+    if (readPrecomputedCentroid) {
+      int longitudeFieldIndex = OGR_F_GetFieldIndex(feature, "longitude");
+      int latitudeFieldIndex = OGR_F_GetFieldIndex(feature, "latitude");
+
+      if (longitudeFieldIndex == -1 || latitudeFieldIndex == -1) {
+        fprintf(stderr, "Failed to get field indices for longitude and latitude from %s\n", filePath);
+        freeVectorGeometryList(geometries);
+        OGR_G_DestroyGeometry(geom);
+        OGR_F_Destroy(feature); // current feature as loop is not finished
+        CSLDestroy(transformerAddonOptions);
+        OGR_GeomTransformer_Destroy(transformer);
+        OCTDestroyCoordinateTransformation(transformation);
+        CPLFree((void *) layerWKT);
+        closeGDALDataset(vectorDataset);
+        return NULL;
+      }
+
+      OGRFeatureDefnH featureDefinition = OGR_F_GetDefnRef(feature);
+
+      OGRFieldDefnH longitudeFieldDefinition = OGR_FD_GetFieldDefn(featureDefinition, longitudeFieldIndex);
+      OGRFieldDefnH latitudeFieldDefinition = OGR_FD_GetFieldDefn(featureDefinition, latitudeFieldIndex);
+
+      if (longitudeFieldDefinition == NULL || latitudeFieldDefinition == NULL) {
+        fprintf(stderr, "Tried to query field definition with invalid index\n");
+        freeVectorGeometryList(geometries);
+        OGR_G_DestroyGeometry(geom);
+        OGR_F_Destroy(feature); // current feature as loop is not finished
+        CSLDestroy(transformerAddonOptions);
+        OGR_GeomTransformer_Destroy(transformer);
+        OCTDestroyCoordinateTransformation(transformation);
+        CPLFree((void *) layerWKT);
+        closeGDALDataset(vectorDataset);
+        return NULL;
+      }
+
+      if (!OGR_F_IsFieldSet(feature, longitudeFieldIndex)
+          || OGR_F_IsFieldNull(feature, longitudeFieldIndex)
+          || OGR_Fld_GetType(longitudeFieldDefinition) != OFTReal) {
+        fprintf(stderr, "longitude field is either not set, NULL or not of type double\n");
+        freeVectorGeometryList(geometries);
+        OGR_G_DestroyGeometry(geom);
+        OGR_F_Destroy(feature); // current feature as loop is not finished
+        CSLDestroy(transformerAddonOptions);
+        OGR_GeomTransformer_Destroy(transformer);
+        OCTDestroyCoordinateTransformation(transformation);
+        CPLFree((void *) layerWKT);
+        closeGDALDataset(vectorDataset);
+        return NULL;
+      }
+
+      if (!OGR_F_IsFieldSet(feature, latitudeFieldIndex)
+          || OGR_F_IsFieldNull(feature, latitudeFieldIndex)
+          || OGR_Fld_GetType(latitudeFieldDefinition) != OFTReal) {
+        fprintf(stderr, "latitude field is either not set, NULL or not of type double\n");
+        freeVectorGeometryList(geometries);
+        OGR_G_DestroyGeometry(geom);
+        OGR_F_Destroy(feature); // current feature as loop is not finished
+        CSLDestroy(transformerAddonOptions);
+        OGR_GeomTransformer_Destroy(transformer);
+        OCTDestroyCoordinateTransformation(transformation);
+        CPLFree((void *) layerWKT);
+        closeGDALDataset(vectorDataset);
+        return NULL;
+      }
+
+      geometries->entries[featureIndex].precomutedLongitude = OGR_F_GetFieldAsDouble(feature,
+        longitudeFieldIndex);
+      geometries->entries[featureIndex].precomputedLatitude = OGR_F_GetFieldAsDouble(feature,
+        latitudeFieldIndex);
+    }
+
     if (geometries->entries[featureIndex].geometry == NULL
         || geometries->entries[featureIndex].mbr == NULL) {
       fprintf(stderr, "Failed to convert OGR geometry to GEOS\n");
@@ -329,7 +403,7 @@ void trackIntersectingGeometries(void *item, void *userdata)
 }
 
 [[nodiscard]] intersectionVector *querySTRTree(vectorGeometryVector *areasOfInterest,
-    GEOSSTRtree *rasterTree)
+    GEOSSTRtree *rasterTree, bool usePrecomputedCentroid)
 {
   intersectionVector *queryResults = malloc(sizeof(intersectionVector));
   if (queryResults == NULL) {
@@ -377,6 +451,11 @@ void trackIntersectingGeometries(void *item, void *userdata)
     queryResults->entries[queryResultsEntries].referenceFID = areasOfInterest->entries[i].id;
     queryResults->entries[queryResultsEntries].intersectionCount = userdata.intersectionCount;
     queryResults->entries[queryResultsEntries].intersectingCells = userdata.intersectingCells;
+
+    if (usePrecomputedCentroid) {
+      queryResults->entries[queryResultsEntries].precomutedLongitude = areasOfInterest->entries[i].precomutedLongitude;
+      queryResults->entries[queryResultsEntries].precomputedLatitude = areasOfInterest->entries[i].precomputedLatitude;
+    }
 
     queryResultsEntries++;
   }

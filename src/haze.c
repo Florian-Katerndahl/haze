@@ -394,7 +394,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 
 [[nodiscard]] meanVector *calculateAreaWeightedMean(intersectionVector *intersections,
     const char *rasterWkt, const bool geometriesAreFootprints,
-    const bool useFastGeodesicAreaCalculation)
+    const bool useFastGeodesicAreaCalculation, bool usePrecomputedCentroid)
 {
   meanVector *means = malloc(sizeof(meanVector));
 
@@ -773,8 +773,13 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 
     means->entries[referenceIndex].value = calculateWeightedAverage(values, weights,
                                            intersections->entries[referenceIndex].intersectionCount);
-    means->entries[referenceIndex].x = OGR_G_GetX(centroid, 0);
-    means->entries[referenceIndex].y = OGR_G_GetY(centroid, 0);
+    if (usePrecomputedCentroid) {
+      means->entries[referenceIndex].x = intersections->entries[referenceIndex].precomutedLongitude;
+      means->entries[referenceIndex].y = intersections->entries[referenceIndex].precomputedLatitude;
+    } else {
+      means->entries[referenceIndex].x = OGR_G_GetX(centroid, 0);
+      means->entries[referenceIndex].y = OGR_G_GetY(centroid, 0);
+    }
 
     // constrain to +/- 180°
     if (means->entries[referenceIndex].x > 180.0) {
@@ -1024,7 +1029,8 @@ int process(option_t *options)
   // https://gis.stackexchange.com/a/380251
   vectorGeometryVector *areasOfInterest = buildGEOSGeometriesFromFile(options->areaOfInterest,
                                           options->aoiName,
-                                          SRS_WKT_WGS84_LAT_LONG);
+                                          SRS_WKT_WGS84_LAT_LONG,
+                                          options->usePrecomputedCentroid);
 
   if (areasOfInterest == NULL) {
     fprintf(stderr, "Failed to process area of interest\n");
@@ -1127,7 +1133,8 @@ int process(option_t *options)
 
       // a function to query the tree constructed by buildSTRTreefromRaster which somehow gets me for each polygon in areasOfInterest
       // the intersecting polygons of the tree so I can calculate the area-weighted average
-      intersectionVector *intersections = querySTRTree(areasOfInterest, rasterTree);
+      intersectionVector *intersections = querySTRTree(areasOfInterest, rasterTree,
+                                          options->usePrecomputedCentroid);
       if (intersections == NULL) {
         fprintf(stderr, "No intersections found\n"); // this is not treated as an error
         // not pretty, but: areasOfInterest, data and rasterWKT are not freed here but after for-loop
@@ -1146,7 +1153,7 @@ int process(option_t *options)
       // 4. calculate area-weighted average
       // 5. get centroid of polygon
       meanVector *weightedMeans = calculateAreaWeightedMean(intersections, SRS_WKT_WGS84_LAT_LONG,
-                                  options->footprint, true);
+                                  options->footprint, true, options->usePrecomputedCentroid);
       if (weightedMeans == NULL) {
         fprintf(stderr, "Failed to calculate weighted means\n");
         freeAverageData(&average);

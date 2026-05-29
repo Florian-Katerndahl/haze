@@ -89,6 +89,8 @@ struct vectorGeometry
   GEOSGeometry *geometry;
   OGRGeometryH OGRGeometry;
   GIntBig id;
+  double precomutedLongitude;
+  double precomputedLatitude;
 };
 
 typedef struct vectorGeometryList
@@ -131,6 +133,8 @@ struct i
   GIntBig referenceFID;
   cellGeometryList *intersectingCells;
   size_t intersectionCount;
+  double precomutedLongitude;
+  double precomputedLatitude;
 };
 
 typedef struct
@@ -215,6 +219,7 @@ typedef struct options
   bool download;
   bool process;
   bool footprint;
+  bool usePrecomputedCentroid;
 } option_t;
 
 /**
