@@ -8,7 +8,6 @@
 #include <gdal/cpl_port.h>
 #include <gdal/cpl_string.h>
 #include <gdal/gdal.h>
-#include <gdal/gdal_fwd.h>
 #include <gdal/ogr_api.h>
 #include <gdal/ogr_core.h>
 #include <gdal/ogr_srs_api.h>
