@@ -38,7 +38,7 @@ haze offers two subprograms, one for downloading data from ECMWF's Climate Data 
 Notable differences compared to the original water vapor implementation from FORCE:
 
 - ERA-5 water column datasets instead of MODIS
-- usage of arbitrary OGR-readable vector geometries (wkbPolygon, wkbMultiPolygon, wkbMultiSurface, wkbSurface, wkbPolyhedralSurface, wkbTIN, wkbTriangle) both for AOI generation while downloading and for processing; layer to use is user-selectable
+- usage of arbitrary OGR-readable vector geometries (wkbPolygon, wkbMultiPolygon) both for AOI generation while downloading and for processing; layer to use is user-selectable
 - usage of OGR-readable vector geometries with different CRS other than EPSG:4326; features will be re-projected on the fly
 - final water vapor value is calculated as area-weighted mean between raster cell intersection and supplied vector geometries
 
