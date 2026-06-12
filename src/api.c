@@ -255,7 +255,7 @@ cleanup:
           int day = options->days[dayIdx];
 
           if (!isValidDate(year, month, day)) {
-            fprintf(stderr, "Skipping prodcut request for invalid date: %.4d-%.2d-%.2d. (request %lu/%lu)\n", year, month, day, requestedDatasets, dailyDatasetsToRequest);
+            fprintf(stderr, "Skipping product request for invalid date: %.4d-%.2d-%.2d. (request %lu/%lu)\n", year, month, day, requestedDatasets, dailyDatasetsToRequest);
             requestedDatasets++;
             continue;
           }
