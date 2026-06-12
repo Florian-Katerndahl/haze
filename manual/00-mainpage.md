@@ -1,5 +1,7 @@
 # Overview {#mainpage}
 
+[![DOI](https://zenodo.org/badge/942918936.svg)](https://doi.org/10.5281/zenodo.20666757)
+
 > [!note]
 > If you come across issues or want to suggest improvements, please [report them on Github!](https://github.com/Florian-Katerndahl/haze/issues)
 
