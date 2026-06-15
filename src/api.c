@@ -273,17 +273,14 @@ cleanup:
           int const requestMonths[1] = {month};
           int const requestDays[1] = {day};
 
-          if (handleDownloadChain(handle, options, aoi, outputPath, requestYears, requestMonths, requestDays,
-                                  options->hours, 1, 1, 1, options->hoursElements, maxAttempts)) {
-            fprintf(stderr, "Failed to download data for %.4d-%.2d-%.2d (request %lu/%lu)\n", year, month, day, requestedDatasets, dailyDatasetsToRequest);
-            unlink(outputPath); // no information at what stage the download failed
-            free(outputPath);
-            requestedDatasets++;
-            continue;
-          }
+          int requestStatus = handleDownloadChain(handle, options, aoi, outputPath, requestYears,
+                                                  requestMonths, requestDays,
+                                                  options->hours, 1, 1, 1, options->hoursElements, maxAttempts);
 
-          if (fprintf(logFile, "%s\tDOWNLOADED\n", outputPath) < 0) {
-            fprintf(stderr, "Failed to add downloaded file to log file. Deleting file and continuing. (request %lu/%lu)\n", requestedDatasets, dailyDatasetsToRequest);
+          if (fprintf(logFile, "%s\t%s\n", outputPath, requestStatus == 0 ? "DOWNLOADED" : "FAILED") < 0) {
+            fprintf(stderr,
+                    "Failed to add downloaded file to log file. Deleting file and continuing. (request %lu/%lu)\n",
+                    requestedDatasets, dailyDatasetsToRequest);
             unlink(outputPath);
             free(outputPath);
             requestedDatasets++;
@@ -293,9 +290,17 @@ cleanup:
           // feels more appropriate to write immediately
           fflush(logFile);
 
+          if (requestStatus == 0) {
+            fprintf(stderr, "Successfully processed download request %lu/%lu\n", requestedDatasets,
+                    dailyDatasetsToRequest);
+          } else {
+            fprintf(stderr, "Failed to download data for %.4d-%.2d-%.2d (request %lu/%lu)\n", year, month, day,
+                    requestedDatasets, dailyDatasetsToRequest);
+            unlink(outputPath); // no information at what stage the download failed
+          }
+
           free(outputPath);
 
-          fprintf(stderr, "Successfully processed download request %lu/%lu\n", requestedDatasets, dailyDatasetsToRequest);
           requestedDatasets++;
         }
       }
@@ -317,17 +322,14 @@ cleanup:
         int const requestYears[1] = {year};
         int const requestMonths[1] = {month};
 
-        if (handleDownloadChain(handle, options, aoi, outputPath, requestYears, requestMonths,
-                                options->days, options->hours, 1, 1, options->daysElements, options->hoursElements, maxAttempts)) {
-          fprintf(stderr, "Failed to download data for %.4d-%.2d (request %lu/%lu)\n", year, month, requestedDatasets, monthlyDatasetsToRequest);
-          unlink(outputPath); // no information at what stage the download failed
-          free(outputPath);
-          requestedDatasets++;
-          continue;
-        }
+        int requestStatus = handleDownloadChain(handle, options, aoi, outputPath, requestYears,
+                                                requestMonths,
+                                                options->days, options->hours, 1, 1, options->daysElements, options->hoursElements, maxAttempts);
 
-        if (fprintf(logFile, "%s\tDOWNLOADED\n", outputPath) < 0) {
-          fprintf(stderr, "Failed to add downloaded file to log file. Deleting file and continuing. (request %lu/%lu)\n", requestedDatasets, monthlyDatasetsToRequest);
+        if (fprintf(logFile, "%s\t%s\n", outputPath, requestStatus == 0 ? "DOWNLOADED" : "FAILED") < 0) {
+          fprintf(stderr,
+                  "Failed to add downloaded file to log file. Deleting file and continuing. (request %lu/%lu)\n",
+                  requestedDatasets, monthlyDatasetsToRequest);
           unlink(outputPath);
           free(outputPath);
           requestedDatasets++;
@@ -337,9 +339,17 @@ cleanup:
         // feels more appropriate to write immediately
         fflush(logFile);
 
+        if (requestStatus == 0) {
+          fprintf(stderr, "Successfully processed download request %lu/%lu\n", requestedDatasets,
+                  monthlyDatasetsToRequest);
+        } else {
+          fprintf(stderr, "Failed to download data for %.4d-%.2d (request %lu/%lu)\n", year, month,
+                  requestedDatasets, monthlyDatasetsToRequest);
+          unlink(outputPath); // no information at what stage the download failed
+        }
+
         free(outputPath);
 
-        fprintf(stderr, "Successfully processed download request %lu/%lu\n", requestedDatasets, monthlyDatasetsToRequest);
         requestedDatasets++;
       }
     }
