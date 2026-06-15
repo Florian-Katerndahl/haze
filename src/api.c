@@ -255,7 +255,8 @@ cleanup:
           int day = options->days[dayIdx];
 
           if (!isValidDate(year, month, day)) {
-            fprintf(stderr, "Skipping product request for invalid date: %.4d-%.2d-%.2d. (request %lu/%lu)\n", year, month, day, requestedDatasets, dailyDatasetsToRequest);
+            fprintf(stderr, "Skipping product request for invalid date: %.4d-%.2d-%.2d. (request %lu/%lu)\n",
+                    year, month, day, requestedDatasets, dailyDatasetsToRequest);
             requestedDatasets++;
             continue;
           }
@@ -264,7 +265,8 @@ cleanup:
                                                month, day);
 
           if (outputPath == NULL) {
-            fprintf(stderr, "Failed to construct local file path (request %lu/%lu)\n", requestedDatasets, dailyDatasetsToRequest);
+            fprintf(stderr, "Failed to construct local file path (request %lu/%lu)\n", requestedDatasets,
+                    dailyDatasetsToRequest);
             requestedDatasets++;
             continue;
           }
@@ -314,7 +316,8 @@ cleanup:
         char *outputPath = constructFilePath("%s/%.4d-%.2d.grib", options->outputDirectory, year, month);
 
         if (outputPath == NULL) {
-          fprintf(stderr, "Failed to construct local file path (request %lu/%lu)\n", requestedDatasets, monthlyDatasetsToRequest);
+          fprintf(stderr, "Failed to construct local file path (request %lu/%lu)\n", requestedDatasets,
+                  monthlyDatasetsToRequest);
           requestedDatasets++;
           continue;
         }
@@ -420,8 +423,7 @@ char *slurpAndGetString(const char *input, const char *key)
   printf("Posted product request with Id: %s\n", requestId);
 #endif
 
-  if (cdsWaitForProduct(handle, requestId, options, maxAttempts)) {
-    fprintf(stderr, "Error while waiting for product\n");
+  if (cdsWaitForProductWithMessage(handle, requestId, options, maxAttempts)) {
     cdsDeleteProductRequest(handle, requestId, options);
     free(requestId);
     return 1;
@@ -578,6 +580,7 @@ productStatus cdsGetProductStatus(CURL *handle, const char *requestId, const opt
     curl_easy_getinfo(statusHandle, CURLINFO_RESPONSE_CODE, &httpResponse);
     fprintf(stderr, "Failed to get product status: %s (%ld)\n", curl_easy_strerror(statusResponse),
             httpResponse);
+    fprintf(stderr, "Server message:\n%s\n", response.string);
     free(response.string);
     free(url);
     curl_slist_free_all(requestHeader);
@@ -628,8 +631,8 @@ int binaryExponentialBackoff(int attempt)
   return (int) backoff;
 }
 
-int cdsWaitForProduct(CURL *handle, const char *requestId, const option_t *options,
-                      unsigned int maxAttempts)
+int cdsWaitForProductWithMessage(CURL *handle, const char *requestId, const option_t *options,
+                                 unsigned int maxAttempts)
 {
   int sleepSeconds;
   unsigned int attempt = 1;

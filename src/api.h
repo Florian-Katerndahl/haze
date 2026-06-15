@@ -248,7 +248,7 @@ int binaryExponentialBackoff(int attempt);
  *                    connection requests.
  * @return int 0 on success, 1 on error.
  */
-int cdsWaitForProduct(CURL *handle, const char *requestId, const option_t *options,
+int cdsWaitForProductWithMessage(CURL *handle, const char *requestId, const option_t *options,
                       unsigned int maxAttempts);
 
 /**
