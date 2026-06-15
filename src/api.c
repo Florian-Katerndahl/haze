@@ -367,6 +367,7 @@ char *slurpAndGetString(const char *input, const char *key)
   json_t *root = json_loads(input, 0, &error);
   if (root == NULL) {
     fprintf(stderr, "Failed to parse JSON response on line %d: %s\n", error.line, error.text);
+    fprintf(stderr, "Offending input: %s\n", input);
     return NULL;
   }
 
