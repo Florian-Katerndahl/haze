@@ -34,6 +34,7 @@ MAX_JOBS=30
 
 BNAME=$(basename "$ORIGINAL_LOGFILE")
 TEMPDIR=$(mktemp -d)
+TEMP_ARG_FILE=$(mktemp -p "${TEMPDIR}")
 
 echo "Temp directory created: " "$TEMPDIR"
 
@@ -48,10 +49,10 @@ cp "$ORIGINAL_LOGFILE" "$TEMPDIR"
 split -d -a 3 -n l/$MAX_JOBS --additional-suffix=.split-log "${TEMPDIR}/${BNAME}" "$TEMPDIR/"
 
 # collect partial files
-find "$TEMPDIR" -name "*.split-log" -fprint "${TEMPDIR}/globbed"
+find "$TEMPDIR" -name "*.split-log" -fprint "${TEMP_ARG_FILE}"
 
 # call haze mulitple times using GNU parallel
-parallel --arg-file "${TEMPDIR}/globbed" -j $MAX_JOBS \
+parallel --arg-file "${TEMP_ARG_FILE}" -j $MAX_JOBS \
   --halt now,fail=1 --joblog "$PWD"/looming-haze-$(date "+%s").log --keep-order -- \
   docker run --rm -u $(id -u):$(id -g) -v /data:/data -v /tmp:/tmp floriankaterndahl/haze:0.1.2 process \
   --wrap-on-edge "$AOI" {} "$OUTPUT_DIRECTORY"
