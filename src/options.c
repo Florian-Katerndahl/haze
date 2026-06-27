@@ -3,6 +3,7 @@
 #define _DEFAULT_SOURCE
 #endif
 
+#include "numeric-conversions.h"
 #include "paths.h"
 #include "options.h"
 #include "fscheck.h"
@@ -280,26 +281,6 @@ int parseIntegers(int *arr, size_t capacity, size_t *elements, char *argString, 
   return 0;
 }
 
-int convertPositiveIntegerSafely(const char *string)
-{
-  if (string == NULL) {
-    return -1;
-  }
-
-  errno = 0;
-  char *endptr;
-  long value = strtol(string, &endptr, 10);
-
-  if ((errno == ERANGE && (value == LONG_MAX || value == LONG_MIN))
-      || (errno != 0 && value == 0)
-      || (endptr == string)
-      || (value < INT_MIN || value > INT_MAX)) {
-    return -1;
-  }
-
-  return (int) value;
-}
-
 int parseRange(int *arr, size_t capacity, size_t *elements, const char *argString)
 {
   if (argString == NULL) {
@@ -313,10 +294,12 @@ int parseRange(int *arr, size_t capacity, size_t *elements, const char *argStrin
 
   sep++;
 
-  int min = convertPositiveIntegerSafely(argString);
-  int max = convertPositiveIntegerSafely(sep);
+  bool errorMin = false;
+  bool errorMax = false;
+  int min = convertPositiveIntegerSafely(argString, &errorMax);
+  int max = convertPositiveIntegerSafely(sep, &errorMin);
 
-  if (max < min || max == -1 || min == -1) {
+  if (max < min || errorMax || errorMin) {
     return 1;
   }
 
@@ -347,9 +330,10 @@ int parseList(int *arr, size_t capacity, size_t *elements, char *argString)
       break;
     }
 
-    int val = convertPositiveIntegerSafely(token);
+    bool error = false;
+    int val = convertPositiveIntegerSafely(token, &error);
 
-    if (val == -1) {
+    if (error) {
       return 1;
     }
 
@@ -367,8 +351,9 @@ int parseList(int *arr, size_t capacity, size_t *elements, char *argString)
 
 int parseSingle(int *arr, size_t *elements, const char *argString)
 {
-  arr[0] = convertPositiveIntegerSafely(argString);
-  if (arr[0] == -1) {
+  bool error = false;
+  arr[0] = convertPositiveIntegerSafely(argString, &error);
+  if (error) {
     return 1;
   }
 

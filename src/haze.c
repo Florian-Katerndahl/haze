@@ -7,6 +7,7 @@
 #include "math-utils.h"
 #include "strtree.h"
 #include "date-check.h"
+#include "numeric-conversions.h"
 #include "area.h"
 #include <dirent.h>
 #include <bits/posix2_lim.h>
@@ -969,6 +970,7 @@ int backFillOptions(option_t *options, GDALDatasetH dataset)
   options->yearsElements = 1;
   options->monthsElements = 1;
   struct tm time;
+  struct tm *timePointer;
 
   int daysHistogram[31] = {0};
   int hoursHistogram[24] = {0};
@@ -985,11 +987,23 @@ int backFillOptions(option_t *options, GDALDatasetH dataset)
       return 1;
     }
 
-    memset(&time, 0, sizeof(time));
-
-    if (strptime(refTime, "%s", &time) == NULL) {
+    if (sizeof(time_t) != sizeof(long)) {
       return 1;
     }
+
+    bool error = false;
+    time_t epoch = (time_t) convertLongSafely(refTime, &error);
+
+    if (error) {
+      fprintf(stderr, "Error: Overflow/Underflow while parsing 'GRIB_REF_TIME'=%s to long\n", refTime);
+      return 1;
+    }
+
+    if ((timePointer = gmtime(&epoch)) == NULL) {
+      return 1;
+    }
+
+    time = *timePointer;
 
     options->years[0] = time.tm_year + 1900;
     options->months[0] = time.tm_mon + 1;

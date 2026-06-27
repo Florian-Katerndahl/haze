@@ -10,7 +10,7 @@ LINKFLAGS+=$(shell pkg-config --cflags --libs geos)
 LINKFLAGS+=$(shell pkg-config --cflags --libs proj)
 LINKFLAGS+=-lm
 
-OBJECTS := paths.o fscheck.o aoi.o haze.o types.o gdal-ops.o math-utils.o options.o api.o strtree.o date-check.o area.o geos-ops.o
+OBJECTS := paths.o fscheck.o aoi.o haze.o types.o gdal-ops.o math-utils.o options.o api.o strtree.o date-check.o area.o geos-ops.o numeric-conversions.o
 OBJECT_PATHS := $(foreach obj,$(OBJECTS),build/$(obj))
 
 .PHONY: all

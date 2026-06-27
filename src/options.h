@@ -61,18 +61,6 @@ int parseIntegers(int *arr, size_t capacity, size_t *elements, char *argString, 
                   const int max);
 
 /**
- * @brief Parse positive integer from string representation to numeric reprentation
- *
- * @details This function is a thin wrapper around `strtol`. In comparison with
- *          `parseSingle, it directly returns a value instead of storing the
- *          converted number in an array.
- *
- * @param string String representation of integer.
- * @return int Parsed integer, -1 on error.
- */
-int convertPositiveIntegerSafely(const char *string);
-
-/**
  * @brief Parse a range of integers denoted by min:max to list of intgers with closed interval bounds
  *
  * @note If max < min or the range exceeds the list's capacity, an error is returned.
