@@ -203,7 +203,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         size_t originBandOffset = band * data->columns * data->rows;
         size_t targetBandOffset = band;
         temporaryArray[targetBandOffset + targetXOffset + targetYOffset] = data->data[originYOffset +
-          originXOffset + originBandOffset];
+            originXOffset + originBandOffset];
       }
     }
   }
@@ -405,7 +405,8 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
   }
 
   means->entries = malloc(intersections->size * sizeof(struct m));
-  means->capcity = means->size = intersections->size; // capcity == size for means but semantically, they're still different
+  means->capcity = means->size =
+                     intersections->size; // capcity == size for means but semantically, they're still different
 
   if (means->entries == NULL) {
     fprintf(stderr, "Failed to allocate memory for array of mean values\n");
@@ -451,7 +452,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
   if (debugOutputDriver == NULL) {
     fprintf(stderr, "Failed to get GPKG driver. Aborting.\n");
     freeWeightedMeans(means);
-    free((char*) debugOutputPath);
+    free((char *) debugOutputPath);
     return NULL;
   }
 
@@ -461,7 +462,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     fprintf(stderr, "Failed to create output dataset %s. Aborting.\n", debugOutputPath);
     /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
     freeWeightedMeans(means);
-    free((char*) debugOutputPath);
+    free((char *) debugOutputPath);
     return NULL;
   }
 
@@ -473,7 +474,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
     freeWeightedMeans(means);
     unlink(debugOutputPath);
-    free((char*) debugOutputPath);
+    free((char *) debugOutputPath);
     return NULL;
   }
 
@@ -485,7 +486,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
     freeWeightedMeans(means);
     unlink(debugOutputPath);
-    free((char*) debugOutputPath);
+    free((char *) debugOutputPath);
     return NULL;
   }
 
@@ -499,7 +500,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
     /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
     freeWeightedMeans(means);
     unlink(debugOutputPath);
-    free((char*) debugOutputPath);
+    free((char *) debugOutputPath);
     return NULL;
   }
 
@@ -516,13 +517,13 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       GDALClose(debugOutputDataset);
       /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
       unlink(debugOutputPath);
-      free((char*) debugOutputPath);
+      free((char *) debugOutputPath);
 #endif
       return NULL;
     }
 
     OGRwkbGeometryType referenceGeometryType = OGR_G_GetGeometryType(
-        intersections->entries[referenceIndex].reference);
+          intersections->entries[referenceIndex].reference);
 
     if (geometriesAreFootprints
         && (referenceGeometryType == wkbMultiPolygon || referenceGeometryType == wkbMultiPolygon25D)
@@ -540,7 +541,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         GDALClose(debugOutputDataset);
         /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
         unlink(debugOutputPath);
-        free((char*) debugOutputPath);
+        free((char *) debugOutputPath);
 #endif
         return NULL;
       }
@@ -556,7 +557,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         GDALClose(debugOutputDataset);
         /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
         unlink(debugOutputPath);
-        free((char*) debugOutputPath);
+        free((char *) debugOutputPath);
 #endif
         return NULL;
       }
@@ -572,7 +573,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         GDALClose(debugOutputDataset);
         /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
         unlink(debugOutputPath);
-        free((char*) debugOutputPath);
+        free((char *) debugOutputPath);
 #endif
         return NULL;
       }
@@ -597,7 +598,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       GDALClose(debugOutputDataset);
       /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
       unlink(debugOutputPath);
-      free((char*) debugOutputPath);
+      free((char *) debugOutputPath);
 #endif
       return NULL;
     }
@@ -612,7 +613,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       GDALClose(debugOutputDataset);
       /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
       unlink(debugOutputPath);
-      free((char*) debugOutputPath);
+      free((char *) debugOutputPath);
 #endif
       return NULL;
     }
@@ -628,7 +629,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
       GDALClose(debugOutputDataset);
       /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
       unlink(debugOutputPath);
-      free((char*) debugOutputPath);
+      free((char *) debugOutputPath);
 #endif
       return NULL;
     }
@@ -653,7 +654,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         GDALClose(debugOutputDataset);
         /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
         unlink(debugOutputPath);
-        free((char*) debugOutputPath);
+        free((char *) debugOutputPath);
 #endif
         return NULL;
       }
@@ -701,7 +702,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
         GDALClose(debugOutputDataset);
         /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
         unlink(debugOutputPath);
-        free((char*) debugOutputPath);
+        free((char *) debugOutputPath);
 #endif
         return NULL;
       }
@@ -730,7 +731,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
           GDALClose(debugOutputDataset);
           /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
           unlink(debugOutputPath);
-          free((char*) debugOutputPath);
+          free((char *) debugOutputPath);
           return NULL;
         }
 
@@ -797,7 +798,7 @@ int reorderToBandInterleavedByPixel(struct rawData *data)
 #ifdef DEBUG
   GDALClose(debugOutputDataset);
   /// NOTE: Destroying the output driver crashes `GDALDestroy`, thus leaving it.
-  free((char*) debugOutputPath);
+  free((char *) debugOutputPath);
 #endif
 
   OSRDestroySpatialReference(spatialRef);
