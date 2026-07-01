@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <math.h>
+#include <sys/stat.h>
 
 struct curl_slist *customHeader(struct curl_slist *list, const option_t *options)
 {
@@ -691,6 +692,7 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     return 1;
   }
 
+  // TODO: this should either be the accept header or removed!
   if ((requestHeader = curl_slist_append(requestHeader, "Content-Type: application/json")) == NULL) {
     free(url);
     curl_slist_free_all(requestHeader);
@@ -725,6 +727,8 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     return 1;
   }
 
+  size_t advertisedSize = 0;
+
   FILE *outputFile = fopen(outputPath, "wb");
   if (outputFile == NULL) {
     fprintf(stderr, "Could not open file %s for writing\n", outputPath);
@@ -754,6 +758,18 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     curl_slist_free_all(requestHeader);
     curl_easy_cleanup(downloadHandle);
     return 1;
+  }
+
+  // after downloading, get the actual file size in bytes and compare to advertised size
+  struct stat st = {0};
+  if (fstat(outputFile, &st) != 0) {
+    fprintf(stderr, "Failed to get file size of most recent downloaded file (%s). Deleting file.\n", outputPath);
+    /// TODO: cleanup
+  }
+
+  if (st.st_size != advertisedSize) {
+    fprintf(stderr, "Mismatch between advertised file size (%ld) and actual size (%ld). Deleting file %s\n", st.st_size, advertisedSize, outputPath);
+    /// TODO: cleanup
   }
 
   fclose(outputFile);
