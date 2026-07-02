@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include "api.h"
 #include "types.h"
 #include "paths.h"
@@ -14,6 +15,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <math.h>
+#include <sys/stat.h>
 
 struct curl_slist *customHeader(struct curl_slist *list, const option_t *options)
 {
@@ -406,6 +408,42 @@ char *slurpAndGetString(const char *input, const char *key)
   return ret;
 }
 
+long int slurpAndGetPositiveLongInteger(const char *input, const char *key)
+{
+  json_error_t error;
+  json_t *root = json_loads(input, 0, &error);
+  if (root == NULL) {
+    fprintf(stderr, "Failed to parse JSON response on line %d: %s\n", error.line, error.text);
+    fprintf(stderr, "Offending input: %s\n", input);
+    return -1L;
+  }
+
+  if (!json_is_object(root)) {
+    fprintf(stderr, "Supplied JSON must be an object.\n");
+    json_decref(root);
+    return -1L;
+  }
+
+  json_t *keyEntry = getKeyRecursively(root, key);
+  if (keyEntry == NULL) {
+    fprintf(stderr, "Could not find key '%s'.\n", key);
+    json_decref(root);
+    return -1L;
+  }
+
+  json_int_t ret = json_integer_value(keyEntry);
+  if (ret == 0 || ret > LONG_MAX) {
+    fprintf(stderr, "Failed to get long value from key '%s' "
+                                   "or it exceeds maximum representable value by a long integer\n", key);
+    json_decref(root);
+    return -1L;
+  }
+
+  json_decref(root);
+
+  return (long int) ret;
+}
+
 [[nodiscard]] int handleDownloadChain(CURL *handle, const option_t *options, const OGREnvelope *aoi,
                                       const char *outputPath, const int *subsetYears, const int *subsetMonths, const int *subsetDays,
                                       const int *subsetHours, const size_t yearsElements, const size_t monthsElements,
@@ -691,6 +729,7 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     return 1;
   }
 
+  // TODO: this should either be the accept header or removed!
   if ((requestHeader = curl_slist_append(requestHeader, "Content-Type: application/json")) == NULL) {
     free(url);
     curl_slist_free_all(requestHeader);
@@ -725,9 +764,21 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     return 1;
   }
 
+  long int advertisedSizeInBytes = slurpAndGetPositiveLongInteger(response.string, "file:size");
+  if (advertisedSizeInBytes == -1) {
+    fprintf(stderr, "Failed to get advertised file size\n");
+    free(downloadURL);
+    free(url);
+    free(response.string);
+    curl_slist_free_all(requestHeader);
+    curl_easy_cleanup(downloadHandle);
+    return 1;
+  }
+
   FILE *outputFile = fopen(outputPath, "wb");
   if (outputFile == NULL) {
     fprintf(stderr, "Could not open file %s for writing\n", outputPath);
+    free(downloadURL);
     free(url);
     free(response.string);
     curl_slist_free_all(requestHeader);
@@ -749,6 +800,75 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     fprintf(stderr, "Server message:\n%s\n", response.string);
     fclose(outputFile);
     unlink(outputPath);
+    free(downloadURL);
+    free(response.string);
+    free(url);
+    curl_slist_free_all(requestHeader);
+    curl_easy_cleanup(downloadHandle);
+    return 1;
+  }
+
+  /// NOTE: flusing file is necessary to write all outstanding chunks before querying its size;
+  ///       otherwise, there may be a difference between the size on disk and the advertised size.
+  if (fflush(outputFile) != 0) {
+    fprintf(stderr, "Failed to flush output file (%s). Deleting file.\n", outputPath);
+    /// TODO: cleanup
+    fclose(outputFile);
+    unlink(outputPath);
+    free(downloadURL);
+    free(response.string);
+    free(url);
+    curl_slist_free_all(requestHeader);
+    curl_easy_cleanup(downloadHandle);
+    return 1;
+  }
+
+  // ~~~~~~~~~~~~~~~~~
+  // after downloading, get the actual file size in bytes and compare to advertised size
+  // ~~~~~~~~~~~~~~~~~
+  int outputFileDescriptor = fileno(outputFile);
+  if (outputFileDescriptor == -1) {
+    fprintf(stderr, "Failed to query file descriptor from file stream\n. Deleting file '%s'\n", outputPath);
+    fclose(outputFile);
+    unlink(outputPath);
+    free(downloadURL);
+    free(response.string);
+    free(url);
+    curl_slist_free_all(requestHeader);
+    curl_easy_cleanup(downloadHandle);
+    return 1;
+  }
+
+  struct stat st = {0};
+  if (fstat(outputFileDescriptor, &st) != 0) {
+    fprintf(stderr, "Failed to get file size of most recent downloaded file (%s). Deleting file.\n", outputPath);
+    fclose(outputFile);
+    unlink(outputPath);
+    free(downloadURL);
+    free(response.string);
+    free(url);
+    curl_slist_free_all(requestHeader);
+    curl_easy_cleanup(downloadHandle);
+    return 1;
+  }
+
+  if (sizeof(st.st_size) != sizeof(advertisedSizeInBytes)) {
+    fprintf(stderr, "Won't compare file sizes as underlying data have different widths\n");
+    fclose(outputFile);
+    unlink(outputPath);
+    free(downloadURL);
+    free(response.string);
+    free(url);
+    curl_slist_free_all(requestHeader);
+    curl_easy_cleanup(downloadHandle);
+    return 1;
+  }
+
+  if (st.st_size != advertisedSizeInBytes) {
+    fprintf(stderr, "Mismatch between advertised file size (%ld) and actual size (%ld). Deleting file %s\n", advertisedSizeInBytes, st.st_size, outputPath);
+    fclose(outputFile);
+    unlink(outputPath);
+    free(downloadURL);
     free(response.string);
     free(url);
     curl_slist_free_all(requestHeader);
