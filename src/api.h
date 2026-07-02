@@ -152,7 +152,7 @@ char *constructStringRequest(const int *years, const int *months, const int *day
 /**
  * @brief Construct a JSON object from a JSON string and search for a key in DFS
  *
- * @relates getKeyRecursively
+ * @relates getKeyRecursively, slurpAndGetPositiveLongInteger
  *
  * @note After the function returns, the caller owns the returned object and musst free it.
  *
@@ -161,6 +161,17 @@ char *constructStringRequest(const int *years, const int *months, const int *day
  * @return char* Reference to value associated with key or NULL on error.
  */
 char *slurpAndGetString(const char *input, const char *key);
+
+/**
+ * @brief Construct a JSON object from a JSON string and search for a key in DFS
+ *
+ * @relates getKeyRecursively, slurpAndGetString
+ *
+ * @param input Reference to string representation of JSON object.
+ * @param key Key to search for.
+ * @return long int Value associated with key or -1 on error.
+ */
+long int slurpAndGetPositiveLongInteger(const char *input, const char *key);
 
 /**
  * @brief Wrapper around chain of API requests needed to perform a download
