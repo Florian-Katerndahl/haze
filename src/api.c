@@ -782,9 +782,6 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
 
   curl_easy_setopt(downloadHandle, CURLOPT_URL, downloadURL);
   curl_easy_setopt(downloadHandle, CURLOPT_WRITEDATA, (void *) outputFile);
-  /// FIXME: use a custom file write function so I can keep track of the bytes written?!
-  ///        using stat on the file afterwards doesn't return the same amount of bytes
-  ///        as returned by the API; or do I need to include "man lseek"?
   curl_easy_setopt(downloadHandle, CURLOPT_WRITEFUNCTION, NULL);
 
   downloadResponse = curl_easy_perform(downloadHandle);
@@ -804,6 +801,14 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     return 1;
   }
 
+  /// NOTE: flusing file is necessary to write all outstanding chunks before querying its size;
+  ///       otherwise, there may be a difference between the size on disk and the advertised size.
+  if (fflush(outputFile) != 0) {
+    fprintf(stderr, "Failed to flush output file (%s). Deleting file.\n", outputPath);
+    /// TODO: cleanup
+    return 1;
+  }
+
   // ~~~~~~~~~~~~~~~~~
   // after downloading, get the actual file size in bytes and compare to advertised size
   // ~~~~~~~~~~~~~~~~~
@@ -811,22 +816,26 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
   if (outputFileDescriptor == -1) {
     fprintf(stderr, "Failed to query file descriptor from file stream\n. Deleting file '%s'\n", outputPath);
     /// TODO: cleanup
+    return 1;
   }
 
   struct stat st = {0};
   if (fstat(outputFileDescriptor, &st) != 0) {
     fprintf(stderr, "Failed to get file size of most recent downloaded file (%s). Deleting file.\n", outputPath);
     /// TODO: cleanup
+    return 1;
   }
 
   if (sizeof(st.st_size) != sizeof(advertisedSizeInBytes)) {
     fprintf(stderr, "Won't compare file sizes as underlying data have different widths\n");
     /// TODO: cleanup
+    return 1;
   }
 
   if (st.st_size != advertisedSizeInBytes) {
-    fprintf(stderr, "Mismatch between advertised file size (%ld) and actual size (%ld). Deleting file %s\n", st.st_size, advertisedSizeInBytes, outputPath);
+    fprintf(stderr, "Mismatch between advertised file size (%ld) and actual size (%ld). Deleting file %s\n", advertisedSizeInBytes, st.st_size, outputPath);
     /// TODO: cleanup
+    return 1;
   }
 
   fclose(outputFile);
