@@ -767,12 +767,18 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
   long int advertisedSizeInBytes = slurpAndGetPositiveLongInteger(response.string, "file:size");
   if (advertisedSizeInBytes == -1) {
     fprintf(stderr, "Failed to get advertised file size\n");
-    /// TODO: cleanup
+    free(downloadURL);
+    free(url);
+    free(response.string);
+    curl_slist_free_all(requestHeader);
+    curl_easy_cleanup(downloadHandle);
+    return 1;
   }
 
   FILE *outputFile = fopen(outputPath, "wb");
   if (outputFile == NULL) {
     fprintf(stderr, "Could not open file %s for writing\n", outputPath);
+    free(downloadURL);
     free(url);
     free(response.string);
     curl_slist_free_all(requestHeader);
@@ -794,6 +800,7 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     fprintf(stderr, "Server message:\n%s\n", response.string);
     fclose(outputFile);
     unlink(outputPath);
+    free(downloadURL);
     free(response.string);
     free(url);
     curl_slist_free_all(requestHeader);
@@ -806,6 +813,13 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
   if (fflush(outputFile) != 0) {
     fprintf(stderr, "Failed to flush output file (%s). Deleting file.\n", outputPath);
     /// TODO: cleanup
+    fclose(outputFile);
+    unlink(outputPath);
+    free(downloadURL);
+    free(response.string);
+    free(url);
+    curl_slist_free_all(requestHeader);
+    curl_easy_cleanup(downloadHandle);
     return 1;
   }
 
@@ -815,26 +829,50 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
   int outputFileDescriptor = fileno(outputFile);
   if (outputFileDescriptor == -1) {
     fprintf(stderr, "Failed to query file descriptor from file stream\n. Deleting file '%s'\n", outputPath);
-    /// TODO: cleanup
+    fclose(outputFile);
+    unlink(outputPath);
+    free(downloadURL);
+    free(response.string);
+    free(url);
+    curl_slist_free_all(requestHeader);
+    curl_easy_cleanup(downloadHandle);
     return 1;
   }
 
   struct stat st = {0};
   if (fstat(outputFileDescriptor, &st) != 0) {
     fprintf(stderr, "Failed to get file size of most recent downloaded file (%s). Deleting file.\n", outputPath);
-    /// TODO: cleanup
+    fclose(outputFile);
+    unlink(outputPath);
+    free(downloadURL);
+    free(response.string);
+    free(url);
+    curl_slist_free_all(requestHeader);
+    curl_easy_cleanup(downloadHandle);
     return 1;
   }
 
   if (sizeof(st.st_size) != sizeof(advertisedSizeInBytes)) {
     fprintf(stderr, "Won't compare file sizes as underlying data have different widths\n");
-    /// TODO: cleanup
+    fclose(outputFile);
+    unlink(outputPath);
+    free(downloadURL);
+    free(response.string);
+    free(url);
+    curl_slist_free_all(requestHeader);
+    curl_easy_cleanup(downloadHandle);
     return 1;
   }
 
   if (st.st_size != advertisedSizeInBytes) {
     fprintf(stderr, "Mismatch between advertised file size (%ld) and actual size (%ld). Deleting file %s\n", advertisedSizeInBytes, st.st_size, outputPath);
-    /// TODO: cleanup
+    fclose(outputFile);
+    unlink(outputPath);
+    free(downloadURL);
+    free(response.string);
+    free(url);
+    curl_slist_free_all(requestHeader);
+    curl_easy_cleanup(downloadHandle);
     return 1;
   }
 
