@@ -838,7 +838,6 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
   ///       otherwise, there may be a difference between the size on disk and the advertised size.
   if (fflush(outputFile) != 0) {
     fprintf(stderr, "Failed to flush output file (%s). Deleting file.\n", outputPath);
-    /// TODO: cleanup
     fclose(outputFile);
     unlink(outputPath);
     free(downloadURL);
@@ -928,9 +927,6 @@ int cdsDeleteProductRequest(CURL *handle, const char *requestId)
   curl_easy_setopt(deleteHandle, CURLOPT_URL, url);
   curl_easy_setopt(deleteHandle, CURLOPT_CUSTOMREQUEST, "DELETE");
   curl_easy_setopt(deleteHandle, CURLOPT_WRITEFUNCTION, discardWrite);
-
-  /// TODO: wasn't there some part where I reused a cURL handle that resulted in a wrong request?
-  //        And also something about errors not correctly propagating (see error output on server error)?
 
   CURLcode deleteResponse = curl_easy_perform(deleteHandle);
   if (deleteResponse != CURLE_OK) {
