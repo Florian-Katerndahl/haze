@@ -31,7 +31,6 @@ int main(int argc, char *argv[])
     GDALDestroyDriver(gmlas);
 
     /* START OF PROGRAM */
-    CURL *handle = NULL;
     const OGREnvelope *aoi = NULL;
 
     option_t *opts = parseOptions(argc, argv);
@@ -46,13 +45,6 @@ int main(int argc, char *argv[])
     printOptions(opts);
 #endif
 
-    handle = curl_easy_init();
-
-    if (handle == NULL) {
-        fprintf(stderr, "Failed to setup cURL\n");
-        goto teardown;
-    }
-
     if (!opts->global && opts->download) {
         aoi = boxFromPath(opts->areaOfInterest, opts->aoiName);
         if (aoi == NULL) {
@@ -62,7 +54,7 @@ int main(int argc, char *argv[])
     }
 
     if (opts->download) {
-        if (download(handle, opts, aoi)) {
+        if (download(opts, aoi)) {
             fprintf(stderr, "Error downloading files\n");
             exitCode = EXIT_FAILURE;
             goto teardown;
@@ -83,7 +75,6 @@ teardown:
     /* TEARDOWN EXTERNAL LIBRARIES */
     GDALDestroy();
     finishGEOS();
-    curl_easy_cleanup(handle);
     curl_global_cleanup();
 
     return exitCode;
