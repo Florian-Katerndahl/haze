@@ -1,7 +1,7 @@
 #ifndef NUMERIC_CONVERSIONS_H
 #define NUMERIC_CONVERSIONS_H
 /**
- * @file numeic-conversions.h
+ * @file numeric-conversions.h
  * @author Florian Katerndahl <florian@katerndahl.com>
  * @brief This header file contains function signatures to parse integers from strings.
  * @version 0.1
