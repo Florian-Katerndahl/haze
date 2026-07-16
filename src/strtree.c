@@ -58,7 +58,7 @@
 
     default:
       fprintf(stderr, "Layer has unsupported geometry type. "
-                      "Allowed types are: Polygon and Multipolygon.\n");
+              "Allowed types are: Polygon and Multipolygon.\n");
       closeGDALDataset(vectorDataset);
       return NULL;
   }
@@ -187,7 +187,8 @@
 
       OGRFeatureDefnH featureDefinition = OGR_F_GetDefnRef(feature);
 
-      OGRFieldDefnH longitudeFieldDefinition = OGR_FD_GetFieldDefn(featureDefinition, longitudeFieldIndex);
+      OGRFieldDefnH longitudeFieldDefinition = OGR_FD_GetFieldDefn(featureDefinition,
+          longitudeFieldIndex);
       OGRFieldDefnH latitudeFieldDefinition = OGR_FD_GetFieldDefn(featureDefinition, latitudeFieldIndex);
 
       if (longitudeFieldDefinition == NULL || latitudeFieldDefinition == NULL) {
@@ -234,9 +235,9 @@
       }
 
       geometries->entries[geometries->size].precomutedLongitude = OGR_F_GetFieldAsDouble(feature,
-        longitudeFieldIndex);
+          longitudeFieldIndex);
       geometries->entries[geometries->size].precomputedLatitude = OGR_F_GetFieldAsDouble(feature,
-        latitudeFieldIndex);
+          latitudeFieldIndex);
     }
 
     if (geometries->entries[geometries->size].geometry == NULL
@@ -445,8 +446,10 @@ void trackIntersectingGeometries(void *item, void *userdata)
     queryResults->entries[queryResults->size].intersectingCells = userdata.intersectingCells;
 
     if (usePrecomputedCentroid) {
-      queryResults->entries[queryResults->size].precomutedLongitude = areasOfInterest->entries[i].precomutedLongitude;
-      queryResults->entries[queryResults->size].precomputedLatitude = areasOfInterest->entries[i].precomputedLatitude;
+      queryResults->entries[queryResults->size].precomutedLongitude =
+        areasOfInterest->entries[i].precomutedLongitude;
+      queryResults->entries[queryResults->size].precomputedLatitude =
+        areasOfInterest->entries[i].precomputedLatitude;
     }
 
     queryResults->size++;

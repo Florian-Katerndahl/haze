@@ -237,7 +237,8 @@ void printHelp(void)
     return NULL;
   }
 
-  if ((!logFileExists && userOptions->process) || (!logFileParentDirWritable && userOptions->download)) {
+  if ((!logFileExists && userOptions->process) || (!logFileParentDirWritable
+      && userOptions->download)) {
     fprintf(stderr, "Logfile '%s' does not exist or cannot be created\n\n", userOptions->logFile);
     freeOption(userOptions);
     return NULL;

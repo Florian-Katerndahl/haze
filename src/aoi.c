@@ -75,7 +75,7 @@
   if (!EQUAL(layerWKT, SRS_WKT_WGS84_LAT_LONG)) {
     // authority compliant axes set to true because it's handled by myself below
     OGRCoordinateTransformationH transformation = transformationFromWKTs(layerWKT,
-      SRS_WKT_WGS84_LAT_LONG, true);
+        SRS_WKT_WGS84_LAT_LONG, true);
 
     if (transformation == NULL) {
       fprintf(stderr, "Failed to create transformation object: %s", CPLGetLastErrorMsg());

@@ -20,7 +20,7 @@
  *
  * @note This function is a thin wrapper around `strtol`
  *       for slightly easier/cleaner usage in this code base.
- * 
+ *
  * @param timeString String representation of number.
  * @param error Reference to error flag. Is set to `true`,
  *              on error. Otherwise the variable is not touched!
@@ -33,7 +33,7 @@ long long convertNumberSafely(const char *timeString, bool *error);
  *
  * @note This function is a thin wrapper around `strtol`
  *       for slightly easier/cleaner usage in this code base.
- * 
+ *
  * @param timeString String representation of number.
  * @param error Reference to error flag. Is set to `true`,
  *              on error. Otherwise the variable is not touched!
@@ -46,7 +46,7 @@ long convertLongSafely(const char *timeString, bool *error);
  *
  * @note This function is a thin wrapper around `strtol`
  *       for slightly easier/cleaner usage in this code base.
- * 
+ *
  * @param timeString String representation of number.
  * @param error Reference to error flag. Is set to `true`,
  *              on error. Otherwise the variable is not touched!
@@ -59,7 +59,7 @@ int convertIntSafely(const char *timeString, bool *error);
  *
  * @note This function is a thin wrapper around `strtol`
  *       for slightly easier/cleaner usage in this code base.
- * 
+ *
  * @param timeString String representation of number.
  * @param error Reference to error flag. Is set to `true`,
  *              on error. Otherwise the variable is not touched!
@@ -72,7 +72,7 @@ short convertShortSafely(const char *timeString, bool *error);
  *
  * @note This function is a thin wrapper around `strtol`
  *       for slightly easier/cleaner usage in this code base.
- * 
+ *
  * @param timeString String representation of number.
  * @param error Reference to error flag. Is set to `true`,
  *              on error. Otherwise the variable is not touched!
@@ -85,7 +85,7 @@ unsigned int convertUnsignedIntSafely(const char *timeString, bool *error);
  *
  * @note This function is a thin wrapper around `strtol`
  *       for slightly easier/cleaner usage in this code base.
- * 
+ *
  * @param timeString String representation of number.
  * @param error Reference to error flag. Is set to `true`,
  *              on error. Otherwise the variable is not touched!
@@ -98,7 +98,7 @@ unsigned short convertUnsignedShortSafely(const char *timeString, bool *error);
  *
  * @note This function is a thin wrapper around `strtol`
  *       for slightly easier/cleaner usage in this code base.
- * 
+ *
  * @param timeString String representation of number.
  * @param error Reference to error flag. Is set to `true`,
  *              on error. Otherwise the variable is not touched!
@@ -111,7 +111,7 @@ int convertPositiveIntegerSafely(const char *timeString, bool *error);
  *
  * @note This function is a thin wrapper around `strtol`
  *       for slightly easier/cleaner usage in this code base.
- * 
+ *
  * @param timeString String representation of number.
  * @param error Reference to error flag. Is set to `true`,
  *              on error. Otherwise the variable is not touched!

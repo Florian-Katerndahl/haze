@@ -27,7 +27,7 @@
  * @note After the function returns, the caller owns the returned objects and must free it
  *       with `curl_slist_free_all`. The parameters `contentType` and `acceptValue` as well
  *       ass the access token from the options struct are copied into the data structure.
- * 
+ *
  * @param options Reference to parsed options.
  * @param contentTypeValue Value to set for the Content-Tpye field.
  * @param acceptValue Value to set for the Accept field.

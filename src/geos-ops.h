@@ -24,7 +24,7 @@
  * @param ... printf-like objects and references to fill
  *            format string
  */
-void geosMessagesToStderr(const char* fmt, ...);
+void geosMessagesToStderr(const char *fmt, ...);
 
 /** @} */ // end of group
 #endif // GEOSOPS_H
