@@ -17,26 +17,59 @@
 #include <math.h>
 #include <sys/stat.h>
 
-struct curl_slist *customHeader(struct curl_slist *list, const option_t *options)
+struct curl_slist *generateHttpHeader(const option_t *options, const char *contentTypeValue,
+                                      const char *acceptValue)
 {
-  if (options == NULL)
+  if (options == NULL || contentTypeValue == NULL || acceptValue == NULL) {
     return NULL;
-
-  char *header = constructURL("PRIVATE-TOKEN:%s", options->authenticationToken);
-
-  if (header == NULL)
-    return NULL;
-
-  struct curl_slist *ret = curl_slist_append(list, header);
-
-  if (ret == NULL) {
-    curl_slist_free_all(list);
   }
 
-  free(header);
+  char *privateToken = constructURL("PRIVATE-TOKEN: %s", options->authenticationToken);
+  char *contentType = constructURL("Content-Type: %s", contentTypeValue);
+  char *accept = constructURL("Accept: %s", acceptValue);
 
-  // returns NULL on error as well
-  return ret;
+  if (privateToken == NULL || contentType == NULL || accept == NULL) {
+    free(privateToken);
+    free(contentType);
+    free(accept);
+    return NULL;
+  }
+
+  struct curl_slist *slist = curl_slist_append(NULL, privateToken)  ;
+
+  if (slist == NULL) {
+    free(privateToken);
+    return NULL;
+  }
+
+  free(privateToken);
+
+  struct curl_slist *tmp = curl_slist_append(slist, contentType);
+
+  if (tmp == NULL) {
+    free(contentType);
+    free(accept);
+    curl_slist_free_all(slist);
+    return NULL;
+  }
+
+  free(contentType);
+
+  slist = tmp;
+
+  tmp = curl_slist_append(slist, accept);
+
+  if (tmp == NULL) {
+    free(accept);
+    curl_slist_free_all(slist);
+    return NULL;
+  }
+
+  free(accept);
+
+  slist = tmp;
+
+  return slist;
 }
 
 int initializeHandle(CURL **handle, const struct curl_slist *headerList)
@@ -56,6 +89,10 @@ int initializeHandle(CURL **handle, const struct curl_slist *headerList)
     return 1;
   if (curl_easy_setopt(*handle, CURLOPT_USERAGENT, "haze") != CURLE_OK)
     return 1;
+#ifdef DEBUG
+  if (curl_easy_setopt(*handle, CURLOPT_VERBOSE, 1L) != CURLE_OK)
+    return 1;
+#endif
 
   return 0;
 }
@@ -68,15 +105,20 @@ CURL *newHandleWithOptions(struct curl_slist **list, const option_t *options)
     return NULL;
   }
 
-  struct curl_slist *headerAddon = customHeader(*list, options);
+  struct curl_slist *headerAddon = generateHttpHeader(options, "application/json",
+                                   "application/json");
   if (headerAddon == NULL) {
     fprintf(stderr, "Failed to create HTTP header for product requests\n");
     curl_easy_cleanup(handle);
     return NULL;
   }
 
+  // use **list as second output parameter to hold on to slist for remainder of download routine
+  *list = headerAddon;
+
   if (initializeHandle(&handle, headerAddon) == 1) {
     fprintf(stderr, "Failed to initialize cURL handle\n");
+    curl_slist_free_all(*list);
     return NULL;
   }
 
@@ -233,10 +275,25 @@ cleanup:
 
 }
 
-[[nodiscard]] int download(CURL *handle, const option_t *options, const OGREnvelope *aoi)
+[[nodiscard]] int download(const option_t *options, const OGREnvelope *aoi)
 {
   const unsigned int maxAttempts = 12;
   unsigned int failedDownloads = 0;
+
+  struct curl_slist *header_list = NULL;
+  CURL *handle = newHandleWithOptions(&header_list, options);
+
+  if (header_list == NULL) {
+    fprintf(stderr, "Failed to generate HTTP header\n");
+    curl_easy_cleanup(handle);
+    return 1;
+  }
+
+  if (handle == NULL) {
+    fprintf(stderr, "Failed to create and setup cURL handle\n");
+    curl_slist_free_all(header_list);
+    return 1;
+  }
 
   FILE *logFile = fopen(options->logFile, "a");
 
@@ -363,6 +420,9 @@ cleanup:
     }
   }
 
+  curl_slist_free_all(header_list);
+  curl_easy_cleanup(handle);
+
   fclose(logFile);
 
   if (failedDownloads) {
@@ -444,7 +504,7 @@ long int slurpAndGetPositiveLongInteger(const char *input, const char *key)
   json_int_t ret = json_integer_value(keyEntry);
   if (ret == 0 || ret > LONG_MAX) {
     fprintf(stderr, "Failed to get long value from key '%s' "
-                                   "or it exceeds maximum representable value by a long integer\n", key);
+            "or it exceeds maximum representable value by a long integer\n", key);
     json_decref(root);
     return -1L;
   }
@@ -461,7 +521,7 @@ long int slurpAndGetPositiveLongInteger(const char *input, const char *key)
 {
   char *requestId = cdsRequestProduct(handle, subsetYears, subsetMonths, subsetDays,
                                       subsetHours, yearsElements, monthsElements,
-                                      daysElements, hoursElements, aoi, options);
+                                      daysElements, hoursElements, aoi);
 
   if (requestId == NULL) {
     fprintf(stderr, "Failed to request product or extract job id\n");
@@ -471,8 +531,8 @@ long int slurpAndGetPositiveLongInteger(const char *input, const char *key)
   printf("Posted product request with Id: %s\n", requestId);
 #endif
 
-  if (cdsWaitForProductWithMessage(handle, requestId, options, maxAttempts)) {
-    cdsDeleteProductRequest(handle, requestId, options);
+  if (cdsWaitForProductWithMessage(handle, requestId, maxAttempts)) {
+    cdsDeleteProductRequest(handle, requestId);
     free(requestId);
     return 1;
   }
@@ -482,7 +542,7 @@ long int slurpAndGetPositiveLongInteger(const char *input, const char *key)
 
   if (cdsDownloadProduct(handle, requestId, outputPath, options)) {
     fprintf(stderr, "Failed to download data.\n");
-    cdsDeleteProductRequest(handle, requestId, options);
+    cdsDeleteProductRequest(handle, requestId);
     free(requestId);
     return 1;
   }
@@ -490,7 +550,7 @@ long int slurpAndGetPositiveLongInteger(const char *input, const char *key)
   printf("Downloaded file for product request %s\n", requestId);
 #endif
 
-  cdsDeleteProductRequest(handle, requestId, options);
+  cdsDeleteProductRequest(handle, requestId);
 #ifdef DEBUG
   printf("Deleted product request with Id: %s\n", requestId);
 #endif
@@ -503,7 +563,7 @@ long int slurpAndGetPositiveLongInteger(const char *input, const char *key)
 char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days,
                         const int *hours, const size_t yearsElements, const size_t monthsElements,
                         const size_t daysElements, const size_t hoursElements,
-                        const OGREnvelope *aoi, const option_t *options)
+                        const OGREnvelope *aoi)
 {
   CURL *requestHandle = curl_easy_duphandle(handle);
   if (requestHandle == NULL) {
@@ -537,36 +597,17 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
   curl_easy_setopt(requestHandle, CURLOPT_WRITEFUNCTION, writeString);
   curl_easy_setopt(requestHandle, CURLOPT_WRITEDATA, (void *) &requestResponse);
 
-  struct curl_slist *requestHeader = customHeader(NULL, options);
-  if (requestHeader == NULL) {
-    fprintf(stderr, "Failed to create custom HTTP header for product request\n");
-    free(url);
-    free(stringRequest);
-    curl_easy_cleanup(requestHandle);
-    return NULL;
-  }
-
-  if ((requestHeader = curl_slist_append(requestHeader, "Content-Type: application/json")) == NULL) {
-    free(url);
-    curl_slist_free_all(requestHeader);
-    free(stringRequest);
-    curl_easy_cleanup(requestHandle);
-    return NULL;
-  }
-
-  curl_easy_setopt(requestHandle, CURLOPT_HTTPHEADER, requestHeader);
-
   CURLcode requestResponseCode = curl_easy_perform(requestHandle);
   if (requestResponseCode != CURLE_OK) {
     long httpResponse = 0;
     // not checking validity of httpResponse!
     curl_easy_getinfo(requestHandle, CURLINFO_RESPONSE_CODE, &httpResponse);
-    fprintf(stderr, "Failed to get product status: %s (%ld)\n", curl_easy_strerror(requestResponseCode),
+    fprintf(stderr, "Failed to get product status while performing inital request: %s (%ld)\n",
+            curl_easy_strerror(requestResponseCode),
             httpResponse);
     fprintf(stderr, "Server message:\n%s\n", requestResponse.string);
     free(requestResponse.string);
     free(url);
-    curl_slist_free_all(requestHeader);
     free(stringRequest);
     curl_easy_cleanup(requestHandle);
     return NULL;
@@ -576,14 +617,13 @@ char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const
 
   free(requestResponse.string);
   free(url);
-  curl_slist_free_all(requestHeader);
   free(stringRequest);
   curl_easy_cleanup(requestHandle);
 
   return jobId;
 }
 
-productStatus cdsGetProductStatus(CURL *handle, const char *requestId, const option_t *options)
+productStatus cdsGetProductStatus(CURL *handle, const char *requestId)
 {
   CURL *statusHandle = curl_easy_duphandle(handle);
   if (statusHandle == NULL) {
@@ -604,34 +644,17 @@ productStatus cdsGetProductStatus(CURL *handle, const char *requestId, const opt
   curl_easy_setopt(statusHandle, CURLOPT_WRITEFUNCTION, writeString);
   curl_easy_setopt(statusHandle, CURLOPT_WRITEDATA, (void *) &response);
 
-  struct curl_slist *requestHeader = customHeader(NULL, options);
-  if (requestHeader == NULL) {
-    fprintf(stderr, "Failed to create custom HTTP header for product status retrieval\n");
-    free(url);
-    curl_easy_cleanup(statusHandle);
-    return ERROR;
-  }
-
-  if ((requestHeader = curl_slist_append(requestHeader, "Content-Type: application/json")) == NULL) {
-    free(url);
-    curl_slist_free_all(requestHeader);
-    curl_easy_cleanup(statusHandle);
-    return ERROR;
-  }
-
-  curl_easy_setopt(statusHandle, CURLOPT_HTTPHEADER, requestHeader);
-
   CURLcode statusResponse = curl_easy_perform(statusHandle);
   if (statusResponse != CURLE_OK) {
     long httpResponse = 0;
     // not checking validity of httpResponse!
     curl_easy_getinfo(statusHandle, CURLINFO_RESPONSE_CODE, &httpResponse);
-    fprintf(stderr, "Failed to get product status: %s (%ld)\n", curl_easy_strerror(statusResponse),
+    fprintf(stderr, "Failed to get product status while waiting on order: %s (%ld)\n",
+            curl_easy_strerror(statusResponse),
             httpResponse);
     fprintf(stderr, "Server message:\n%s\n", response.string);
     free(response.string);
     free(url);
-    curl_slist_free_all(requestHeader);
     curl_easy_cleanup(statusHandle);
     return ERROR;
   }
@@ -640,7 +663,6 @@ productStatus cdsGetProductStatus(CURL *handle, const char *requestId, const opt
   if (statusWord == NULL) {
     free(response.string);
     free(url);
-    curl_slist_free_all(requestHeader);
     curl_easy_cleanup(statusHandle);
     return ERROR;
   }
@@ -660,7 +682,6 @@ productStatus cdsGetProductStatus(CURL *handle, const char *requestId, const opt
   free(statusWord);
   free(response.string);
   free(url);
-  curl_slist_free_all(requestHeader);
   curl_easy_cleanup(statusHandle);
 
   return status;
@@ -679,13 +700,12 @@ int binaryExponentialBackoff(int attempt)
   return (int) backoff;
 }
 
-int cdsWaitForProductWithMessage(CURL *handle, const char *requestId, const option_t *options,
-                                 unsigned int maxAttempts)
+int cdsWaitForProductWithMessage(CURL *handle, const char *requestId, unsigned int maxAttempts)
 {
   int sleepSeconds;
   unsigned int attempt = 1;
   while (attempt <= maxAttempts) {
-    switch (cdsGetProductStatus(handle, requestId, options)) {
+    switch (cdsGetProductStatus(handle, requestId)) {
       case SUCCESSFUL:
         return 0;
       case ACCEPTED:
@@ -731,35 +751,17 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
   curl_easy_setopt(downloadHandle, CURLOPT_WRITEDATA, (void *) &response);
   curl_easy_setopt(downloadHandle, CURLOPT_WRITEFUNCTION, writeString);
 
-  struct curl_slist *requestHeader = customHeader(NULL, options);
-  if (requestHeader == NULL) {
-    fprintf(stderr, "Failed to create custom HTTP header for product download\n");
-    free(url);
-    curl_easy_cleanup(downloadHandle);
-    return 1;
-  }
-
-  // TODO: this should either be the accept header or removed!
-  if ((requestHeader = curl_slist_append(requestHeader, "Content-Type: application/json")) == NULL) {
-    free(url);
-    curl_slist_free_all(requestHeader);
-    curl_easy_cleanup(downloadHandle);
-    return 1;
-  }
-
-  curl_easy_setopt(downloadHandle, CURLOPT_HTTPHEADER, requestHeader);
-
   CURLcode downloadResponse = curl_easy_perform(downloadHandle);
   if (downloadResponse != CURLE_OK) {
     long httpResponse = 0;
     // not checking validity of httpResponse!
     curl_easy_getinfo(downloadHandle, CURLINFO_RESPONSE_CODE, &httpResponse);
-    fprintf(stderr, "Failed to get product status: %s (%ld)\n", curl_easy_strerror(downloadResponse),
+    fprintf(stderr, "Failed to get product status before downloading dataset: %s (%ld)\n",
+            curl_easy_strerror(downloadResponse),
             httpResponse);
     fprintf(stderr, "Server message:\n%s\n", response.string);
     free(response.string);
     free(url);
-    curl_slist_free_all(requestHeader);
     curl_easy_cleanup(downloadHandle);
     return 1;
   }
@@ -769,7 +771,6 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     fprintf(stderr, "Failed to get download URL\n");
     free(url);
     free(response.string);
-    curl_slist_free_all(requestHeader);
     curl_easy_cleanup(downloadHandle);
     return 1;
   }
@@ -780,7 +781,6 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     free(downloadURL);
     free(url);
     free(response.string);
-    curl_slist_free_all(requestHeader);
     curl_easy_cleanup(downloadHandle);
     return 1;
   }
@@ -791,7 +791,6 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     free(downloadURL);
     free(url);
     free(response.string);
-    curl_slist_free_all(requestHeader);
     curl_easy_cleanup(downloadHandle);
     return 1;
   }
@@ -800,12 +799,26 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
   curl_easy_setopt(downloadHandle, CURLOPT_WRITEDATA, (void *) outputFile);
   curl_easy_setopt(downloadHandle, CURLOPT_WRITEFUNCTION, NULL);
 
+  // first, generate a new curl_slist because the accept header is different for the following request;
+  struct curl_slist *fileDownloadHttpHeader = generateHttpHeader(options, "application/json",
+      "application/x-grib");
+  if (fileDownloadHttpHeader == NULL) {
+    fprintf(stderr, "Failed to create HTTP header for product requests\n");
+    curl_easy_cleanup(handle);
+    return 1;
+  }
+
+  // secondly, overwrite header in handle
+  // existing header entries are simply overwritten
+  curl_easy_setopt(downloadHandle, CURLOPT_HTTPHEADER, fileDownloadHttpHeader);
+
   downloadResponse = curl_easy_perform(downloadHandle);
   if (downloadResponse != CURLE_OK) {
     long httpResponse = 0;
     // not checking validity of httpResponse!
     curl_easy_getinfo(downloadHandle, CURLINFO_RESPONSE_CODE, &httpResponse);
-    fprintf(stderr, "Failed to get product status: %s (%ld)\n", curl_easy_strerror(downloadResponse),
+    fprintf(stderr, "Failed to get product status when trying to extract download link: %s (%ld)\n",
+            curl_easy_strerror(downloadResponse),
             httpResponse);
     fprintf(stderr, "Server message:\n%s\n", response.string);
     fclose(outputFile);
@@ -813,10 +826,13 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     free(downloadURL);
     free(response.string);
     free(url);
-    curl_slist_free_all(requestHeader);
+    curl_slist_free_all(fileDownloadHttpHeader); // free local slist
     curl_easy_cleanup(downloadHandle);
     return 1;
   }
+
+  // lastly, immediately cleanup the custom slist after usage
+  curl_slist_free_all(fileDownloadHttpHeader);
 
   /// NOTE: flusing file is necessary to write all outstanding chunks before querying its size;
   ///       otherwise, there may be a difference between the size on disk and the advertised size.
@@ -828,7 +844,6 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     free(downloadURL);
     free(response.string);
     free(url);
-    curl_slist_free_all(requestHeader);
     curl_easy_cleanup(downloadHandle);
     return 1;
   }
@@ -838,26 +853,26 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
   // ~~~~~~~~~~~~~~~~~
   int outputFileDescriptor = fileno(outputFile);
   if (outputFileDescriptor == -1) {
-    fprintf(stderr, "Failed to query file descriptor from file stream\n. Deleting file '%s'\n", outputPath);
+    fprintf(stderr, "Failed to query file descriptor from file stream\n. Deleting file '%s'\n",
+            outputPath);
     fclose(outputFile);
     unlink(outputPath);
     free(downloadURL);
     free(response.string);
     free(url);
-    curl_slist_free_all(requestHeader);
     curl_easy_cleanup(downloadHandle);
     return 1;
   }
 
   struct stat st = {0};
   if (fstat(outputFileDescriptor, &st) != 0) {
-    fprintf(stderr, "Failed to get file size of most recent downloaded file (%s). Deleting file.\n", outputPath);
+    fprintf(stderr, "Failed to get file size of most recent downloaded file (%s). Deleting file.\n",
+            outputPath);
     fclose(outputFile);
     unlink(outputPath);
     free(downloadURL);
     free(response.string);
     free(url);
-    curl_slist_free_all(requestHeader);
     curl_easy_cleanup(downloadHandle);
     return 1;
   }
@@ -869,19 +884,19 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
     free(downloadURL);
     free(response.string);
     free(url);
-    curl_slist_free_all(requestHeader);
     curl_easy_cleanup(downloadHandle);
     return 1;
   }
 
   if (st.st_size != advertisedSizeInBytes) {
-    fprintf(stderr, "Mismatch between advertised file size (%ld) and actual size (%ld). Deleting file %s\n", advertisedSizeInBytes, st.st_size, outputPath);
+    fprintf(stderr,
+            "Mismatch between advertised file size (%ld) and actual size (%ld). Deleting file %s\n",
+            advertisedSizeInBytes, st.st_size, outputPath);
     fclose(outputFile);
     unlink(outputPath);
     free(downloadURL);
     free(response.string);
     free(url);
-    curl_slist_free_all(requestHeader);
     curl_easy_cleanup(downloadHandle);
     return 1;
   }
@@ -890,13 +905,12 @@ int cdsDownloadProduct(CURL *handle, const char *requestId, const char *outputPa
   free(downloadURL);
   free(response.string);
   free(url);
-  curl_slist_free_all(requestHeader);
   curl_easy_cleanup(downloadHandle);
 
   return 0;
 }
 
-int cdsDeleteProductRequest(CURL *handle, const char *requestId, const option_t *options)
+int cdsDeleteProductRequest(CURL *handle, const char *requestId)
 {
   CURL *deleteHandle = curl_easy_duphandle(handle);
   if (deleteHandle == NULL) {
@@ -915,22 +929,8 @@ int cdsDeleteProductRequest(CURL *handle, const char *requestId, const option_t 
   curl_easy_setopt(deleteHandle, CURLOPT_CUSTOMREQUEST, "DELETE");
   curl_easy_setopt(deleteHandle, CURLOPT_WRITEFUNCTION, discardWrite);
 
-  struct curl_slist *requestHeader = customHeader(NULL, options);
-  if (requestHeader == NULL) {
-    fprintf(stderr, "Failed to create custom HTTP header for product deletion\n");
-    free(url);
-    curl_easy_cleanup(deleteHandle);
-    return 1;
-  }
-
-  if ((requestHeader = curl_slist_append(requestHeader, "Content-Type: application/json")) == NULL) {
-    free(url);
-    curl_slist_free_all(requestHeader);
-    curl_easy_cleanup(deleteHandle);
-    return 1;
-  }
-
-  curl_easy_setopt(deleteHandle, CURLOPT_HTTPHEADER, requestHeader);
+  /// TODO: wasn't there some part where I reused a cURL handle that resulted in a wrong request?
+  //        And also something about errors not correctly propagating (see error output on server error)?
 
   CURLcode deleteResponse = curl_easy_perform(deleteHandle);
   if (deleteResponse != CURLE_OK) {
@@ -939,13 +939,11 @@ int cdsDeleteProductRequest(CURL *handle, const char *requestId, const option_t 
     curl_easy_getinfo(deleteHandle, CURLINFO_RESPONSE_CODE, &httpResponse);
     fprintf(stderr, "Failed to delete product request: %s (%ld)\n", curl_easy_strerror(deleteResponse),
             httpResponse);
-    curl_slist_free_all(requestHeader);
     curl_easy_cleanup(deleteHandle);
     free(url);
     return 1;
   }
 
-  curl_slist_free_all(requestHeader);
   curl_easy_cleanup(deleteHandle);
   free(url);
 

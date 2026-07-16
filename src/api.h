@@ -22,17 +22,19 @@
 #define BASEURL "https://cds.climate.copernicus.eu/api"
 
 /**
- * @brief Create a new header list for cURL with CDS API token field
+ * @brief Create a new heaader list for cURL
  *
- * @note After the function returns, the caller owns the returned object and must free it with `curl_slist_free_all` after use.
- *
- * @note This function may free the object pointed to by `list` when encountering an error.
- *
- * @param list Reference to existing `curl_slist` to append to or `NULL` to create a new list.
+ * @note After the function returns, the caller owns the returned objects and must free it
+ *       with `curl_slist_free_all`. The parameters `contentType` and `acceptValue` as well
+ *       ass the access token from the options struct are copied into the data structure.
+ * 
  * @param options Reference to parsed options.
- * @return struct curl_slist* Reference to cURL header list, NULL on error.
+ * @param contentTypeValue Value to set for the Content-Tpye field.
+ * @param acceptValue Value to set for the Accept field.
+ * @return struct curl_slist* Reference to new cURL header list, NULL on error.
  */
-struct curl_slist *customHeader(struct curl_slist *list, const option_t *options);
+struct curl_slist *generateHttpHeader(const option_t *options, const char *contentTypeValue,
+                                      const char *acceptValue);
 
 /**
  * @brief Initialize cURL handle in place
@@ -142,12 +144,11 @@ char *constructStringRequest(const int *years, const int *months, const int *day
  *          to query the CDS API, wait for successful processing and downloads file.
  *          A cURL handle is allocated and de-allocated for the scope of this function
  *
- * @param handle Reference to allocated and initialized cURL handle
  * @param options Reference to parsed options.
  * @param aoi Reference to a north-up bounding box with EPSG:4326 coordinates to restrict AOI, possibly NULL.
  * @return int 0 on success, 1 on failure.
  */
-[[nodiscard]] int download(CURL *handle, const option_t *options, const OGREnvelope *aoi);
+[[nodiscard]] int download(const option_t *options, const OGREnvelope *aoi);
 
 /**
  * @brief Construct a JSON object from a JSON string and search for a key in DFS
@@ -218,24 +219,20 @@ long int slurpAndGetPositiveLongInteger(const char *input, const char *key);
  * @param daysElements Number of entries in respective array.
  * @param hoursElements Number of entries in respective array.
  * @param aoi Reference to a north-up bounding box with EPSG:4326 coordinates to restrict AOI, possibly NULL.
- * @param options Reference to parsed options.
  * @return char* Job/Request ID, NULL on error.
  */
 char *cdsRequestProduct(CURL *handle, const int *years, const int *months, const int *days,
                         const int *hours, const size_t yearsElements, const size_t monthsElements,
-                        const size_t daysElements, const size_t hoursElements, const OGREnvelope *aoi,
-                        const option_t *options);
+                        const size_t daysElements, const size_t hoursElements, const OGREnvelope *aoi);
 
 /**
  * @brief Query the CDS API for the status of a previously created product request
  *
  * @param handle Reference to existing cURL handle used for request after duplication.
  * @param requestId Request ID to query.
- * @param options Reference to parsed options.
  * @return productStatus Product status.
  */
-productStatus cdsGetProductStatus(CURL *handle, const char *requestId,
-                                  const option_t *options); // Result.update
+productStatus cdsGetProductStatus(CURL *handle, const char *requestId);
 
 /**
  * @brief Compute binary exponential backoff
@@ -253,14 +250,12 @@ int binaryExponentialBackoff(int attempt);
  *
  * @param handle Reference to existing cURL handle used for request after duplication.
  * @param requestId Request ID to wait on.
- * @param options Reference to parsed options.
  * @param maxAttempts Maximum number of connections attempts to perform. This should be a rather
  *                    high value as binary exponential backoff is used to increase time between
  *                    connection requests.
  * @return int 0 on success, 1 on error.
  */
-int cdsWaitForProductWithMessage(CURL *handle, const char *requestId, const option_t *options,
-                      unsigned int maxAttempts);
+int cdsWaitForProductWithMessage(CURL *handle, const char *requestId, unsigned int maxAttempts);
 
 /**
  * @brief Download data related to previously made request to local file
@@ -282,11 +277,9 @@ int cdsDownloadProduct(CURL *handle, const char *requestId,
  *
  * @param handle Reference to existing cURL handle used for request after duplication.
  * @param requestId Request ID to delete.
- * @param options Reference to parsed options.
  * @return int 0 on success, 1 on failure.
  */
-int cdsDeleteProductRequest(CURL *handle, const char *requestId,
-                            const option_t *options); // Result.delete
+int cdsDeleteProductRequest(CURL *handle, const char *requestId); // Result.delete
 
 /** @} */ // end of group
 #endif // API_H
