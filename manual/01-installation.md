@@ -1,4 +1,4 @@
-# Installation {#installtion}
+# Installation {#installation}
 
 haze can be installed locally and is distributed via Docker Hub.
 
