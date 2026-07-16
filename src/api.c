@@ -236,6 +236,7 @@ cleanup:
 [[nodiscard]] int download(CURL *handle, const option_t *options, const OGREnvelope *aoi)
 {
   const unsigned int maxAttempts = 12;
+  unsigned int failedDownloads = 0;
 
   FILE *logFile = fopen(options->logFile, "a");
 
@@ -301,6 +302,7 @@ cleanup:
             fprintf(stderr, "Failed to download data for %.4d-%.2d-%.2d (request %lu/%lu)\n", year, month, day,
                     requestedDatasets, dailyDatasetsToRequest);
             unlink(outputPath); // no information at what stage the download failed
+            failedDownloads++;
           }
 
           free(outputPath);
@@ -351,6 +353,7 @@ cleanup:
           fprintf(stderr, "Failed to download data for %.4d-%.2d (request %lu/%lu)\n", year, month,
                   requestedDatasets, monthlyDatasetsToRequest);
           unlink(outputPath); // no information at what stage the download failed
+          failedDownloads++;
         }
 
         free(outputPath);
@@ -361,6 +364,13 @@ cleanup:
   }
 
   fclose(logFile);
+
+  if (failedDownloads) {
+    printf(
+      "Failed to download %u datasets. Check the log file for entried with status 'FAILED' to re-download them manually. "
+      "Afer successfully downloading them, you can remove the failed entries from the log file (although not strictly needed).\n",
+      failedDownloads);
+  }
 
   return 0;
 }
