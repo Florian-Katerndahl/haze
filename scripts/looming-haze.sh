@@ -54,7 +54,7 @@ find "$TEMPDIR" -name "*.split-log" -fprint "${TEMP_ARG_FILE}"
 # call haze mulitple times using GNU parallel
 parallel --arg-file "${TEMP_ARG_FILE}" -j $MAX_JOBS \
   --halt now,fail=1 --joblog "$PWD"/looming-haze-$(date "+%s").log --keep-order -- \
-  docker run --rm -u $(id -u):$(id -g) -v /data:/data -v /tmp:/tmp floriankaterndahl/haze:0.1.2 process \
+  docker run --rm -u $(id -u):$(id -g) -v /data:/data -v /tmp:/tmp floriankaterndahl/haze:latest process \
   --wrap-on-edge "$AOI" {} "$OUTPUT_DIRECTORY"
 
 # combine files updated by haze
