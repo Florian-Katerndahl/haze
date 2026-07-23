@@ -1,0 +1,18 @@
+.TH haze 1 "13 July 2026" "version 1.0.0" "Command Line Tool Reference"
+
+.SH NAME
+haze - haze is a flexible drop-in replacement to process water vapor to be used with FORCE
+
+.SH SYNOPSIS
+
+.SH DESCRIPTION
+
+.SH OPTIONS
+
+.SH BUGS
+
+.SH AUTHOR
+Florian Katerndahl <florian@katerndahl.com>
+
+.SH SEE ALSO
+haze is most useful in conjunction with FORCE, check out the corresponding documentation https://force-eo.readthedocs.io/en/latest/ or the repository at https://github.com/davidfrantz/force.
