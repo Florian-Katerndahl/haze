@@ -9,7 +9,17 @@ haze - haze is a flexible drop-in replacement to process water vapor to be used 
 
 .SH OPTIONS
 
+.SH ENVIRONMENT
+
+.SH FILES
+
 .SH BUGS
+
+.SH EXAMPLE
+
+.SS Downloading Raw Data
+
+.SS Processing Raw Data to Water Vapor Tables
 
 .SH AUTHOR
 Florian Katerndahl <florian@katerndahl.com>
