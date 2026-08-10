@@ -1,6 +1,6 @@
 CC=gcc
 DEFINES=-D_FORTIFY_SOURCE=3
-SANITIZERS=-fno-omit-frame-pointer -fsanitize-address-use-after-scope -fstack-protector-strong -fstack-clash-protection
+SANITIZERS=-fno-omit-frame-pointer -fsanitize-address-use-after-scope -fstack-protector-strong -fstack-clash-protection -fanalyzer
 OPTIMIZATION=-O3
 CFLAGS=-Wall -Wextra -Werror -pedantic -std=c2x -flto $(SANITIZERS) $(OPTIMIZATION)
 LINKFLAGS=$(shell pkg-config --cflags --libs jansson)
