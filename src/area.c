@@ -16,6 +16,8 @@ double fastLinearRingGeodesicArea(const OGRGeometryH geometry, const struct geod
 
   if (x == NULL || y == NULL) {
     fprintf(stderr, "Failed to allocate memory for coordinates of linear ring\n");
+    free(x);
+    free(y);
     return -1.0;
   }
 

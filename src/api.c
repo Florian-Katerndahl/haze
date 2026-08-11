@@ -39,6 +39,8 @@ struct curl_slist *generateHttpHeader(const option_t *options, const char *conte
 
   if (slist == NULL) {
     free(privateToken);
+    free(contentType);
+    free(accept);
     return NULL;
   }
 

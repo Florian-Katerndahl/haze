@@ -25,7 +25,7 @@
     const char *inputReferenceSystem,
     bool readPrecomputedCentroid)
 {
-  vectorGeometryVector *geometries = malloc(sizeof(vectorGeometryVector));
+  vectorGeometryVector *geometries = calloc(1, sizeof(vectorGeometryVector));
 
   if (geometries == NULL) {
     fprintf(stderr,
@@ -35,6 +35,7 @@
 
   GDALDatasetH vectorDataset = openVectorDataset(filePath);
   if (vectorDataset == NULL) {
+    freeVectorGeometryList(geometries);
     return NULL;
   }
 
@@ -42,6 +43,7 @@
   if (layer == NULL) {
     fprintf(stderr, "Failed to get vector layer: %s", CPLGetLastErrorMsg());
     closeGDALDataset(vectorDataset);
+    freeVectorGeometryList(geometries);
     return NULL;
   }
 
@@ -60,6 +62,7 @@
       fprintf(stderr, "Layer has unsupported geometry type. "
               "Allowed types are: Polygon and Multipolygon.\n");
       closeGDALDataset(vectorDataset);
+      freeVectorGeometryList(geometries);
       return NULL;
   }
 
@@ -69,6 +72,7 @@
   if (layerCRS == NULL) {
     fprintf(stderr, "Failed to get layer CRS: %s", CPLGetLastErrorMsg());
     closeGDALDataset(vectorDataset);
+    freeVectorGeometryList(geometries);
     return NULL;
   }
 
@@ -76,6 +80,7 @@
   if (OSRExportToWktEx(layerCRS, &layerWKT, NULL) != OGRERR_NONE) {
     fprintf(stderr, "Failed to convert CRS to WKT: %s", CPLGetLastErrorMsg());
     closeGDALDataset(vectorDataset);
+    freeVectorGeometryList(geometries);
     return NULL;
   }
 
@@ -88,7 +93,6 @@
   if (geometries->entries == NULL) {
     fprintf(stderr, "Failed to allocate memory for array of vector geometries\n");
     freeVectorGeometryList(geometries);
-    free(geometries);
     closeGDALDataset(vectorDataset);
     return NULL;
   }
@@ -410,7 +414,7 @@ void trackIntersectingGeometries(void *item, void *userdata)
 
   if (queryResults->entries == NULL) {
     fprintf(stderr, "Failed to allocate memory for array of STRTRee query results\n");
-    freeIntersections(queryResults);
+    free(queryResults); // don't free intersectionVector via `destructor' because alloc failed; only "head node" is valid
     return NULL;
   }
 
