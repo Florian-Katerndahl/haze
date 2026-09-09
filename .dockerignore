@@ -1,5 +1,8 @@
+.git/
 .github/
 .vscode/
+.gitignore
+.astylerc
 aoi/
 benchmarks/
 build/
@@ -8,9 +11,7 @@ data-dir/
 feature-tests/
 manual/
 testing-data/
-.git/
-.astylerc
-.gitignore
+CITATION.cff
 Doxyfile
 README.md
 test-aoi.gpkg
