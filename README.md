@@ -20,7 +20,7 @@ For other systems, please refer to the respective package repositories. To build
 
 ### Using Containers (Docker, Singularity, ...)
 
-Additionally, haze is available as a pre-build Docker image with different tags:
+Additionally, haze is available as a pre-build Docker image (`floriankaterndahl/haze`) with different tags:
 
 | Tag            |                                          Description                                         |                                             Note                                             |
 |----------------|:--------------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------:|
