@@ -49,6 +49,7 @@ void printHelp(void)
   printf("\nGlobal mandatory positional arguments:\n");
   printf("\tlogfile: Path to logfile storing successful downloads and processing statuses.\n");
   printf("\toutdir:  Directory into which output data products and CSVs are written.\n");
+  printf("\nCitation information about haze's most recent version can be found at 'https://doi.org/10.5281/zenodo.20666757'; see Zenodo for version-specific DOIs.\n");
 }
 
 [[nodiscard]] option_t *parseOptions(int argc, char *argv[])

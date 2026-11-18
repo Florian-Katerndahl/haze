@@ -2,6 +2,7 @@ FROM ghcr.io/osgeo/gdal:ubuntu-small-3.10.2
 
 LABEL author="Florian Katerndahl <florian@katerndahl.com>"
 LABEL description="haze aims to be a drop-in replacement for water vapor processing of ERA-5 datasets to be used with FORCE."
+LABEL citation="Citation information about haze's most recent version can be found at 'https://doi.org/10.5281/zenodo.20666757'; see Zenodo for version-specific DOIs."
 
 ENV DEBIAN_FRONTEND=noninteractive
 
