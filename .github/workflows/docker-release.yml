@@ -26,11 +26,6 @@ jobs:
           images: ${{ vars.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
           tags: |
             type=semver,pattern={{version}}
-          labels: |
-            org.opencontainers.image.authors=Florian Katerndahl <florian@katerndahl.com>
-            org.opencontainers.image.title=haze
-            org.opencontainers.image.description=haze aims to be a drop-in replacement for water vapor processing of ERA-5 datasets to be used with FORCE.
-            org.opencontainers.image.documentation=https://www.katerndahl.net/haze/
       
       - name: Login to registry
         uses: docker/login-action@v4
@@ -73,11 +68,6 @@ jobs:
             suffix=-debug,onlatest=true
           tags: |
             type=semver,pattern={{version}}
-          labels: |
-            org.opencontainers.image.authors=Florian Katerndahl <florian@katerndahl.com>
-            org.opencontainers.image.title=haze
-            org.opencontainers.image.description=haze aims to be a drop-in replacement for water vapor processing of ERA-5 datasets to be used with FORCE.
-            org.opencontainers.image.documentation=https://www.katerndahl.net/haze/
       
       - name: Login to registry
         uses: docker/login-action@v4
