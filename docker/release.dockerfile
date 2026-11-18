@@ -5,6 +5,9 @@ LABEL org.opencontainers.image.author="Florian Katerndahl <florian@katerndahl.co
 LABEL org.opencontainers.image.description="haze aims to be a drop-in replacement for water vapor processing of ERA-5 datasets to be used with FORCE."
 LABEL org.opencontainers.image.documentation="https://www.katerndahl.net/haze/"
 LABEL org.opencontainers.image.citation="Citation information about haze's most recent version can be found at 'https://doi.org/10.5281/zenodo.20666757'; see Zenodo for version-specific DOIs."
+LABEL org.opencontainers.image.licenses="GPL-3.0"
+LABEL org.opencontainers.image.url="https://github.com/Florian-Katerndahl/haze"
+LABEL org.opencontainers.image.source="https://github.com/Florian-Katerndahl/haze"
 
 ENV DEBIAN_FRONTEND=noninteractive
 
